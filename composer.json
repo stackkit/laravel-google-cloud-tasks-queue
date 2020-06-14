@@ -1,5 +1,5 @@
 {
-    "name": "stackkit/laravel-google-pubsub-queue",
+    "name": "stackkit/laravel-google-cloud-tasks-queue",
     "license": "MIT",
     "authors": [
         {
@@ -9,7 +9,7 @@
     ],
     "require": {
         "ext-json": "*",
-        "google/cloud-pubsub": "^1.24"
+        "google/cloud-tasks": "^1.6"
     },
     "require-dev": {
         "mockery/mockery": "^1.2",
@@ -18,13 +18,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Stackkit\\LaravelGooglePubSubQueue\\": "src/"
+            "Stackkit\\LaravelGoogleCloudTasksQueue\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Stackkit\\LaravelGooglePubSubQueue\\LaravelGooglePubSubQueueServiceProvider"
+                "Stackkit\\LaravelGoogleCloudTasksQueue\\CloudTasksServiceProvider"
             ]
         }
     }
