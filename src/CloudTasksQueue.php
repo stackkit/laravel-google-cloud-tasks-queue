@@ -6,11 +6,13 @@ use Carbon\Carbon;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
+use Google\Cloud\Tasks\V2\OidcToken;
 use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\InteractsWithTime;
+use Illuminate\Support\Str;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
@@ -55,13 +57,17 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $queueName = $this->client->queueName(Config::project(), Config::location(), $queue);
         $availableAt = $this->availableAt($delay);
 
-        $httpRequest = app(HttpRequest::class);
+        $httpRequest = $this->createHttpRequest();
         $httpRequest->setUrl(Config::handler());
         $httpRequest->setHttpMethod(HttpMethod::POST);
         $httpRequest->setBody($payload);
 
-        $task = app(Task::class);
+        $task = $this->createTask();
+        $randomString = Str::random();
+        $task->setName($queueName . '/tasks/' . $randomString);
         $task->setHttpRequest($httpRequest);
+
+        $httpRequest->setHeaders(['X-Stackkit-Auth-Token' => encrypt($randomString)]);
 
         if ($availableAt > time()) {
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
@@ -78,5 +84,21 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     private function getQueue($queue = null)
     {
         return $queue ?: $this->default;
+    }
+
+    /**
+     * @return HttpRequest
+     */
+    private function createHttpRequest()
+    {
+        return app(HttpRequest::class);
+    }
+
+    /**
+     * @return Task
+     */
+    private function createTask()
+    {
+        return app(Task::class);
     }
 }
