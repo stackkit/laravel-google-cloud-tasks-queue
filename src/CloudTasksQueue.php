@@ -55,12 +55,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $queueName = $this->client->queueName(Config::project(), Config::location(), $queue);
         $availableAt = $this->availableAt($delay);
 
-        $httpRequest = new HttpRequest();
+        $httpRequest = app(HttpRequest::class);
         $httpRequest->setUrl(Config::handler());
         $httpRequest->setHttpMethod(HttpMethod::POST);
         $httpRequest->setBody($payload);
 
-        $task = new Task;
+        $task = app(Task::class);
         $task->setHttpRequest($httpRequest);
 
         if ($availableAt > time()) {

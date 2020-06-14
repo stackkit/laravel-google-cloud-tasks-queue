@@ -1,0 +1,5 @@
+{
+    "type": "service_account",
+    "client_email": "info@stackkit.io",
+    "private_key": "PRIVATE KEY"
+}

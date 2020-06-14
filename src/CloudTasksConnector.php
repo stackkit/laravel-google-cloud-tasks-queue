@@ -9,10 +9,16 @@ class CloudTasksConnector implements ConnectorInterface
 {
     public function connect(array $config)
     {
-        return new CloudTasksQueue(
-            $config,
-            new CloudTasksClient($this->buildConfig())
-        );
+        Config::validate($config);
+
+        // @todo - clean this up
+        if (app()->has(CloudTasksClient::class)) {
+            $client = app(CloudTasksClient::class);
+        } else {
+            $client = new CloudTasksClient($this->buildConfig());
+        }
+
+        return new CloudTasksQueue($config, $client);
     }
 
     private function buildConfig()

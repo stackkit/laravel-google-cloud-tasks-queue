@@ -9,11 +9,12 @@ use Throwable;
 class TaskHandler
 {
     /**
+     * @param $task
      * @throws CloudTasksException
      */
-    public function handle()
+    public function handle($task = null)
     {
-        $task = $this->captureTask();
+        $task = $task ?: $this->captureTask();
 
         $this->handleTask($task);
     }
