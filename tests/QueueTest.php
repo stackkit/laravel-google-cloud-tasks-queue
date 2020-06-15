@@ -22,7 +22,7 @@ class QueueTest extends TestCase
         parent::setUp();
 
         $this->client = Mockery::mock(CloudTasksClient::class)->makePartial();
-        $this->http = Mockery::mock(HttpRequest::class)->makePartial();
+        $this->http = Mockery::mock(new HttpRequest)->makePartial();
         $this->task = Mockery::mock(new Task);
 
         $this->app->instance(CloudTasksClient::class, $this->client);

@@ -9,7 +9,9 @@
     ],
     "require": {
         "ext-json": "*",
-        "google/cloud-tasks": "^1.6"
+        "google/cloud-tasks": "^1.6",
+        "firebase/php-jwt": "^5.2",
+        "phpseclib/phpseclib": "~2.0"
     },
     "require-dev": {
         "mockery/mockery": "^1.2",

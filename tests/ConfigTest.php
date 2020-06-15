@@ -62,4 +62,15 @@ class ConfigTest extends TestCase
 
         SimpleJob::dispatch();
     }
+
+    /** @test */
+    public function service_email_is_required()
+    {
+        $this->setConfigValue('service_account_email', '');
+
+        $this->expectException(Error::class);
+        $this->expectExceptionMessage(Errors::invalidServiceAccountEmail());
+
+        SimpleJob::dispatch();
+    }
 }

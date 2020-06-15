@@ -26,6 +26,11 @@ class Config
         return config('queue.connections.cloudtasks.handler');
     }
 
+    public static function serviceAccountEmail()
+    {
+        return config('queue.connections.cloudtasks.service_account_email');
+    }
+
     public static function validate(array $config)
     {
         if (empty($config['credentials'])) {
@@ -46,6 +51,10 @@ class Config
 
         if (empty($config['handler'])) {
             throw new Error(Errors::invalidHandler());
+        }
+
+        if (empty($config['service_account_email'])) {
+            throw new Error(Errors::invalidServiceAccountEmail());
         }
     }
 }

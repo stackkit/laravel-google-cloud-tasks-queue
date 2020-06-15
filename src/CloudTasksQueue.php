@@ -2,7 +2,6 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Carbon\Carbon;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
@@ -63,11 +62,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest->setBody($payload);
 
         $task = $this->createTask();
-        $randomString = Str::random();
-        $task->setName($queueName . '/tasks/' . $randomString);
         $task->setHttpRequest($httpRequest);
 
-        $httpRequest->setHeaders(['X-Stackkit-Auth-Token' => encrypt($randomString)]);
+        $token = new OidcToken;
+        $token->setServiceAccountEmail(Config::serviceAccountEmail());
+        $httpRequest->setOidcToken($token);
 
         if ($availableAt > time()) {
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));

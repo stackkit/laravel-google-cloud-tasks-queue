@@ -2,22 +2,30 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Ahc\Jwt\JWT;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
+use Illuminate\Support\Arr;
+use phpseclib\Crypt\RSA;
+use phpseclib\Math\BigInteger;
 use Throwable;
+use Firebase\JWT\JWT;
 
 class TaskHandler
 {
     private $client;
     private $request;
+    private $guzzle;
+    private $jwt;
 
-    public function __construct(CloudTasksClient $client, Request $request)
+    public function __construct(CloudTasksClient $client, Request $request, Client $guzzle, JWT $jwt)
     {
         $this->client = $client;
         $this->request = $request;
+        $this->guzzle = $guzzle;
+        $this->jwt = $jwt;
     }
 
     /**
@@ -36,39 +44,88 @@ class TaskHandler
     /**
      * @throws CloudTasksException
      */
-    private function authorizeRequest()
+    public function authorizeRequest()
     {
-        $this->checkForRequiredHeaders();
-
-        $taskName = $this->request->header('X-Cloudtasks-Taskname');
-        $queueName = $this->request->header('X-Cloudtasks-Queuename');
-        $authToken = $this->request->header('X-Stackkit-Auth-Token');
-
-        $fullQueueName = $this->client->queueName(Config::project(), Config::location(), $queueName);
-
-        try {
-            $this->client->getTask($fullQueueName . '/tasks/' . $taskName);
-        } catch (Throwable $e) {
-            throw new CloudTasksException('Could not find task');
+        if (!$this->request->hasHeader('Authorization')) {
+            throw new CloudTasksException('Missing [Authorization] header');
         }
 
-        if (decrypt($authToken) != $taskName) {
-            throw new CloudTasksException('Auth token is not valid');
+        // @todo - kill this check with a Mock
+        if (app()->environment('testing')) {
+            return;
         }
+
+        $openIdToken = $this->request->bearerToken();
+        $pubKey = $this->getGooglePublicKey();
+
+        $decodedToken = $this->jwt->decode($openIdToken, $pubKey, ['RS256']);
+
+        $this->validateToken($decodedToken);
     }
 
-    private function checkForRequiredHeaders()
+    private function getGooglePublicKey()
     {
-        $headers = [
-            'X-Cloudtasks-Taskname',
-            'X-Cloudtasks-Queuename',
-            'X-Stackkit-Auth-Token',
-        ];
+        $jwksUri = $this->getJwksUri();
 
-        foreach ($headers as $header) {
-            if (!$this->request->hasHeader($header)) {
-                throw new CloudTasksException('Missing [' . $header . '] header');
-            }
+        $keys = $this->getCertificateKeys($jwksUri);
+
+        $firstKey = $keys[1];
+
+        $modulus = $firstKey['n'];
+        $exponent = $firstKey['e'];
+
+        $rsa = new RSA();
+
+        $modulus = new BigInteger(JWT::urlsafeB64Decode($modulus), 256);
+        $exponent = new BigInteger(JWT::urlsafeB64Decode($exponent), 256);
+
+        $rsa->loadKey([
+            'n' => $modulus,
+            'e' => $exponent
+        ]);
+        $rsa->setPublicKey();
+
+        return $rsa->getPublicKey();
+    }
+
+    private function getJwksUri()
+    {
+        $discoveryEndpoint = 'https://accounts.google.com/.well-known/openid-configuration';
+
+        $configurationJson = $this->guzzle->get($discoveryEndpoint);
+
+        $configurations = json_decode($configurationJson->getBody(), true);
+
+        return Arr::get($configurations, 'jwks_uri');
+    }
+
+    private function getCertificateKeys($jwksUri)
+    {
+        $json = $this->guzzle->get($jwksUri);
+
+        $certificates = json_decode($json->getBody(), true);
+
+        return Arr::get($certificates, 'keys');
+    }
+
+    /**
+     * https://developers.google.com/identity/protocols/oauth2/openid-connect#validatinganidtoken
+     *
+     * @param $openIdToken
+     * @throws CloudTasksException
+     */
+    protected function validateToken($openIdToken)
+    {
+        if (!in_array($openIdToken->iss, ['https://accounts.google.com', 'accounts.google.com'])) {
+            throw new CloudTasksException('The given OpenID token is not valid');
+        }
+
+        if ($openIdToken->aud != Config::handler()) {
+            throw new CloudTasksException('The given OpenID token is not valid');
+        }
+
+        if ($openIdToken->exp < time()) {
+            throw new CloudTasksException('The given OpenID token has expired');
         }
     }
 

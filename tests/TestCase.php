@@ -37,6 +37,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'project' => 'test-project',
             'location' => 'europe-west6',
             'handler' => 'https://localhost/my-handler',
+            'service_account_email' => 'info@stackkit.io',
         ]);
     }
 

@@ -2,7 +2,9 @@
 
 namespace Tests;
 
+use Firebase\JWT\JWT;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Mail;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
@@ -17,78 +19,37 @@ class TaskHandlerTest extends TestCase
 
     private $client;
 
+    private $jwt;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->client = \Mockery::mock(CloudTasksClient::class)->makePartial();
-        $this->handler = new TaskHandler(
+
+        $this->jwt = \Mockery::mock(JWT::class)->makePartial();
+
+        $this->handler = \Mockery::mock(new TaskHandler(
             $this->client,
-            request()
-        );
+            request(),
+            new Client(),
+            $this->jwt
+        ))->shouldAllowMockingProtectedMethods();
+        $this->app->instance(TaskHandler::class, $this->handler);
+
+        $this->jwt->shouldReceive('decode')->andReturnNull();
+        $this->handler->shouldReceive('authorizeRequest')->andReturnNull();
     }
 
     /** @test */
-    public function it_needs_a_task_name_header()
+    public function it_needs_an_authorization_header()
     {
         $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('Missing [X-Cloudtasks-Taskname] header');
-
-        $this->handler->handle();
-    }
-
-    /** @test */
-    public function it_needs_a_queue_name_header()
-    {
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('Missing [X-Cloudtasks-Queuename] header');
-
-        request()->headers->add(['X-Cloudtasks-Taskname' => 'test']);
-        $this->handler->handle();
-    }
-
-    /** @test */
-    public function it_needs_a_stackkit_auth_token_header()
-    {
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('Missing [X-Stackkit-Auth-Token] header');
+        $this->expectExceptionMessage('Missing [Authorization] header');
 
         request()->headers->add(['X-Cloudtasks-Taskname' => 'test']);
         request()->headers->add(['X-Cloudtasks-Queuename' => 'test']);
         $this->handler->handle();
-    }
-
-    /** @test */
-    public function it_will_check_if_the_incoming_task_exists()
-    {
-        request()->headers->add(['X-Cloudtasks-Taskname' => 'test']);
-        request()->headers->add(['X-Cloudtasks-Queuename' => 'test']);
-        request()->headers->add(['X-Stackkit-Auth-Token' => encrypt('test')]);
-
-        Mail::fake();
-
-        $this->client
-            ->shouldReceive('getTask')
-            ->once()
-            ->with('projects/test-project/locations/europe-west6/queues/test/tasks/test')
-            ->andReturnNull();
-
-        $this->handler->handle(json_decode(file_get_contents(__DIR__ . '/Support/test-job-payload.json'), true));
-    }
-
-    /** @test */
-    public function it_will_check_the_auth_token()
-    {
-        request()->headers->add(['X-Cloudtasks-Taskname' => 'test']);
-        request()->headers->add(['X-Cloudtasks-Queuename' => 'test']);
-        request()->headers->add(['X-Stackkit-Auth-Token' => encrypt('does not match the task name')]);
-
-        $this->client->shouldReceive('getTask')->andReturnNull();
-
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('Auth token is not valid');
-
-        $this->handler->handle(json_decode(file_get_contents(__DIR__ . '/Support/test-job-payload.json'), true));
     }
 
     /** @test */
@@ -98,7 +59,7 @@ class TaskHandlerTest extends TestCase
 
         request()->headers->add(['X-Cloudtasks-Taskname' => 'test']);
         request()->headers->add(['X-Cloudtasks-Queuename' => 'test']);
-        request()->headers->add(['X-Stackkit-Auth-Token' => encrypt('test')]);
+        request()->headers->add(['Authorization' => 'Bearer 123']);
 
         $this->client->shouldReceive('getTask')->andReturnNull();
 
