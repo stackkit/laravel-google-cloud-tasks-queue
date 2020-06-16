@@ -85,7 +85,7 @@ class TaskHandler
             throw new CloudTasksException('Could not read incoming task');
         }
 
-        $task = json_decode($input, true, JSON_THROW_ON_ERROR);
+        $task = json_decode($input, true);
 
         if (is_null($task)) {
             throw new CloudTasksException('Could not decode incoming task');
