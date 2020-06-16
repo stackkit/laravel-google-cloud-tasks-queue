@@ -1,6 +1,17 @@
+<p align="center">
+  <img src="/logo.png" width="400">
+</p>
+<p align="center">
+<img src="https://github.com/stackkit/laravel-google-cloud-tasks-queue/workflows/Run%20tests/badge.svg?branch=master" alt="Build Status">
+<a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/v/stable.svg" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/license.svg" alt="License"></a>
+</p>
+
 # Introduction
 
 This package allows you to use Google Cloud Tasks as your queue driver.
+
+**This is a WIP package, use at own risk**
 
 # How it works [!]
 
@@ -16,6 +27,20 @@ Please read the following resource on how to correctly configure your queue so y
 https://cloud.google.com/tasks/docs/configuring-queues
 
 This package uses the HTTP request handler and doesnt' support AppEngine yet. But feel free to contribute! I myself don't use AppEngine.
+
+# Requirements
+
+This package requires Laravel 5.6 or higher.
+
+Please check the table below for supported Laravel and PHP versions:
+
+|Laravel Version| PHP Version |
+|---|---|
+| 5.6 | 7.2 or 7.3
+| 5.7 | 7.2 or 7.3
+| 5.8 | 7.2 or 7.3 or 7.4
+| 6.x | 7.2 or 7.3 or 7.4
+| 7.x | 7.2 or 7.3 or 7.4
 
 # Installation
 
