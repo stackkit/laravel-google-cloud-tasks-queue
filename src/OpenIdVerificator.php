@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use phpseclib\Crypt\RSA;
 use phpseclib\Math\BigInteger;
 
-class GooglePublicKey
+class OpenIdVerificator
 {
     private const V3_CERTS = 'GOOGLE_V3_CERTS';
     private const URL_OPENID_CONFIG = 'https://accounts.google.com/.well-known/openid-configuration';
@@ -24,7 +24,7 @@ class GooglePublicKey
         $this->rsa = $rsa;
     }
 
-    public function get($kid = null)
+    public function getPublicKey($kid = null)
     {
         $v3Certs = Cache::rememberForever(self::V3_CERTS, function () {
             return $this->getv3Certs();
@@ -52,7 +52,7 @@ class GooglePublicKey
         return $this->rsa->getPublicKey();
     }
 
-    public function getKid($openIdToken)
+    public function getKidFromOpenIdToken($openIdToken)
     {
         return $this->callApiAndReturnValue(self::URL_TOKEN_INFO . '?id_token=' . $openIdToken, 'kid');
     }

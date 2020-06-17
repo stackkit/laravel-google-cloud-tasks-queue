@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Mail;
 use Mockery;
 use phpseclib\Crypt\RSA;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
-use Stackkit\LaravelGoogleCloudTasksQueue\GooglePublicKey;
+use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\TestMailable;
 
@@ -40,9 +40,9 @@ class TaskHandlerTest extends TestCase
         ])->byDefault();
 
         // Ensure we don't fetch the Google public key each test...
-        $googlePublicKey = Mockery::mock(app(GooglePublicKey::class));
-        $googlePublicKey->shouldReceive('get')->andReturnNull();
-        $googlePublicKey->shouldReceive('getKid')->andReturnNull();
+        $googlePublicKey = Mockery::mock(app(OpenIdVerificator::class));
+        $googlePublicKey->shouldReceive('getPublicKey')->andReturnNull();
+        $googlePublicKey->shouldReceive('getKidFromOpenIdToken')->andReturnNull();
 
         $this->handler = new TaskHandler(
             new CloudTasksClient([

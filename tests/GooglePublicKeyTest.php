@@ -6,12 +6,12 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use phpseclib\Crypt\RSA;
-use Stackkit\LaravelGoogleCloudTasksQueue\GooglePublicKey;
+use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 
 class GooglePublicKeyTest extends TestCase
 {
     /**
-     * @var GooglePublicKey
+     * @var OpenIdVerificator
      */
     private $publicKey;
 
@@ -26,13 +26,13 @@ class GooglePublicKeyTest extends TestCase
 
         $this->guzzle = Mockery::mock(new Client());
 
-        $this->publicKey = new GooglePublicKey($this->guzzle, new RSA());
+        $this->publicKey = new OpenIdVerificator($this->guzzle, new RSA());
     }
 
     /** @test */
     public function it_fetches_the_gcloud_public_key()
     {
-        $this->assertStringContainsString('-----BEGIN PUBLIC KEY-----', $this->publicKey->get());
+        $this->assertStringContainsString('-----BEGIN PUBLIC KEY-----', $this->publicKey->getPublicKey());
     }
 
     /** @test */
@@ -40,7 +40,7 @@ class GooglePublicKeyTest extends TestCase
     {
         $this->assertFalse($this->publicKey->isCached());
 
-        $this->publicKey->get();
+        $this->publicKey->getPublicKey();
 
         $this->assertTrue($this->publicKey->isCached());
     }
@@ -48,9 +48,9 @@ class GooglePublicKeyTest extends TestCase
     /** @test */
     public function it_will_return_the_cached_gcloud_public_key()
     {
-        $this->publicKey->get();
+        $this->publicKey->getPublicKey();
 
-        $this->publicKey->get();
+        $this->publicKey->getPublicKey();
 
         $this->guzzle->shouldHaveReceived('get')->twice();
     }

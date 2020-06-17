@@ -15,7 +15,7 @@ class TaskHandler
     private $jwt;
     private $publicKey;
 
-    public function __construct(CloudTasksClient $client, Request $request, JWT $jwt, GooglePublicKey $publicKey)
+    public function __construct(CloudTasksClient $client, Request $request, JWT $jwt, OpenIdVerificator $publicKey)
     {
         $this->client = $client;
         $this->request = $request;
@@ -46,8 +46,8 @@ class TaskHandler
         }
 
         $openIdToken = $this->request->bearerToken();
-        $kid = $this->publicKey->getKid($openIdToken);
-        $publicKey = $this->publicKey->get($kid);
+        $kid = $this->publicKey->getKidFromOpenIdToken($openIdToken);
+        $publicKey = $this->publicKey->getPublicKey($kid);
 
         $decodedToken = $this->jwt->decode($openIdToken, $publicKey, ['RS256']);
 
