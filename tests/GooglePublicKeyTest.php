@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use phpseclib\Crypt\RSA;
@@ -14,11 +15,18 @@ class GooglePublicKeyTest extends TestCase
      */
     private $publicKey;
 
+    /**
+     * @var Client
+     */
+    private $guzzle;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->publicKey = app(GooglePublicKey::class);
+        $this->guzzle = Mockery::mock(new Client());
+
+        $this->publicKey = new GooglePublicKey($this->guzzle);
     }
 
     /** @test */
@@ -40,12 +48,10 @@ class GooglePublicKeyTest extends TestCase
     /** @test */
     public function it_will_return_the_cached_gcloud_public_key()
     {
-        $this->app->instance(RSA::class, ($rsa = Mockery::mock(new RSA())->byDefault()));
-
         $this->publicKey->get();
 
         $this->publicKey->get();
 
-        $rsa->shouldHaveReceived('loadKey')->once();
+        $this->guzzle->shouldHaveReceived('get')->twice();
     }
 }

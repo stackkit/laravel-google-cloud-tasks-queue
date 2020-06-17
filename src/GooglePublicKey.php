@@ -20,23 +20,31 @@ class GooglePublicKey
         $this->guzzle = $guzzle;
     }
 
-    public function get()
+    public function get($kid = null)
     {
-        return Cache::rememberForever(self::CACHE_KEY, function () {
-            return $this->fetch();
-        });
+        $v3Certs = Cache::rememberForever(
+            self::CACHE_KEY,
+            function () {
+                return $this->getv3Certs();
+            }
+        );
+
+        $cert = $kid ? collect($v3Certs)->firstWhere('kid', '=', $kid) : $v3Certs[0];
+
+        return $this->extractPublicKeyFromCertificate($cert);
     }
 
-    private function fetch()
+    private function getv3Certs()
     {
         $jwksUri = $this->getJwksUri();
 
-        $keys = $this->getCertificateKeys($jwksUri);
+        return $this->getCertificateKeys($jwksUri);
+    }
 
-        $firstKey = $keys[1];
-
-        $modulus = $firstKey['n'];
-        $exponent = $firstKey['e'];
+    private function extractPublicKeyFromCertificate($certificate)
+    {
+        $modulus = $certificate['n'];
+        $exponent = $certificate['e'];
 
         $rsa = app(RSA::class);
 
@@ -70,6 +78,15 @@ class GooglePublicKey
         $certificates = json_decode($json->getBody(), true);
 
         return Arr::get($certificates, 'keys');
+    }
+
+    public function getKid($openIdToken)
+    {
+        $response = $this->guzzle->get('https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=' . $openIdToken);
+
+        $tokenInfo = json_decode($response->getBody(), true);
+
+        return Arr::get($tokenInfo, 'kid');
     }
 
     public function isCached()

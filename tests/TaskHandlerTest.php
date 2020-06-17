@@ -42,6 +42,7 @@ class TaskHandlerTest extends TestCase
         // Ensure we don't fetch the Google public key each test...
         $googlePublicKey = Mockery::mock(app(GooglePublicKey::class));
         $googlePublicKey->shouldReceive('get')->andReturnNull();
+        $googlePublicKey->shouldReceive('getKid')->andReturnNull();
 
         $this->handler = new TaskHandler(
             new CloudTasksClient([
