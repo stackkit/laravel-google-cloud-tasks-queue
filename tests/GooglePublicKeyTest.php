@@ -26,7 +26,7 @@ class GooglePublicKeyTest extends TestCase
 
         $this->guzzle = Mockery::mock(new Client());
 
-        $this->publicKey = new GooglePublicKey($this->guzzle);
+        $this->publicKey = new GooglePublicKey($this->guzzle, new RSA());
     }
 
     /** @test */

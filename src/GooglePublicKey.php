@@ -11,23 +11,24 @@ use phpseclib\Math\BigInteger;
 
 class GooglePublicKey
 {
-    private const CACHE_KEY = 'GooglePublicKey';
+    private const V3_CERTS = 'GOOGLE_V3_CERTS';
+    private const URL_OPENID_CONFIG = 'https://accounts.google.com/.well-known/openid-configuration';
+    private const URL_TOKEN_INFO = 'https://www.googleapis.com/oauth2/v3/tokeninfo';
 
     private $guzzle;
+    private $rsa;
 
-    public function __construct(Client $guzzle)
+    public function __construct(Client $guzzle, RSA $rsa)
     {
         $this->guzzle = $guzzle;
+        $this->rsa = $rsa;
     }
 
     public function get($kid = null)
     {
-        $v3Certs = Cache::rememberForever(
-            self::CACHE_KEY,
-            function () {
-                return $this->getv3Certs();
-            }
-        );
+        $v3Certs = Cache::rememberForever(self::V3_CERTS, function () {
+            return $this->getv3Certs();
+        });
 
         $cert = $kid ? collect($v3Certs)->firstWhere('kid', '=', $kid) : $v3Certs[0];
 
@@ -36,61 +37,37 @@ class GooglePublicKey
 
     private function getv3Certs()
     {
-        $jwksUri = $this->getJwksUri();
+        $jwksUri =  $this->callApiAndReturnValue(self::URL_OPENID_CONFIG, 'jwks_uri');
 
-        return $this->getCertificateKeys($jwksUri);
+        return $this->callApiAndReturnValue($jwksUri, 'keys');
     }
 
     private function extractPublicKeyFromCertificate($certificate)
     {
-        $modulus = $certificate['n'];
-        $exponent = $certificate['e'];
+        $modulus = new BigInteger(JWT::urlsafeB64Decode($certificate['n']), 256);
+        $exponent = new BigInteger(JWT::urlsafeB64Decode($certificate['e']), 256);
 
-        $rsa = app(RSA::class);
+        $this->rsa->loadKey(compact('modulus', 'exponent'));
 
-        $modulus = new BigInteger(JWT::urlsafeB64Decode($modulus), 256);
-        $exponent = new BigInteger(JWT::urlsafeB64Decode($exponent), 256);
-
-        $rsa->loadKey([
-            'n' => $modulus,
-            'e' => $exponent
-        ]);
-        $rsa->setPublicKey();
-
-        return $rsa->getPublicKey();
-    }
-
-    private function getJwksUri()
-    {
-        $discoveryEndpoint = 'https://accounts.google.com/.well-known/openid-configuration';
-
-        $configurationJson = $this->guzzle->get($discoveryEndpoint);
-
-        $configurations = json_decode($configurationJson->getBody(), true);
-
-        return Arr::get($configurations, 'jwks_uri');
-    }
-
-    private function getCertificateKeys($jwksUri)
-    {
-        $json = $this->guzzle->get($jwksUri);
-
-        $certificates = json_decode($json->getBody(), true);
-
-        return Arr::get($certificates, 'keys');
+        return $this->rsa->getPublicKey();
     }
 
     public function getKid($openIdToken)
     {
-        $response = $this->guzzle->get('https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=' . $openIdToken);
+        return $this->callApiAndReturnValue(self::URL_TOKEN_INFO . '?id_token=' . $openIdToken, 'kid');
+    }
 
-        $tokenInfo = json_decode($response->getBody(), true);
+    private function callApiAndReturnValue($url, $value)
+    {
+        $response = $this->guzzle->get($url);
 
-        return Arr::get($tokenInfo, 'kid');
+        $data = json_decode($response->getBody(), true);
+
+        return Arr::get($data, $value);
     }
 
     public function isCached()
     {
-        return Cache::has(self::CACHE_KEY);
+        return Cache::has(self::V3_CERTS);
     }
 }
