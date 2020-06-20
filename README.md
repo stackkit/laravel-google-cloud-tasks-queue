@@ -83,7 +83,8 @@ Please check the table below on what the values mean and what their value should
 |`STACKKIT_CLOUD_TASKS_LOCATION`|The region where the AppEngine is hosted|`europe-west6`
 |`STACKKIT_CLOUD_TASKS_HANDLER`|The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app with the `handle-task` path added|`https://<your website>.com/handle-task`
 |`STACKKIT_CLOUD_TASKS_QUEUE`|The queue a job will be added to|`emails`
-|`STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`|The emailaddress of the AppEngine service account. Important, it should have the *Cloud Tasks Enqueuer* role|`my-service-account@appspot.gserviceaccount.com`
+|`STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`|The email address of the AppEngine service account. Important, it should have the *Cloud Tasks Enqueuer* role. This is used for securing the handler.|`my-service-account@appspot.gserviceaccount.com`
+
 # Configuring the queue
 
 When you first create a queue using `gcloud tasks queues create`, the default settings will look something like this:
@@ -141,3 +142,13 @@ gcloud tasks queues update [QUEUE_ID] --max-concurrent-dispatches=1
 More information on configuring queues:
 
 https://cloud.google.com/tasks/docs/configuring-queues
+
+# Security
+
+The job handler requires each request to have an OpenID token. In the installation step we set the service account email, and with that service account, Cloud Tasks will generate an OpenID token and send it along with the job payload to the handler.
+
+This package verifies that the token is digitally signed by Google. Only Google Tasks will be able to call your handler.
+
+More information about OpenID Connect:
+
+https://developers.google.com/identity/protocols/oauth2/openid-connect
