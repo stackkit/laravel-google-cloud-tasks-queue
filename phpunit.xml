@@ -22,6 +22,7 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="MAIL_DRIVER" value="log"/>
         <env name="QUEUE_DRIVER" value="cloudtasks"/>
+        <env name="GOOGLE_APPLICATION_CREDENTIALS" value="./tests/Support/gcloud-key-valid.json" />
     </php>
 
     <filter>
