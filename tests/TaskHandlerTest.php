@@ -45,9 +45,7 @@ class TaskHandlerTest extends TestCase
         $googlePublicKey->shouldReceive('getKidFromOpenIdToken')->andReturnNull();
 
         $this->handler = new TaskHandler(
-            new CloudTasksClient([
-                'credentials' => __DIR__ . '/Support/gcloud-key-valid.json'
-            ]),
+            new CloudTasksClient(),
             request(),
             $this->jwt,
             $googlePublicKey

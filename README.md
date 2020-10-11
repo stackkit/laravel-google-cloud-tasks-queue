@@ -52,7 +52,6 @@ composer require stackkit/laravel-google-cloud-tasks-queue
 ```
 'cloudtasks' => [
     'driver' => 'cloudtasks',
-    'credentials' => base_path('gcloud-key.json'),
     'project' => env('STACKKIT_CLOUD_TASKS_PROJECT', ''),
     'location' => env('STACKKIT_CLOUD_TASKS_LOCATION', ''),
     'handler' => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),

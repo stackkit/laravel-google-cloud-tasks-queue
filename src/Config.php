@@ -33,14 +33,6 @@ class Config
 
     public static function validate(array $config)
     {
-        if (empty($config['credentials'])) {
-            throw new Error(Errors::invalidCredentials());
-        }
-
-        if (!file_exists($config['credentials'])) {
-            throw new Error(Errors::credentialsFileDoesNotExist());
-        }
-
         if (empty($config['project'])) {
             throw new Error(Errors::invalidProject());
         }

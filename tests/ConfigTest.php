@@ -9,28 +9,6 @@ use Tests\Support\SimpleJob;
 class ConfigTest extends TestCase
 {
     /** @test */
-    public function credentials_are_required()
-    {
-        $this->setConfigValue('credentials', '');
-
-        $this->expectException(Error::class);
-        $this->expectExceptionMessage(Errors::invalidCredentials());
-
-        SimpleJob::dispatch();
-    }
-
-    /** @test */
-    public function credentials_file_must_exist()
-    {
-        $this->setConfigValue('credentials', 'doesnotexist.json');
-
-        $this->expectException(Error::class);
-        $this->expectExceptionMessage(Errors::credentialsFileDoesNotExist());
-
-        SimpleJob::dispatch();
-    }
-
-    /** @test */
     public function project_is_required()
     {
         $this->setConfigValue('project', '');

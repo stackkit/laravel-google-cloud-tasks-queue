@@ -32,7 +32,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('queue.default', 'cloudtasks');
         $app['config']->set('queue.connections.cloudtasks', [
             'driver' => 'cloudtasks',
-            'credentials' => __DIR__ . '/Support/gcloud-key-valid.json',
             'queue' => 'test-queue',
             'project' => 'test-project',
             'location' => 'europe-west6',
