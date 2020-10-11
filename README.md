@@ -85,6 +85,12 @@ Please check the table below on what the values mean and what their value should
 |`STACKKIT_CLOUD_TASKS_QUEUE`|The queue a job will be added to|`emails`
 |`STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`|The email address of the AppEngine service account. Important, it should have the *Cloud Tasks Enqueuer* role. This is used for securing the handler.|`my-service-account@appspot.gserviceaccount.com`
 
+# Authentication
+
+Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the credentials file.
+
+More info: https://cloud.google.com/docs/authentication/production
+
 # Configuring the queue
 
 When you first create a queue using `gcloud tasks queues create`, the default settings will look something like this:
