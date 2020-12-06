@@ -2,7 +2,9 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Carbon\Carbon;
 use Firebase\JWT\JWT;
+use Firebase\JWT\SignatureInvalidException;
 use GuzzleHttp\Client;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -17,25 +19,50 @@ class OpenIdVerificator
 
     private $guzzle;
     private $rsa;
+    private $jwt;
+    private $maxAge = [];
 
-    public function __construct(Client $guzzle, RSA $rsa)
+    public function __construct(Client $guzzle, RSA $rsa, JWT $jwt)
     {
         $this->guzzle = $guzzle;
         $this->rsa = $rsa;
+        $this->jwt = $jwt;
+    }
+
+    public function decodeOpenIdToken($openIdToken, $kid, $cache = true)
+    {
+        if (!$cache) {
+            $this->forgetFromCache();
+        }
+
+        $publicKey = $this->getPublicKey($kid);
+
+        try {
+            return $this->jwt->decode($openIdToken, $publicKey, ['RS256']);
+        } catch (SignatureInvalidException $e) {
+            if (!$cache) {
+                throw $e;
+            }
+
+            return $this->decodeOpenIdToken($openIdToken, $kid, false);
+        }
     }
 
     public function getPublicKey($kid = null)
     {
-        $v3Certs = Cache::rememberForever(self::V3_CERTS, function () {
-            return $this->getv3Certs();
-        });
+        if (Cache::has(self::V3_CERTS)) {
+            $v3Certs = Cache::get(self::V3_CERTS);
+        } else {
+            $v3Certs = $this->getFreshCertificates();
+            Cache::put(self::V3_CERTS, $v3Certs, Carbon::now()->addSeconds($this->maxAge[self::URL_OPENID_CONFIG]));
+        }
 
         $cert = $kid ? collect($v3Certs)->firstWhere('kid', '=', $kid) : $v3Certs[0];
 
         return $this->extractPublicKeyFromCertificate($cert);
     }
 
-    private function getv3Certs()
+    private function getFreshCertificates()
     {
         $jwksUri =  $this->callApiAndReturnValue(self::URL_OPENID_CONFIG, 'jwks_uri');
 
@@ -63,11 +90,24 @@ class OpenIdVerificator
 
         $data = json_decode($response->getBody(), true);
 
+        $maxAge = 0;
+        foreach ($response->getHeader('Cache-Control') as $line) {
+            preg_match('/max-age=(\d+)/', $line, $matches);
+            $maxAge = isset($matches[1]) ? (int) $matches[1] : 0;
+        }
+
+        $this->maxAge[$url] = $maxAge;
+
         return Arr::get($data, $value);
     }
 
     public function isCached()
     {
         return Cache::has(self::V3_CERTS);
+    }
+
+    public function forgetFromCache()
+    {
+        Cache::forget(self::V3_CERTS);
     }
 }

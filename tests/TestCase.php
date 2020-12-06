@@ -2,6 +2,8 @@
 
 namespace Tests;
 
+use Illuminate\Support\Facades\Artisan;
+
 class TestCase extends \Orchestra\Testbench\TestCase
 {
     /**
@@ -29,6 +31,11 @@ class TestCase extends \Orchestra\Testbench\TestCase
      */
     protected function getEnvironmentSetUp($app)
     {
+        foreach (glob(storage_path('framework/cache/data/*/*/*')) as $file) {
+            unlink($file);
+        }
+
+        $app['config']->set('cache.default', 'file');
         $app['config']->set('queue.default', 'cloudtasks');
         $app['config']->set('queue.connections.cloudtasks', [
             'driver' => 'cloudtasks',

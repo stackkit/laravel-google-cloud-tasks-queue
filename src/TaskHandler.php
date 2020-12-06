@@ -47,9 +47,8 @@ class TaskHandler
 
         $openIdToken = $this->request->bearerToken();
         $kid = $this->publicKey->getKidFromOpenIdToken($openIdToken);
-        $publicKey = $this->publicKey->getPublicKey($kid);
 
-        $decodedToken = $this->jwt->decode($openIdToken, $publicKey, ['RS256']);
+        $decodedToken = $this->publicKey->decodeOpenIdToken($openIdToken, $kid);
 
         $this->validateToken($decodedToken);
     }

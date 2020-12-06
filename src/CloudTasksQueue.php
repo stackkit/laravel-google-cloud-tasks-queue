@@ -11,7 +11,6 @@ use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\InteractsWithTime;
-use Illuminate\Support\Str;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
