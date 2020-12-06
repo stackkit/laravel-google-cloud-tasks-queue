@@ -70,4 +70,9 @@ class OpenIdVerificator
     {
         return Cache::has(self::V3_CERTS);
     }
+
+    public function forgetFromCache()
+    {
+        Cache::forget(self::V3_CERTS);
+    }
 }
