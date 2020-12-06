@@ -17,6 +17,7 @@ class OpenIdVerificator
 
     private $guzzle;
     private $rsa;
+    private $maxAge = [];
 
     public function __construct(Client $guzzle, RSA $rsa)
     {
@@ -26,9 +27,12 @@ class OpenIdVerificator
 
     public function getPublicKey($kid = null)
     {
-        $v3Certs = Cache::rememberForever(self::V3_CERTS, function () {
-            return $this->getv3Certs();
-        });
+        if (Cache::has(self::V3_CERTS)) {
+            $v3Certs = Cache::get(self::V3_CERTS);
+        } else {
+            $v3Certs = $this->getv3Certs();
+            Cache::put(self::V3_CERTS, $v3Certs, $this->maxAge[self::URL_OPENID_CONFIG]);
+        }
 
         $cert = $kid ? collect($v3Certs)->firstWhere('kid', '=', $kid) : $v3Certs[0];
 
@@ -62,6 +66,14 @@ class OpenIdVerificator
         $response = $this->guzzle->get($url);
 
         $data = json_decode($response->getBody(), true);
+
+        $maxAge = 0;
+        foreach ($response->getHeader('Cache-Control') as $line) {
+            preg_match('/max-age=(\d+)/', $line, $matches);
+            $maxAge = isset($matches[1]) ? (int) $matches[1] : 0;
+        }
+
+        $this->maxAge[$url] = $maxAge;
 
         return Arr::get($data, $value);
     }
