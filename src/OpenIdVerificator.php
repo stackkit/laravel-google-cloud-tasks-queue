@@ -3,6 +3,7 @@
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Firebase\JWT\JWT;
+use Firebase\JWT\SignatureInvalidException;
 use GuzzleHttp\Client;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -17,12 +18,33 @@ class OpenIdVerificator
 
     private $guzzle;
     private $rsa;
+    private $jwt;
     private $maxAge = [];
 
-    public function __construct(Client $guzzle, RSA $rsa)
+    public function __construct(Client $guzzle, RSA $rsa, JWT $jwt)
     {
         $this->guzzle = $guzzle;
         $this->rsa = $rsa;
+        $this->jwt = $jwt;
+    }
+
+    public function decodeOpenIdToken($openIdToken, $kid, $cache = true)
+    {
+        if (!$cache) {
+            $this->forgetFromCache();
+        }
+
+        $publicKey = $this->getPublicKey($kid);
+
+        try {
+            return $this->jwt->decode($openIdToken, $publicKey, ['RS256']);
+        } catch (SignatureInvalidException $e) {
+            if (!$cache) {
+                throw $e;
+            }
+
+            return $this->decodeOpenIdToken($openIdToken, $kid, false);
+        }
     }
 
     public function getPublicKey($kid = null)

@@ -2,13 +2,11 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Firebase\JWT\SignatureInvalidException;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
 use Firebase\JWT\JWT;
-use Illuminate\Support\Facades\Cache;
 
 class TaskHandler
 {
@@ -50,28 +48,9 @@ class TaskHandler
         $openIdToken = $this->request->bearerToken();
         $kid = $this->publicKey->getKidFromOpenIdToken($openIdToken);
 
-        $decodedToken = $this->decodeOpenIdToken($openIdToken, $kid);
+        $decodedToken = $this->publicKey->decodeOpenIdToken($openIdToken, $kid);
 
         $this->validateToken($decodedToken);
-    }
-
-    private function decodeOpenIdToken($openIdToken, $kid, $cache = true)
-    {
-        if (!$cache) {
-            $this->publicKey->forgetFromCache();
-        }
-
-        $publicKey = $this->publicKey->getPublicKey($kid);
-
-        try {
-            return $this->jwt->decode($openIdToken, $publicKey, ['RS256']);
-        } catch (SignatureInvalidException $e) {
-            if (!$cache) {
-                throw $e;
-            }
-
-            return $this->decodeOpenIdToken($openIdToken, $kid, false);
-        }
     }
 
     /**
