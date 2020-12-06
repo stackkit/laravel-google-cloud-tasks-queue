@@ -74,22 +74,17 @@ class GooglePublicKeyTest extends TestCase
         Event::fake();
 
         $this->publicKey->getPublicKey();
-        Event::assertDispatched(CacheMissed::class);
-        Event::assertDispatched(KeyWritten::class);
-        Event::fake(); // reset
 
         $this->publicKey->getPublicKey();
-        Event::assertDispatched(CacheHit::class);
-        Event::fake(); // reset
 
         Carbon::setTestNow(Carbon::now()->addSeconds(3600));
         $this->publicKey->getPublicKey();
-        Event::assertDispatched(CacheHit::class);
-        Event::fake(); // reset
 
         Carbon::setTestNow(Carbon::now()->addSeconds(1));
         $this->publicKey->getPublicKey();
-        Event::assertDispatched(CacheMissed::class);
-        Event::assertDispatched(KeyWritten::class);
+
+        Event::assertDispatched(CacheMissed::class, 2);
+        Event::assertDispatched(KeyWritten::class, 2);
+
     }
 }
