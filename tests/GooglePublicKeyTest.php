@@ -80,7 +80,7 @@ class GooglePublicKeyTest extends TestCase
         Carbon::setTestNow(Carbon::now()->addSeconds(3600));
         $this->publicKey->getPublicKey();
 
-        Carbon::setTestNow(Carbon::now()->addSeconds(1));
+        Carbon::setTestNow(Carbon::now()->addSeconds(5));
         $this->publicKey->getPublicKey();
 
         Event::assertDispatched(CacheMissed::class, 2);
