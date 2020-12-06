@@ -4,16 +4,6 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 class Errors
 {
-    public static function invalidCredentials()
-    {
-        return 'Google Cloud credentials not provided. To fix this, in config/queue.php, connections.cloudtasks.credentials, provide the path to your credentials JSON file';
-    }
-
-    public static function credentialsFileDoesNotExist()
-    {
-        return 'Google Cloud credentials JSON file does not exist';
-    }
-
     public static function invalidProject()
     {
         return 'Google Cloud project not provided. To fix this, set the STACKKIT_CLOUD_TASKS_PROJECT environment variable';
