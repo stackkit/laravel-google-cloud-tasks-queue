@@ -3,12 +3,13 @@
 namespace Tests;
 
 use Firebase\JWT\JWT;
+use Firebase\JWT\SignatureInvalidException;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
-use GuzzleHttp\Client;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Events\KeyWritten;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
-use phpseclib\Crypt\RSA;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
@@ -114,6 +115,21 @@ class TaskHandlerTest extends TestCase
         $this->expectException(CloudTasksException::class);
         $this->expectExceptionMessage('The given OpenID token has expired');
         $this->handler->handle($this->simpleJob());
+    }
+
+    /** @test */
+    public function in_case_of_signature_verification_failure_it_will_retry()
+    {
+        Event::fake();
+
+        $this->jwt->shouldReceive('decode')->andThrow(SignatureInvalidException::class);
+
+        $this->expectException(SignatureInvalidException::class);
+
+        $this->handler->handle($this->simpleJob());
+
+        Event::assertDispatched(CacheHit::class);
+        Event::assertDispatched(KeyWritten::class);
     }
 
     /** @test */
