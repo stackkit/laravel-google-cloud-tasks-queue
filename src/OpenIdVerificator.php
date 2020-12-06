@@ -53,7 +53,7 @@ class OpenIdVerificator
         if (Cache::has(self::V3_CERTS)) {
             $v3Certs = Cache::get(self::V3_CERTS);
         } else {
-            $v3Certs = $this->getv3Certs();
+            $v3Certs = $this->getFreshCertificates();
             Cache::put(self::V3_CERTS, $v3Certs, Carbon::now()->addSeconds($this->maxAge[self::URL_OPENID_CONFIG]));
         }
 
@@ -62,7 +62,7 @@ class OpenIdVerificator
         return $this->extractPublicKeyFromCertificate($cert);
     }
 
-    private function getv3Certs()
+    private function getFreshCertificates()
     {
         $jwksUri =  $this->callApiAndReturnValue(self::URL_OPENID_CONFIG, 'jwks_uri');
 
