@@ -2,6 +2,7 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Carbon\Carbon;
 use Firebase\JWT\JWT;
 use Firebase\JWT\SignatureInvalidException;
 use GuzzleHttp\Client;
@@ -53,7 +54,7 @@ class OpenIdVerificator
             $v3Certs = Cache::get(self::V3_CERTS);
         } else {
             $v3Certs = $this->getv3Certs();
-            Cache::put(self::V3_CERTS, $v3Certs, $this->maxAge[self::URL_OPENID_CONFIG]);
+            Cache::put(self::V3_CERTS, $v3Certs, Carbon::now()->addSeconds($this->maxAge[self::URL_OPENID_CONFIG]));
         }
 
         $cert = $kid ? collect($v3Certs)->firstWhere('kid', '=', $kid) : $v3Certs[0];
