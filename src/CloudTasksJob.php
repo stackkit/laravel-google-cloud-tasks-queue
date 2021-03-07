@@ -10,11 +10,11 @@ class CloudTasksJob extends LaravelJob implements JobContract
 {
     private $job;
     private $attempts;
+    private $maxTries;
 
-    public function __construct($job, $attempts)
+    public function __construct($job)
     {
         $this->job = $job;
-        $this->attempts = $attempts;
         $this->container = Container::getInstance();
     }
 
@@ -31,5 +31,25 @@ class CloudTasksJob extends LaravelJob implements JobContract
     public function attempts()
     {
         return $this->attempts;
+    }
+
+    public function setAttempts($attempts)
+    {
+        $this->attempts = $attempts;
+    }
+
+    public function setMaxTries($maxTries)
+    {
+        $this->maxTries = $maxTries;
+    }
+
+    public function maxTries()
+    {
+        return $this->maxTries;
+    }
+
+    public function setQueue($queue)
+    {
+        $this->queue = $queue;
     }
 }
