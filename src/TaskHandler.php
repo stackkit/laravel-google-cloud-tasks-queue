@@ -121,11 +121,25 @@ class TaskHandler
 
         $job->setAttempts(request()->header('X-CloudTasks-TaskRetryCount') + 1);
         $job->setQueue(request()->header('X-Cloudtasks-Queuename'));
-        $job->setMaxTries(request()->header('X-Stackkit-Max-Attempts'));
+        $job->setMaxTries($this->getQueueMaxTries($job));
 
         $worker = $this->getQueueWorker();
 
         $worker->process('cloudtasks', $job, new WorkerOptions());
+    }
+
+    private function getQueueMaxTries(CloudTasksJob $job)
+    {
+        $queueName = $this->client->queueName(
+            Config::project(),
+            Config::location(),
+            $job->getQueue()
+        );
+
+        return $this->client
+            ->getQueue($queueName)
+            ->getRetryConfig()
+            ->getMaxAttempts();
     }
 
     /**

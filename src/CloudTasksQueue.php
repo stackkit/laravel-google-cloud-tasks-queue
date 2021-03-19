@@ -60,10 +60,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest->setHttpMethod(HttpMethod::POST);
         $httpRequest->setBody($payload);
 
-        $httpRequest->setHeaders([
-            'X-Stackkit-Max-Attempts' => $this->getMaxAttempts($queueName),
-        ]);
-
         $task = $this->createTask();
         $task->setHttpRequest($httpRequest);
 
@@ -102,10 +98,5 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     private function createTask()
     {
         return app(Task::class);
-    }
-
-    private function getMaxAttempts($queue)
-    {
-        return $this->client->getQueue($queue)->getRetryConfig()->getMaxAttempts();
     }
 }
