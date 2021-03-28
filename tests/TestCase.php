@@ -2,10 +2,30 @@
 
 namespace Tests;
 
-use Illuminate\Support\Facades\Artisan;
-
 class TestCase extends \Orchestra\Testbench\TestCase
 {
+    public static $migrated = false;
+
+    protected function setUp()
+    {
+        parent::setUp();
+
+        // There is probably a more sane way to do this
+        if (!static::$migrated) {
+            unlink(database_path('database.sqlite'));
+            touch(database_path('database.sqlite'));
+
+            foreach(glob(database_path('migrations/*.php')) as $file) {
+                unlink($file);
+            }
+
+            $this->artisan('queue:failed-table');
+            $this->artisan('migrate');
+
+            static::$migrated = true;
+        }
+    }
+
     /**
      * Get package providers.  At a minimum this is the package being tested, but also
      * would include packages upon which our package depends, e.g. Cartalyst/Sentry
@@ -45,6 +65,9 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'handler' => 'https://localhost/my-handler',
             'service_account_email' => 'info@stackkit.io',
         ]);
+
+        $app['config']->set('database.default', 'sqlite');
+        $app['config']->set('database.connections.sqlite.database', database_path('database.sqlite'));
     }
 
     protected function setConfigValue($key, $value)
