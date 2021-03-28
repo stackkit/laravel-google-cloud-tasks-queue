@@ -63,7 +63,6 @@ class TaskHandlerTest extends TestCase
         $this->handler = new TaskHandler(
             $cloudTasksClient,
             request(),
-            $this->jwt,
             $googlePublicKey
         );
 
@@ -184,6 +183,6 @@ class TaskHandlerTest extends TestCase
 
     private function failingJob()
     {
-        return json_decode(file_get_contents(__DIR__ . '/Support/failing-job-payload.json'), true);
+        return json_decode($this->failingJobPayload(), true);
     }
 }

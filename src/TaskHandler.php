@@ -7,20 +7,16 @@ use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
-use Firebase\JWT\JWT;
 
 class TaskHandler
 {
     private $request;
-    private $guzzle;
-    private $jwt;
     private $publicKey;
 
-    public function __construct(CloudTasksClient $client, Request $request, JWT $jwt, OpenIdVerificator $publicKey)
+    public function __construct(CloudTasksClient $client, Request $request, OpenIdVerificator $publicKey)
     {
         $this->client = $client;
         $this->request = $request;
-        $this->jwt = $jwt;
         $this->publicKey = $publicKey;
     }
 
