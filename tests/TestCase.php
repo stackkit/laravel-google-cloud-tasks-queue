@@ -6,7 +6,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
 {
     public static $migrated = false;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
