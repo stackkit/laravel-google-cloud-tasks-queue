@@ -12,7 +12,10 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         // There is probably a more sane way to do this
         if (!static::$migrated) {
-            unlink(database_path('database.sqlite'));
+            if (file_exists(database_path('database.sqlite'))) {
+                unlink(database_path('database.sqlite'));
+            }
+
             touch(database_path('database.sqlite'));
 
             foreach(glob(database_path('migrations/*.php')) as $file) {
