@@ -65,9 +65,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'handler' => 'https://localhost/my-handler',
             'service_account_email' => 'info@stackkit.io',
         ]);
-
-        $app['config']->set('database.default', 'sqlite');
-        $app['config']->set('database.connections.sqlite.database', database_path('database.sqlite'));
     }
 
     protected function setConfigValue($key, $value)
