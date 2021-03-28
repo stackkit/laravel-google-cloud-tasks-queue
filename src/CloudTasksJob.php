@@ -40,6 +40,10 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
     public function setMaxTries($maxTries)
     {
+        if ((int) $maxTries === -1) {
+            $maxTries = null;
+        }
+
         $this->maxTries = $maxTries;
     }
 
