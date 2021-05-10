@@ -67,7 +67,17 @@ composer require stackkit/laravel-google-cloud-tasks-queue
 QUEUE_CONNECTION=cloudtasks
 ```
 
-(4) Create a new Cloud Tasks queue using `gcloud`
+(4) [Laravel ^8.0 and above only] configure failed tasks to use the `database-uuids` driver in `config/queue.php`
+
+```
+'failed' => [
+    'database' => env('DB_CONNECTION', 'mysql'),
+    'table' => 'failed_jobs',
+    'driver' => 'database-uuids',
+],
+```
+
+(5) Create a new Cloud Tasks queue using `gcloud`
 
 ````bash
 gcloud tasks queues create [QUEUE_ID]
