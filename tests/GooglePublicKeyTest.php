@@ -8,7 +8,6 @@ use GuzzleHttp\Client;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Cache\Events\KeyWritten;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Mockery;
 use phpseclib\Crypt\RSA;

@@ -7,6 +7,7 @@ use Firebase\JWT\SignatureInvalidException;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\KeyWritten;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
@@ -45,10 +46,23 @@ class TaskHandlerTest extends TestCase
         $googlePublicKey->shouldReceive('getPublicKey')->andReturnNull();
         $googlePublicKey->shouldReceive('getKidFromOpenIdToken')->andReturnNull();
 
+        $cloudTasksClient = Mockery::mock(new CloudTasksClient());
+
+        // Ensure we don't fetch the Queue name and attempts each test...
+        $cloudTasksClient->shouldReceive('queueName')->andReturn('my-queue');
+        $cloudTasksClient->shouldReceive('getQueue')->andReturn(new class {
+            public function getRetryConfig() {
+                return new class {
+                    public function getMaxAttempts() {
+                        return 3;
+                    }
+                };
+            }
+        });
+
         $this->handler = new TaskHandler(
-            new CloudTasksClient(),
+            $cloudTasksClient,
             request(),
-            $this->jwt,
             $googlePublicKey
         );
 
@@ -64,21 +78,6 @@ class TaskHandlerTest extends TestCase
         $this->expectExceptionMessage('Missing [Authorization] header');
 
         $this->handler->handle();
-    }
-
-    /** @test */
-    public function the_authorization_header_must_contain_a_valid_gcloud_token()
-    {
-        request()->headers->add([
-            'Authorization' => 'Bearer 123',
-        ]);
-
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('Could not decode incoming task');
-
-        $this->handler->handle();
-
-        // @todo - test with a valid token, not sure how to do that right now
     }
 
     /** @test */
@@ -144,8 +143,46 @@ class TaskHandlerTest extends TestCase
         Mail::assertSent(TestMailable::class);
     }
 
+    /** @test */
+    public function after_max_attempts_it_will_log_to_failed_table()
+    {
+        $this->request->headers->add(['X-Cloudtasks-Queuename' => 'my-queue']);
+
+        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 1]);
+        try {
+            $this->handler->handle($this->failingJob());
+        } catch (\Throwable $e) {
+            //
+        }
+
+        $this->assertCount(0, DB::table('failed_jobs')->get());
+
+        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 2]);
+        try {
+            $this->handler->handle($this->failingJob());
+        } catch (\Throwable $e) {
+            //
+        }
+
+        $this->assertDatabaseHas('failed_jobs', [
+            'connection' => 'cloudtasks',
+            'queue' => 'my-queue',
+            'payload' => rtrim($this->failingJobPayload()),
+        ]);
+    }
+
     private function simpleJob()
     {
         return json_decode(file_get_contents(__DIR__ . '/Support/test-job-payload.json'), true);
+    }
+
+    private function failingJobPayload()
+    {
+        return file_get_contents(__DIR__ . '/Support/failing-job-payload.json');
+    }
+
+    private function failingJob()
+    {
+        return json_decode($this->failingJobPayload(), true);
     }
 }

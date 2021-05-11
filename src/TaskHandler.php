@@ -4,22 +4,19 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
-use Firebase\JWT\JWT;
 
 class TaskHandler
 {
     private $request;
-    private $guzzle;
-    private $jwt;
     private $publicKey;
 
-    public function __construct(CloudTasksClient $client, Request $request, JWT $jwt, OpenIdVerificator $publicKey)
+    public function __construct(CloudTasksClient $client, Request $request, OpenIdVerificator $publicKey)
     {
         $this->client = $client;
         $this->request = $request;
-        $this->jwt = $jwt;
         $this->publicKey = $publicKey;
     }
 
@@ -32,6 +29,8 @@ class TaskHandler
         $this->authorizeRequest();
 
         $task = $task ?: $this->captureTask();
+
+        $this->listenForEvents();
 
         $this->handleTask($task);
     }
@@ -81,7 +80,11 @@ class TaskHandler
     {
         $input = file_get_contents('php://input');
 
-        if ($input === false) {
+        if (!$input) {
+            $input = request('input') ?: false;
+        }
+
+        if (!$input) {
             throw new CloudTasksException('Could not read incoming task');
         }
 
@@ -94,17 +97,45 @@ class TaskHandler
         return $task;
     }
 
+    private function listenForEvents()
+    {
+        app('events')->listen(JobFailed::class, function ($event) {
+            app('queue.failer')->log(
+                'cloudtasks', $event->job->getQueue(),
+                $event->job->getRawBody(), $event->exception
+            );
+        });
+    }
+
     /**
      * @param $task
      * @throws CloudTasksException
      */
     private function handleTask($task)
     {
-        $job = new CloudTasksJob($task, request()->header('X-CloudTasks-TaskRetryCount'));
+        $job = new CloudTasksJob($task);
+
+        $job->setAttempts(request()->header('X-CloudTasks-TaskRetryCount') + 1);
+        $job->setQueue(request()->header('X-Cloudtasks-Queuename'));
+        $job->setMaxTries($this->getQueueMaxTries($job));
 
         $worker = $this->getQueueWorker();
 
         $worker->process('cloudtasks', $job, new WorkerOptions());
+    }
+
+    private function getQueueMaxTries(CloudTasksJob $job)
+    {
+        $queueName = $this->client->queueName(
+            Config::project(),
+            Config::location(),
+            $job->getQueue()
+        );
+
+        return $this->client
+            ->getQueue($queueName)
+            ->getRetryConfig()
+            ->getMaxAttempts();
     }
 
     /**
