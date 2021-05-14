@@ -78,11 +78,7 @@ class TaskHandler
      */
     private function captureTask()
     {
-        $input = file_get_contents('php://input');
-
-        if (!$input) {
-            $input = request('input') ?: false;
-        }
+        $input = (string) (request()->getContent());
 
         if (!$input) {
             throw new CloudTasksException('Could not read incoming task');
