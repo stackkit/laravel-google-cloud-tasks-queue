@@ -6,31 +6,6 @@ use Error;
 
 class Config
 {
-    public static function credentials($connection = 'cloudtasks')
-    {
-        return config("queue.connections.{$connection}.credentials");
-    }
-
-    public static function project($connection = 'cloudtasks')
-    {
-        return config("queue.connections.{$connection}.project");
-    }
-
-    public static function location($connection = 'cloudtasks')
-    {
-        return config("queue.connections.{$connection}.location");
-    }
-
-    public static function handler($connection = 'cloudtasks')
-    {
-        return config("queue.connections.{$connection}.handler");
-    }
-
-    public static function serviceAccountEmail($connection = 'cloudtasks')
-    {
-        return config("queue.connections.{$connection}.service_account_email");
-    }
-
     public static function validate(array $config)
     {
         if (empty($config['project'])) {

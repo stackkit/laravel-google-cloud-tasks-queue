@@ -18,11 +18,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     private $client;
     private $default;
+    private $config;
 
     public function __construct(array $config, CloudTasksClient $client)
     {
         $this->client = $client;
         $this->default = $config['queue'];
+        $this->config = $config;
     }
 
     public function size($queue = null)
@@ -52,11 +54,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     protected function pushToCloudTasks($queue, $payload, $delay = 0, $attempts = 0)
     {
         $queue = $this->getQueue($queue);
-        $queueName = $this->client->queueName(Config::project($this->connectionName), Config::location($this->connectionName), $queue);
+        $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
         $availableAt = $this->availableAt($delay);
 
         $httpRequest = $this->createHttpRequest();
-        $httpRequest->setUrl(Config::handler($this->connectionName));
+        $httpRequest->setUrl($this->config['handler']);
         $httpRequest->setHttpMethod(HttpMethod::POST);
         $httpRequest->setBody($payload);
 
@@ -64,7 +66,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $task->setHttpRequest($httpRequest);
 
         $token = new OidcToken;
-        $token->setServiceAccountEmail(Config::serviceAccountEmail($this->connectionName));
+        $token->setServiceAccountEmail($this->config['service_account_email']);
         $httpRequest->setOidcToken($token);
 
         if ($availableAt > time()) {
