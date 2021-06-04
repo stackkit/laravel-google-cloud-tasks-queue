@@ -77,7 +77,7 @@ class TaskHandlerTest extends TestCase
         $this->expectException(CloudTasksException::class);
         $this->expectExceptionMessage('Missing [Authorization] header');
 
-        $this->handler->handle();
+        $this->handler->handle($this->simpleJob());
     }
 
     /** @test */
