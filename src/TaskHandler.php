@@ -26,19 +26,22 @@ class TaskHandler
      */
     public function handle($task = null)
     {
-        $this->authorizeRequest();
-
         $task = $task ?: $this->captureTask();
 
-        $this->listenForEvents();
+        $command = unserialize($task['data']['command']);
+        $connection = $command->connection ?? 'cloudtasks';
 
-        $this->handleTask($task);
+        $this->authorizeRequest($connection);
+
+        $this->listenForEvents($connection);
+
+        $this->handleTask($connection, $task);
     }
 
     /**
      * @throws CloudTasksException
      */
-    public function authorizeRequest()
+    public function authorizeRequest($connection)
     {
         if (!$this->request->hasHeader('Authorization')) {
             throw new CloudTasksException('Missing [Authorization] header');
@@ -49,7 +52,7 @@ class TaskHandler
 
         $decodedToken = $this->publicKey->decodeOpenIdToken($openIdToken, $kid);
 
-        $this->validateToken($decodedToken);
+        $this->validateToken($connection, $decodedToken);
     }
 
     /**
@@ -58,13 +61,13 @@ class TaskHandler
      * @param $openIdToken
      * @throws CloudTasksException
      */
-    protected function validateToken($openIdToken)
+    protected function validateToken($connection, $openIdToken)
     {
         if (!in_array($openIdToken->iss, ['https://accounts.google.com', 'accounts.google.com'])) {
             throw new CloudTasksException('The given OpenID token is not valid');
         }
 
-        if ($openIdToken->aud != Config::handler()) {
+        if ($openIdToken->aud != Config::handler($connection)) {
             throw new CloudTasksException('The given OpenID token is not valid');
         }
 
@@ -93,11 +96,11 @@ class TaskHandler
         return $task;
     }
 
-    private function listenForEvents()
+    private function listenForEvents($connection)
     {
-        app('events')->listen(JobFailed::class, function ($event) {
+        app('events')->listen(JobFailed::class, function ($event) use ($connection) {
             app('queue.failer')->log(
-                'cloudtasks', $event->job->getQueue(),
+                $connection, $event->job->getQueue(),
                 $event->job->getRawBody(), $event->exception
             );
         });
@@ -107,24 +110,24 @@ class TaskHandler
      * @param $task
      * @throws CloudTasksException
      */
-    private function handleTask($task)
+    private function handleTask($connection, $task)
     {
         $job = new CloudTasksJob($task);
 
         $job->setAttempts(request()->header('X-CloudTasks-TaskRetryCount') + 1);
         $job->setQueue(request()->header('X-Cloudtasks-Queuename'));
-        $job->setMaxTries($this->getQueueMaxTries($job));
+        $job->setMaxTries($this->getQueueMaxTries($connection, $job));
 
         $worker = $this->getQueueWorker();
 
-        $worker->process('cloudtasks', $job, new WorkerOptions());
+        $worker->process($connection, $job, new WorkerOptions());
     }
 
-    private function getQueueMaxTries(CloudTasksJob $job)
+    private function getQueueMaxTries($connection, CloudTasksJob $job)
     {
         $queueName = $this->client->queueName(
-            Config::project(),
-            Config::location(),
+            Config::project($connection),
+            Config::location($connection),
             $job->getQueue()
         );
 
