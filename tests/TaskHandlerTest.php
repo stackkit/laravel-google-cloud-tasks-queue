@@ -77,7 +77,7 @@ class TaskHandlerTest extends TestCase
         $this->expectException(CloudTasksException::class);
         $this->expectExceptionMessage('Missing [Authorization] header');
 
-        $this->handler->handle();
+        $this->handler->handle($this->simpleJob());
     }
 
     /** @test */
@@ -165,7 +165,7 @@ class TaskHandlerTest extends TestCase
         }
 
         $this->assertDatabaseHas('failed_jobs', [
-            'connection' => 'cloudtasks',
+            'connection' => 'my-cloudtasks-connection',
             'queue' => 'my-queue',
             'payload' => rtrim($this->failingJobPayload()),
         ]);

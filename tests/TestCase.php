@@ -59,8 +59,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
         }
 
         $app['config']->set('cache.default', 'file');
-        $app['config']->set('queue.default', 'cloudtasks');
-        $app['config']->set('queue.connections.cloudtasks', [
+        $app['config']->set('queue.default', 'my-cloudtasks-connection');
+        $app['config']->set('queue.connections.my-cloudtasks-connection', [
             'driver' => 'cloudtasks',
             'queue' => 'test-queue',
             'project' => 'test-project',
@@ -72,6 +72,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function setConfigValue($key, $value)
     {
-        $this->app['config']->set('queue.connections.cloudtasks.' . $key, $value);
+        $this->app['config']->set('queue.connections.my-cloudtasks-connection.' . $key, $value);
     }
 }

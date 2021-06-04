@@ -12,6 +12,7 @@ class TaskHandler
 {
     private $request;
     private $publicKey;
+    private $config;
 
     public function __construct(CloudTasksClient $client, Request $request, OpenIdVerificator $publicKey)
     {
@@ -26,13 +27,25 @@ class TaskHandler
      */
     public function handle($task = null)
     {
-        $this->authorizeRequest();
-
         $task = $task ?: $this->captureTask();
+
+        $this->loadQueueConnectionConfiguration($task);
+
+        $this->authorizeRequest();
 
         $this->listenForEvents();
 
         $this->handleTask($task);
+    }
+
+    private function loadQueueConnectionConfiguration($task)
+    {
+        $command = unserialize($task['data']['command']);
+        $connection = $command->connection ?? config('queue.default');
+        $this->config = array_merge(
+            config("queue.connections.{$connection}"),
+            ['connection' => $connection]
+        );
     }
 
     /**
@@ -64,7 +77,7 @@ class TaskHandler
             throw new CloudTasksException('The given OpenID token is not valid');
         }
 
-        if ($openIdToken->aud != Config::handler()) {
+        if ($openIdToken->aud != $this->config['handler']) {
             throw new CloudTasksException('The given OpenID token is not valid');
         }
 
@@ -97,7 +110,7 @@ class TaskHandler
     {
         app('events')->listen(JobFailed::class, function ($event) {
             app('queue.failer')->log(
-                'cloudtasks', $event->job->getQueue(),
+                $this->config['connection'], $event->job->getQueue(),
                 $event->job->getRawBody(), $event->exception
             );
         });
@@ -117,14 +130,14 @@ class TaskHandler
 
         $worker = $this->getQueueWorker();
 
-        $worker->process('cloudtasks', $job, new WorkerOptions());
+        $worker->process($this->config['connection'], $job, new WorkerOptions());
     }
 
     private function getQueueMaxTries(CloudTasksJob $job)
     {
         $queueName = $this->client->queueName(
-            Config::project(),
-            Config::location(),
+            $this->config['project'],
+            $this->config['location'],
             $job->getQueue()
         );
 
