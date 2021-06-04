@@ -29,7 +29,7 @@ class TaskHandler
         $task = $task ?: $this->captureTask();
 
         $command = unserialize($task['data']['command']);
-        $connection = $command->connection ?? 'cloudtasks';
+        $connection = $command->connection ?? config('queue.default');
 
         $this->authorizeRequest($connection);
 

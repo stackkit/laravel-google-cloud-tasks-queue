@@ -165,7 +165,7 @@ class TaskHandlerTest extends TestCase
         }
 
         $this->assertDatabaseHas('failed_jobs', [
-            'connection' => 'cloudtasks',
+            'connection' => 'my-cloudtasks-connection',
             'queue' => 'my-queue',
             'payload' => rtrim($this->failingJobPayload()),
         ]);
