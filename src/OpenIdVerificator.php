@@ -50,9 +50,9 @@ class OpenIdVerificator
 
     public function getPublicKey($kid = null)
     {
-        if (Cache::has(self::V3_CERTS)) {
-            $v3Certs = Cache::get(self::V3_CERTS);
-        } else {
+        $v3Certs = Cache::get(self::V3_CERTS);
+        
+        if (is_null($v3Certs)) {
             $v3Certs = $this->getFreshCertificates();
             Cache::put(self::V3_CERTS, $v3Certs, Carbon::now()->addSeconds($this->maxAge[self::URL_OPENID_CONFIG]));
         }
