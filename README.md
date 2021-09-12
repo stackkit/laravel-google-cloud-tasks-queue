@@ -101,6 +101,14 @@ Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the
 
 More info: https://cloud.google.com/docs/authentication/production
 
+## Service Account Roles
+
+If you're not using your master service account (which have all of the abilities), you must add the following roles to make it works:
+1. App Engine Viewer
+2. Cloud Tasks Enqueuer
+3. Cloud Tasks Viewer
+4. Service Account User
+
 # Configuring the queue
 
 When you first create a queue using `gcloud tasks queues create`, the default settings will look something like this:
