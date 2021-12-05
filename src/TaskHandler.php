@@ -2,7 +2,9 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Google\Cloud\Tasks\V2\Attempt;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Worker;
@@ -13,6 +15,16 @@ class TaskHandler
     private $request;
     private $publicKey;
     private $config;
+
+    /**
+     * @var CloudTasksQueue
+     */
+    private $queue;
+
+    /**
+     * @var RetryConfig
+     */
+    private $retryConfig = null;
 
     public function __construct(CloudTasksClient $client, Request $request, OpenIdVerificator $publicKey)
     {
@@ -31,6 +43,8 @@ class TaskHandler
 
         $this->loadQueueConnectionConfiguration($task);
 
+        $this->setQueue();
+
         $this->authorizeRequest();
 
         $this->listenForEvents();
@@ -46,6 +60,11 @@ class TaskHandler
             config("queue.connections.{$connection}"),
             ['connection' => $connection]
         );
+    }
+
+    private function setQueue()
+    {
+        $this->queue = new CloudTasksQueue($this->config, $this->client);
     }
 
     /**
@@ -122,29 +141,59 @@ class TaskHandler
      */
     private function handleTask($task)
     {
-        $job = new CloudTasksJob($task);
+        $job = new CloudTasksJob($task, $this->queue);
+
+        $this->loadQueueRetryConfig();
 
         $job->setAttempts(request()->header('X-CloudTasks-TaskRetryCount') + 1);
         $job->setQueue(request()->header('X-Cloudtasks-Queuename'));
-        $job->setMaxTries($this->getQueueMaxTries($job));
+        $job->setMaxTries($this->retryConfig->getMaxAttempts());
+
+        // If the job is being attempted again we also check if a
+        // max retry duration has been set. If that duration
+        // has passed, it should stop trying altogether.
+        if ($job->attempts() >= 1) {
+            $job->setRetryUntil($this->getRetryUntilTimestamp($job));
+        }
 
         $worker = $this->getQueueWorker();
 
         $worker->process($this->config['connection'], $job, new WorkerOptions());
     }
 
-    private function getQueueMaxTries(CloudTasksJob $job)
+    private function loadQueueRetryConfig()
     {
         $queueName = $this->client->queueName(
             $this->config['project'],
             $this->config['location'],
-            $job->getQueue()
+            request()->header('X-Cloudtasks-Queuename')
         );
 
-        return $this->client
-            ->getQueue($queueName)
-            ->getRetryConfig()
-            ->getMaxAttempts();
+        $this->retryConfig = $this->client->getQueue($queueName)->getRetryConfig();
+    }
+
+    private function getRetryUntilTimestamp(CloudTasksJob $job)
+    {
+        $task = $this->client->getTask(
+            $this->client->taskName(
+                $this->config['project'],
+                $this->config['location'],
+                $job->getQueue(),
+                request()->header('X-Cloudtasks-Taskname')
+            )
+        );
+
+        $attempt = $task->getFirstAttempt();
+
+        if (!$attempt instanceof Attempt) {
+            return null;
+        }
+
+        $maxDurationInSeconds = $this->retryConfig->getMaxRetryDuration()->getSeconds();
+
+        $firstAttemptTimestamp = $attempt->getDispatchTime()->toDateTime()->getTimestamp();
+
+        return $firstAttemptTimestamp + $maxDurationInSeconds;
     }
 
     /**
