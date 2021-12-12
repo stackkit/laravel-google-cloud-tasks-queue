@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Carbon\Carbon;
 use Firebase\JWT\JWT;
 use Firebase\JWT\SignatureInvalidException;
 use Google\Cloud\Tasks\V2\Attempt;
@@ -279,7 +280,70 @@ class TaskHandlerTest extends TestCase
 
             $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
         }
+    }
 
+    /**
+     * @test
+     * @testWith [{"retryCount": 1, "shouldHaveFailed": false}]
+     *           [{"retryCount": 2, "shouldHaveFailed": false}]
+     *           [{"retryCount": 2, "travelSeconds": 29, "shouldHaveFailed": false}]
+     *           [{"retryCount": 2, "travelSeconds": 31, "shouldHaveFailed": true}]
+     */
+    public function job_max_attempts_is_ignored_if_has_retry_until($example)
+    {
+        // Arrange
+        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => $example['retryCount']]);
+
+        $now = Carbon::now()->getTimestamp();
+        if (array_key_exists('travelSeconds', $example)) {
+            Carbon::setTestNow(Carbon::now()->addSeconds($example['travelSeconds']));
+        }
+
+        $this->cloudTasksClient->shouldReceive('getQueue')
+            ->byDefault()
+            ->andReturn(new class() {
+                public function getRetryConfig() {
+                    return new class {
+                        public function getMaxAttempts() {
+                            return 3;
+                        }
+
+                        public function hasMaxRetryDuration() {
+                            return true;
+                        }
+
+                        public function getMaxRetryDuration() {
+                            return new class {
+                                public function getSeconds() {
+                                    return 30;
+                                }
+                            };
+                        }
+                    };
+                }
+            });
+
+        $this->cloudTasksClient
+            ->shouldReceive('getTask')
+            ->byDefault()
+            ->andReturn(new class {
+                public function getFirstAttempt() {
+                    return (new Attempt())
+                        ->setDispatchTime(new Timestamp([
+                            'seconds' => time(),
+                        ]));
+                }
+            });
+
+        rescue(function () {
+            $this->handler->handle($this->failingJob());
+        });
+
+        if ($example['shouldHaveFailed']) {
+            $this->cloudTasksClient->shouldHaveReceived('deleteTask');
+        } else {
+            $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
+        }
     }
 
     private function simpleJob()
