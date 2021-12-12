@@ -284,17 +284,13 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
-     * @testWith [{"retryCount": 1, "shouldHaveFailed": false}]
-     *           [{"retryCount": 2, "shouldHaveFailed": false}]
-     *           [{"retryCount": 2, "travelSeconds": 29, "shouldHaveFailed": false}]
-     *           [{"retryCount": 2, "travelSeconds": 31, "shouldHaveFailed": true}]
+     * @dataProvider whenIsJobFailingProvider
      */
     public function job_max_attempts_is_ignored_if_has_retry_until($example)
     {
         // Arrange
         $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => $example['retryCount']]);
 
-        $now = Carbon::now()->getTimestamp();
         if (array_key_exists('travelSeconds', $example)) {
             Carbon::setTestNow(Carbon::now()->addSeconds($example['travelSeconds']));
         }
@@ -344,6 +340,105 @@ class TaskHandlerTest extends TestCase
         } else {
             $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
         }
+    }
+
+    public function whenIsJobFailingProvider()
+    {
+        $this->createApplication();
+
+        // 8.x behavior: if retryUntil, only check that.
+        // 6.x behavior: if retryUntil, check that, otherwise check maxAttempts
+
+        // max retry count is 3
+        // max retryUntil is 30 seconds
+
+        if (version_compare(app()->version(), '8.0.0', '>=')) {
+            return [
+                [
+                    [
+                        'retryCount' => 1,
+                        'shouldHaveFailed' => false,
+                    ],
+                ],
+                [
+                    [
+                        'retryCount' => 2,
+                        'shouldHaveFailed' => false,
+                    ],
+                ],
+                [
+                    [
+                        'retryCount' => 1,
+                        'travelSeconds' => 29,
+                        'shouldHaveFailed' => false,
+                    ],
+                ],
+                [
+                    [
+                        'retryCount' => 1,
+                        'travelSeconds' => 31,
+                        'shouldHaveFailed' => true,
+                    ],
+                ],
+                [
+                    [
+                        'retryCount' => 1,
+                        'travelSeconds' => 32,
+                        'shouldHaveFailed' => true,
+                    ],
+                ],
+                [
+                    [
+                        'retryCount' => 1,
+                        'travelSeconds' => 31,
+                        'shouldHaveFailed' => true,
+                    ],
+                ],
+            ];
+        }
+
+        return [
+            [
+                [
+                    'retryCount' => 1,
+                    'shouldHaveFailed' => false,
+                ],
+            ],
+            [
+                [
+                    'retryCount' => 2,
+                    'shouldHaveFailed' => true,
+                ],
+            ],
+            [
+                [
+                    'retryCount' => 1,
+                    'travelSeconds' => 29,
+                    'shouldHaveFailed' => false,
+                ],
+            ],
+            [
+                [
+                    'retryCount' => 1,
+                    'travelSeconds' => 31,
+                    'shouldHaveFailed' => true,
+                ],
+            ],
+            [
+                [
+                    'retryCount' => 1,
+                    'travelSeconds' => 32,
+                    'shouldHaveFailed' => true,
+                ],
+            ],
+            [
+                [
+                    'retryCount' => 1,
+                    'travelSeconds' => 32,
+                    'shouldHaveFailed' => true,
+                ],
+            ],
+        ];
     }
 
     private function simpleJob()
