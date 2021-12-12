@@ -4,7 +4,10 @@ namespace Tests;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\SignatureInvalidException;
+use Google\Cloud\Tasks\V2\Attempt;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Task;
+use Google\Protobuf\Timestamp;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\KeyWritten;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +30,8 @@ class TaskHandlerTest extends TestCase
 
     private $request;
 
+    private $cloudTasksClient;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -46,7 +51,8 @@ class TaskHandlerTest extends TestCase
         $googlePublicKey->shouldReceive('getPublicKey')->andReturnNull();
         $googlePublicKey->shouldReceive('getKidFromOpenIdToken')->andReturnNull();
 
-        $cloudTasksClient = Mockery::mock(new CloudTasksClient());
+        $cloudTasksClient = Mockery::mock(new CloudTasksClient())->byDefault();
+        $this->cloudTasksClient = $cloudTasksClient;
 
         // Ensure we don't fetch the Queue name and attempts each test...
         $cloudTasksClient->shouldReceive('queueName')->andReturn('my-queue');
@@ -56,9 +62,25 @@ class TaskHandlerTest extends TestCase
                     public function getMaxAttempts() {
                         return 3;
                     }
+
+                    public function getMaxRetryDuration() {
+                        return new class {
+                            public function getSeconds() {
+                                return 30;
+                            }
+                        };
+                    }
                 };
             }
         });
+        $cloudTasksClient->shouldReceive('taskName')->andReturn('FakeTaskName');
+        $cloudTasksClient->shouldReceive('getTask')->byDefault()->andReturn(new class {
+            public function getFirstAttempt() {
+                return null;
+            }
+        });
+
+        $cloudTasksClient->shouldReceive('deleteTask')->andReturnNull();
 
         $this->handler = new TaskHandler(
             $cloudTasksClient,
@@ -169,6 +191,58 @@ class TaskHandlerTest extends TestCase
             'queue' => 'my-queue',
             'payload' => rtrim($this->failingJobPayload()),
         ]);
+    }
+
+    /** @test */
+    public function after_max_attempts_it_will_delete_the_task()
+    {
+        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 2]);
+
+        rescue(function () {
+            $this->handler->handle($this->failingJob());
+        });
+
+        $this->cloudTasksClient->shouldHaveReceived('deleteTask')->once();
+    }
+
+    /** @test */
+    public function after_max_retry_until_it_will_delete_the_task()
+    {
+        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 1]);
+
+        $this->cloudTasksClient
+            ->shouldReceive('getTask')
+            ->byDefault()
+            ->andReturn(new class {
+                public function getFirstAttempt() {
+                    return (new Attempt())
+                        ->setDispatchTime(new Timestamp([
+                            'seconds' => time() - 29,
+                        ]));
+                }
+            });
+
+        rescue(function () {
+            $this->handler->handle($this->failingJob());
+        });
+
+        $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
+
+        $this->cloudTasksClient->shouldReceive('getTask')
+            ->andReturn(new class {
+                public function getFirstAttempt() {
+                    return (new Attempt())
+                        ->setDispatchTime(new Timestamp([
+                            'seconds' => time() - 30,
+                        ]));
+                }
+            });
+
+        rescue(function () {
+            $this->handler->handle($this->failingJob());
+        });
+
+        $this->cloudTasksClient->shouldHaveReceived('deleteTask')->once();
     }
 
     private function simpleJob()
