@@ -152,7 +152,7 @@ class TaskHandler
         // If the job is being attempted again we also check if a
         // max retry duration has been set. If that duration
         // has passed, it should stop trying altogether.
-        if ($job->attempts() >= 1) {
+        if ($job->attempts() > 1) {
             $job->setRetryUntil($this->getRetryUntilTimestamp($job));
         }
 
