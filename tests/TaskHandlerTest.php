@@ -56,23 +56,29 @@ class TaskHandlerTest extends TestCase
 
         // Ensure we don't fetch the Queue name and attempts each test...
         $cloudTasksClient->shouldReceive('queueName')->andReturn('my-queue');
-        $cloudTasksClient->shouldReceive('getQueue')->andReturn(new class {
-            public function getRetryConfig() {
-                return new class {
-                    public function getMaxAttempts() {
-                        return 3;
-                    }
+        $cloudTasksClient->shouldReceive('getQueue')
+            ->byDefault()
+            ->andReturn(new class {
+                public function getRetryConfig() {
+                    return new class {
+                        public function getMaxAttempts() {
+                            return 3;
+                        }
 
-                    public function getMaxRetryDuration() {
-                        return new class {
-                            public function getSeconds() {
-                                return 30;
-                            }
-                        };
-                    }
-                };
-            }
-        });
+                        public function hasMaxRetryDuration() {
+                            return true;
+                        }
+
+                        public function getMaxRetryDuration() {
+                            return new class {
+                                public function getSeconds() {
+                                    return 30;
+                                }
+                            };
+                        }
+                    };
+                }
+            });
         $cloudTasksClient->shouldReceive('taskName')->andReturn('FakeTaskName');
         $cloudTasksClient->shouldReceive('getTask')->byDefault()->andReturn(new class {
             public function getFirstAttempt() {
@@ -243,6 +249,37 @@ class TaskHandlerTest extends TestCase
         });
 
         $this->cloudTasksClient->shouldHaveReceived('deleteTask')->once();
+    }
+
+    /** @test */
+    public function test_unlimited_max_attempts()
+    {
+        $this->cloudTasksClient->shouldReceive('getQueue')
+            ->byDefault()
+            ->andReturn(new class {
+                public function getRetryConfig() {
+                    return new class {
+                        public function getMaxAttempts() {
+                            return -1;
+                        }
+
+                        public function hasMaxRetryDuration() {
+                            return false;
+                        }
+                    };
+                }
+            });
+
+        for ($i = 0; $i < 50; $i++) {
+            $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => $i]);
+
+            rescue(function () {
+                $this->handler->handle($this->failingJob());
+            });
+
+            $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
+        }
+
     }
 
     private function simpleJob()

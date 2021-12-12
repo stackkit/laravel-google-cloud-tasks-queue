@@ -189,6 +189,10 @@ class TaskHandler
             return null;
         }
 
+        if (! $this->retryConfig->hasMaxRetryDuration()) {
+            return null;
+        }
+
         $maxDurationInSeconds = $this->retryConfig->getMaxRetryDuration()->getSeconds();
 
         $firstAttemptTimestamp = $attempt->getDispatchTime()->toDateTime()->getTimestamp();
