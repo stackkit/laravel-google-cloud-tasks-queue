@@ -94,6 +94,20 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return app(HttpRequest::class);
     }
 
+    public function delete(CloudTasksJob $job)
+    {
+        $config = $this->config;
+
+        $taskName = $this->client->taskName(
+            $config['project'],
+            $config['location'],
+            $job->getQueue(),
+            request()->header('X-Cloudtasks-Taskname')
+        );
+
+        $this->client->deleteTask($taskName);
+    }
+
     /**
      * @return Task
      */
