@@ -73,6 +73,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
         }
 
+        MonitoringService::make()->addToMonitor($queue, $task);
+
         $this->client->createTask($queueName, $task);
     }
 

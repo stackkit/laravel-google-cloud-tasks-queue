@@ -95,6 +95,27 @@ Please check the table below on what the values mean and what their value should
 |`STACKKIT_CLOUD_TASKS_QUEUE`|The queue a job will be added to|`emails`
 |`STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`|The email address of the AppEngine service account. Important, it should have the *Cloud Tasks Enqueuer* role. This is used for securing the handler.|`my-service-account@appspot.gserviceaccount.com`
 
+## Dashboard
+
+The package comes with a dashboard that can be used to monitor all queued jobs.
+
+To make use of it, publish its assets:
+
+```
+php artisan vendor:publish --tag=cloud-tasks-assets
+```
+
+We expose a dashboard at the /cloud-tasks URI. By default, you will only be able to access this dashboard in the local environment. However, within your app/Providers/AppServiceProvider.php file, there is an authorization gate definition. This authorization gate controls access to Cloud Tasks in non-local environments. You are free to modify this gate as needed to restrict access to your Cloud Tasks installation:
+
+
+```php
+Gate::define('viewCloudTasks', function ($user) {
+    return in_array($user->email, [
+        'me@example.com',
+    ]);
+});
+```
+
 # Authentication
 
 Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the credentials file.

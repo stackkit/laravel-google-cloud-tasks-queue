@@ -6,7 +6,10 @@ use Google\Cloud\Tasks\V2\Attempt;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
 
@@ -127,7 +130,29 @@ class TaskHandler
 
     private function listenForEvents()
     {
+        app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
+            MonitoringService::make()->markAsRunning(
+                $event->job->uuid()
+            );
+        });
+
+        app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
+            MonitoringService::make()->markAsSuccessful(
+                $event->job->uuid()
+            );
+        });
+
+        app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
+            MonitoringService::make()->markAsError(
+                $event
+            );
+        });
+
         app('events')->listen(JobFailed::class, function ($event) {
+            MonitoringService::make()->markAsFailed(
+                $event
+            );
+
             app('queue.failer')->log(
                 $this->config['connection'], $event->job->getQueue(),
                 $event->job->getRawBody(), $event->exception
