@@ -2,31 +2,47 @@
 
 namespace Tests;
 
+use Illuminate\Support\Facades\DB;
+use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Mockery;
+
 class TestCase extends \Orchestra\Testbench\TestCase
 {
-    public static $migrated = false;
+    /**
+     * @var \Mockery\Mock $client
+     */
+    public $client;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // There is probably a more sane way to do this
-        if (!static::$migrated) {
-            if (file_exists(database_path('database.sqlite'))) {
-                unlink(database_path('database.sqlite'));
-            }
+        $this->forwardToEmulatorClient();
+    }
 
-            touch(database_path('database.sqlite'));
-
-            foreach(glob(database_path('migrations/*.php')) as $file) {
-                unlink($file);
-            }
-
-            $this->artisan('queue:failed-table');
-            $this->artisan('migrate');
-
-            static::$migrated = true;
-        }
+    /**
+     * Forward the Tasks Client to the local emulator.
+     *
+     * @return void
+     */
+    private function forwardToEmulatorClient(): void
+    {
+        $this->client = $this->instance(
+            CloudTasksClient::class,
+            Mockery::mock(
+                new CloudTasksClient([
+                    'apiEndpoint' => 'localhost:8123',
+                    'transport' => 'grpc',
+                    'transportConfig' => [
+                        'grpc' => [
+                            'stubOpts' => [
+                                'credentials' => \Grpc\ChannelCredentials::createInsecure()
+                            ]
+                        ]
+                    ]
+                ])
+            )->makePartial()
+        );
     }
 
     /**
@@ -62,10 +78,10 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('queue.default', 'my-cloudtasks-connection');
         $app['config']->set('queue.connections.my-cloudtasks-connection', [
             'driver' => 'cloudtasks',
-            'queue' => 'test-queue',
-            'project' => 'test-project',
+            'queue' => 'barbequeue',
+            'project' => 'my-test-project',
             'location' => 'europe-west6',
-            'handler' => 'https://localhost/my-handler',
+            'handler' => env('CLOUD_TASKS_HANDLER', 'http://docker.for.mac.localhost:8080/handle-task'),
             'service_account_email' => 'info@stackkit.io',
         ]);
     }
@@ -73,5 +89,67 @@ class TestCase extends \Orchestra\Testbench\TestCase
     protected function setConfigValue($key, $value)
     {
         $this->app['config']->set('queue.connections.my-cloudtasks-connection.' . $key, $value);
+    }
+
+    protected function sleep(int $ms)
+    {
+        usleep($ms * 1000);
+    }
+
+    public function clearTables()
+    {
+        DB::table('failed_jobs')->truncate();
+        DB::table('stackkit_cloud_tasks')->truncate();
+    }
+
+    protected function logFilePath(): string
+    {
+        return __DIR__ . '/laravel/storage/logs/laravel.log';
+    }
+
+    protected function clearLaravelStorageFile()
+    {
+        if (!file_exists($this->logFilePath())) {
+            touch($this->logFilePath());
+            return;
+        }
+
+        file_put_contents($this->logFilePath(), '');
+    }
+
+    protected function assertLogEmpty()
+    {
+        $this->assertEquals('', file_get_contents($this->logFilePath()));
+    }
+
+    protected function assertLogContains(string $contains)
+    {
+        $attempts = 0;
+
+        while (true) {
+            $attempts++;
+
+            if (file_exists($this->logFilePath())) {
+                $contents = file_get_contents($this->logFilePath());
+
+                if (!empty($contents)) {
+                    $this->assertStringContainsString($contains, $contents);
+                    return;
+                }
+            }
+
+            if ($attempts >= 50) {
+                break;
+            }
+
+            usleep(0.1 * 1000000);
+        }
+
+        $this->fail('The log file does not contain: ' . $contains);
+    }
+
+    protected function getLogContents()
+    {
+        return file_exists($this->logFilePath()) ? file_get_contents($this->logFilePath()) : '';
     }
 }

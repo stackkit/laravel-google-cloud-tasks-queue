@@ -80,9 +80,8 @@ class TaskHandler
         }
 
         $openIdToken = $this->request->bearerToken();
-        $kid = $this->publicKey->getKidFromOpenIdToken($openIdToken);
 
-        $decodedToken = $this->publicKey->decodeOpenIdToken($openIdToken, $kid);
+        $decodedToken = $this->publicKey->decodeOpenIdToken($openIdToken);
 
         $this->validateToken($decodedToken);
     }
@@ -95,7 +94,11 @@ class TaskHandler
      */
     protected function validateToken($openIdToken)
     {
-        if (!in_array($openIdToken->iss, ['https://accounts.google.com', 'accounts.google.com'])) {
+        $allowedIssuers = app()->runningUnitTests()
+            ? ['http://localhost:8980']
+            : ['https://accounts.google.com', 'accounts.google.com'];
+
+        if (!in_array($openIdToken->iss, $allowedIssuers)) {
             throw new CloudTasksException('The given OpenID token is not valid');
         }
 
@@ -195,6 +198,13 @@ class TaskHandler
         );
 
         $this->retryConfig = $this->client->getQueue($queueName)->getRetryConfig();
+
+        // @todo: Need to figure out how to configure this in the emulator itself instead of doing it here.
+        if (app()->runningUnitTests()) {
+            $this->retryConfig->setMaxAttempts(3);
+            $this->retryConfig->setMinBackoff(new \Google\Protobuf\Duration(['seconds' => 0]));
+            $this->retryConfig->setMaxBackoff(new \Google\Protobuf\Duration(['seconds' => 0]));
+        }
     }
 
     private function getRetryUntilTimestamp(CloudTasksJob $job)

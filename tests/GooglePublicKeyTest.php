@@ -37,7 +37,7 @@ class GooglePublicKeyTest extends TestCase
     /** @test */
     public function it_fetches_the_gcloud_public_key()
     {
-        $this->assertStringContainsString('-----BEGIN PUBLIC KEY-----', $this->publicKey->getPublicKey());
+        $this->assertStringContainsString('-----BEGIN PUBLIC KEY-----', $this->publicKey->getPublicKeys());
     }
 
     /** @test */
@@ -45,7 +45,7 @@ class GooglePublicKeyTest extends TestCase
     {
         $this->assertFalse($this->publicKey->isCached());
 
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
         $this->assertTrue($this->publicKey->isCached());
     }
@@ -55,12 +55,12 @@ class GooglePublicKeyTest extends TestCase
     {
         Event::fake();
 
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
         Event::assertDispatched(CacheMissed::class);
         Event::assertDispatched(KeyWritten::class);
 
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
         Event::assertDispatched(CacheHit::class);
 
@@ -72,15 +72,15 @@ class GooglePublicKeyTest extends TestCase
     {
         Event::fake();
 
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
         Carbon::setTestNow(Carbon::now()->addSeconds(3600));
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
         Carbon::setTestNow(Carbon::now()->addSeconds(5));
-        $this->publicKey->getPublicKey();
+        $this->publicKey->getPublicKeys();
 
         Event::assertDispatched(CacheMissed::class, 2);
         Event::assertDispatched(KeyWritten::class, 2);

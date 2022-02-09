@@ -194,3 +194,15 @@ This package verifies that the token is digitally signed by Google. Only Google 
 More information about OpenID Connect:
 
 https://developers.google.com/identity/protocols/oauth2/openid-connect
+
+# Running tests
+
+The test suite uses a emulated version of Google Tasks, thanks to aertje/cloud-tasks-emulator.
+
+To start running the tests locally, first start all Docker services:
+
+```
+docker compose up -d
+```
+
+This will start the emulator, MySQL and Postgres.

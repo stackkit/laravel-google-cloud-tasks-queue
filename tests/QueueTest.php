@@ -8,29 +8,25 @@ use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Timestamp;
+use Grpc\ChannelCredentials;
 use Mockery;
 use Tests\Support\SimpleJob;
 
 class QueueTest extends TestCase
 {
-    private $client;
+    /**
+     * @var HttpRequest $http
+     */
     private $http;
-    private $task;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->client = Mockery::mock(CloudTasksClient::class)->makePartial();
-        $this->http = Mockery::mock(new HttpRequest)->makePartial();
-        $this->task = Mockery::mock(new Task);
-
-        $this->app->instance(CloudTasksClient::class, $this->client);
-        $this->app->instance(HttpRequest::class, $this->http);
-        $this->app->instance(Task::class, $this->task);
-
-        // ensure we don't actually call the Google API
-        $this->client->shouldReceive('createTask')->andReturnNull();
+        $this->http = $this->instance(
+            HttpRequest::class,
+            Mockery::mock(new HttpRequest)->makePartial()
+        );
     }
 
     /** @test */
@@ -40,7 +36,7 @@ class QueueTest extends TestCase
 
         $this->http
             ->shouldHaveReceived('setUrl')
-            ->with('https://localhost/my-handler')
+            ->with('http://docker.for.mac.localhost:8080/handle-task')
             ->once();
     }
 
@@ -82,23 +78,22 @@ class QueueTest extends TestCase
     }
 
     /** @test */
-    public function it_creates_a_task_containing_the_http_request()
-    {
-        $this->task->shouldReceive('setHttpRequest')->once()->with($this->http);
-
-        SimpleJob::dispatch();
-    }
-
-    /** @test */
     public function it_will_set_the_scheduled_time_when_dispatching_later()
     {
+        $task = $this->instance(
+            Task::class,
+            Mockery::mock(new Task)->makePartial()
+        );
+
         $inFiveMinutes = Carbon::now()->addMinutes(5);
 
         SimpleJob::dispatch()->delay($inFiveMinutes);
 
-        $this->task->shouldHaveReceived('setScheduleTime')->once()->with(Mockery::on(function (Timestamp $timestamp) use ($inFiveMinutes) {
-            return $timestamp->getSeconds() === $inFiveMinutes->timestamp;
-        }));
+        $task->shouldHaveReceived('setScheduleTime')
+            ->once()
+            ->with(Mockery::on(function (Timestamp $timestamp) use ($inFiveMinutes) {
+                return $timestamp->getSeconds() === $inFiveMinutes->timestamp;
+            }));
     }
 
     /** @test */
@@ -109,7 +104,7 @@ class QueueTest extends TestCase
         $this->client
             ->shouldHaveReceived('createTask')
             ->withArgs(function ($queueName) {
-                return $queueName === 'projects/test-project/locations/europe-west6/queues/test-queue';
+                return $queueName === 'projects/my-test-project/locations/europe-west6/queues/barbequeue';
             });
     }
 
@@ -120,8 +115,11 @@ class QueueTest extends TestCase
 
         $this->client
             ->shouldHaveReceived('createTask')
-            ->withArgs(function ($queueName, $task) {
-                return $task === $this->task;
+            ->withArgs(function ($queueName, Task $task) {
+                return strpos(
+                    $task->getHttpRequest()->getBody(),
+                        'SimpleJob'
+                ) !== false;
             });
     }
 }

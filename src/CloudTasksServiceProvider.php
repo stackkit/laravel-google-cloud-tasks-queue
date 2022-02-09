@@ -3,6 +3,7 @@
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\CloudTasksClient;
+use \Grpc\ChannelCredentials;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Gate;
@@ -56,7 +57,17 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     private function registerClient()
     {
         $this->app->singleton(CloudTasksClient::class, function () {
-            return new CloudTasksClient();
+            return new CloudTasksClient([
+                'apiEndpoint' => 'localhost:8123',
+                'transport' => 'grpc',
+                'transportConfig' => [
+                    'grpc' => [
+                        'stubOpts' => [
+                            'credentials' => ChannelCredentials::createInsecure()
+                        ]
+                    ]
+                ]
+            ]);
         });
     }
 

@@ -8,10 +8,12 @@
          convertWarningsToExceptions="true"
          processIsolation="false"
          stopOnFailure="false">
-
     <testsuites>
-        <testsuite name="Orchestra\Testbench Test Suite">
-            <directory suffix="Test.php">./tests/</directory>
+        <testsuite name="Testsuite">
+            <file>tests/ConfigTest.php</file>
+            <file>tests/GooglePublicKeyTest.php</file>
+            <file>tests/QueueTest.php</file>
+            <file>tests/TaskHandlerTest.php</file>
         </testsuite>
     </testsuites>
     <php>
@@ -23,12 +25,11 @@
         <env name="MAIL_DRIVER" value="log"/>
         <env name="QUEUE_DRIVER" value="cloudtasks"/>
         <env name="GOOGLE_APPLICATION_CREDENTIALS" value="./tests/Support/gcloud-key-valid.json" />
-        <env name="DB_CONNECTION" value="sqlite" />
+        <env name="DB_CONNECTION" value="mysql" />
+        <env name="DB_HOST" value="127.0.0.1" />
+        <env name="DB_PORT" value="3306" />
+        <env name="DB_USERNAME" value="root" />
+        <env name="DB_PASSWORD" value="my-secret-pw" />
+        <env name="DB_DATABASE" value="cloudtasks" />
     </php>
-
-    <filter>
-        <whitelist addUncoveredFilesFromWhitelist="false">
-            <directory suffix=".php">src/</directory>
-        </whitelist>
-    </filter>
 </phpunit>

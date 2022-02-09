@@ -1,0 +1,21 @@
+services:
+  gcloud-tasks-emulator:
+    image: ghcr.io/aertje/cloud-tasks-emulator:latest
+    command: -host 0.0.0.0 -openid-issuer http://localhost:8980 -port 8123 -queue "projects/my-test-project/locations/europe-west6/queues/barbequeue"
+    ports:
+      - "${TASKS_PORT:-8123}:8123"
+      - 8980:8980
+  mysql:
+    image: mysql:8
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: 'my-secret-pw'
+      MYSQL_DATABASE: 'cloudtasks'
+  postgres:
+    image: postgres:14
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: 'my-secret-pw'
+      POSTGRES_DB: 'cloudtasks'
