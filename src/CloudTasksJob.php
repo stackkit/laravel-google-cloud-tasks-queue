@@ -17,13 +17,15 @@ class CloudTasksJob extends LaravelJob implements JobContract
     /**
      * @var CloudTasksQueue
      */
-    private $cloudTasksQueue;
+    public $cloudTasksQueue;
 
     public function __construct($job, CloudTasksQueue $cloudTasksQueue)
     {
         $this->job = $job;
         $this->container = Container::getInstance();
         $this->cloudTasksQueue = $cloudTasksQueue;
+        $command = unserialize($job['data']['command']);
+        $this->queue = $command->queue;
     }
 
     public function getJobId()
@@ -86,5 +88,12 @@ class CloudTasksJob extends LaravelJob implements JobContract
         parent::delete();
 
         $this->cloudTasksQueue->delete($this);
+    }
+
+    public function fire()
+    {
+        $this->attempts++;
+
+        parent::fire();
     }
 }

@@ -4,6 +4,10 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use \Grpc\ChannelCredentials;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Gate;
@@ -21,6 +25,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->registerAssets();
         $this->registerMigrations();
         $this->registerRoutes($router);
+        $this->registerMonitoring();
     }
 
     /**
@@ -57,18 +62,11 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     private function registerClient()
     {
         $this->app->singleton(CloudTasksClient::class, function () {
-            return new CloudTasksClient([
-                'apiEndpoint' => 'localhost:8123',
-                'transport' => 'grpc',
-                'transportConfig' => [
-                    'grpc' => [
-                        'stubOpts' => [
-                            'credentials' => ChannelCredentials::createInsecure()
-                        ]
-                    ]
-                ]
-            ]);
+            return new CloudTasksClient();
         });
+
+        $this->app->bind('open-id-verificator', OpenIdVerificatorConcrete::class);
+        $this->app->bind('cloud-tasks-api', CloudTasksApiConcrete::class);
     }
 
     private function registerConnector(QueueManager $queue)
@@ -120,6 +118,40 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             $router->get('cloud-tasks-api/dashboard', [CloudTasksApiController::class, 'dashboard']);
             $router->get('cloud-tasks-api/tasks', [CloudTasksApiController::class, 'tasks']);
             $router->get('cloud-tasks-api/task/{uuid}', [CloudTasksApiController::class, 'task']);
+        });
+    }
+
+    private function registerMonitoring()
+    {
+        app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
+            MonitoringService::make()->markAsRunning(
+                $event->job->uuid()
+            );
+        });
+
+        app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
+            MonitoringService::make()->markAsSuccessful(
+                $event->job->uuid()
+            );
+        });
+
+        app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
+            MonitoringService::make()->markAsError(
+                $event
+            );
+        });
+
+        app('events')->listen(JobFailed::class, function ($event) {
+            MonitoringService::make()->markAsFailed(
+                $event
+            );
+
+            $config = $event->job->cloudTasksQueue->config;
+
+            app('queue.failer')->log(
+                $config['connection'], $event->job->getQueue() ?: $config['queue'],
+                $event->job->getRawBody(), $event->exception
+            );
         });
     }
 }

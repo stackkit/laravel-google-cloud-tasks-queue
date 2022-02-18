@@ -10,10 +10,8 @@
          stopOnFailure="false">
     <testsuites>
         <testsuite name="Testsuite">
-            <file>tests/ConfigTest.php</file>
-            <file>tests/GooglePublicKeyTest.php</file>
-            <file>tests/QueueTest.php</file>
-            <file>tests/TaskHandlerTest.php</file>
+            <file>./tests/ConfigTest.php</file>
+            <file>./tests/TaskHandlerTest.php</file>
         </testsuite>
     </testsuites>
     <php>
@@ -24,7 +22,6 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="MAIL_DRIVER" value="log"/>
         <env name="QUEUE_DRIVER" value="cloudtasks"/>
-        <env name="GOOGLE_APPLICATION_CREDENTIALS" value="./tests/Support/gcloud-key-valid.json" />
         <env name="DB_CONNECTION" value="mysql" />
         <env name="DB_HOST" value="127.0.0.1" />
         <env name="DB_PORT" value="3306" />

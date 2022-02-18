@@ -57,6 +57,7 @@ function setup() {
             'handler' => 'http://docker.for.mac.localhost:8080/handle-task',
             'service_account_email' => 'info@stackkit.io',
         ];
+        $queue['failed']['driver'] = 'database-uuids';
         file_put_contents('./tests/laravel/config/queue.php', '<?php return ' . var_export($queue, true) . ';');
     }
 
@@ -64,10 +65,12 @@ function setup() {
         cd ./tests/laravel &&
         mkdir -p tests/Support &&
         cp ../../tests/support/SimpleJob.php tests/support/SimpleJob.php &&
+        cp ../../tests/support/FailingJob.php tests/support/FailingJob.php &&
+        cp ../../tests/support/FailingJobWithDelay.php tests/support/FailingJobWithDelay.php &&
         composer require stackkit/laravel-google-cloud-tasks-queue &&
         php artisan migrate
     ');
 }
 
 echo "Started dev server on port 8080!\n";
-exec('cd ./tests/laravel && php artisan serve --port=8080 --no-ansi');
+exec('cd ./tests/laravel && php artisan serve --host=0.0.0.0 --port=8080 --no-ansi');

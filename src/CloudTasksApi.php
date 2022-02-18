@@ -6,15 +6,15 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Illuminate\Support\Facades\Facade;
 
-class OpenIdVerificator extends Facade
+class CloudTasksApi extends Facade
 {
     protected static function getFacadeAccessor()
     {
-        return 'open-id-verificator';
+        return 'cloud-tasks-api';
     }
 
     public static function fake(): void
     {
-        self::swap(new OpenIdVerificatorFake());
+        self::swap(new CloudTasksApiFake());
     }
 }

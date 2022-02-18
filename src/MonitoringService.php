@@ -72,8 +72,15 @@ class MonitoringService
     public function markAsError(JobExceptionOccurred $event)
     {
         $task = StackkitCloudTask::whereTaskUuid($event->job->uuid())
-            ->where('status', '!=', 'failed')
-            ->firstOrFail();
+            ->first();
+
+        if (!$task) {
+            return;
+        }
+
+        if ($task->status === 'failed') {
+            return;
+        }
 
         $task->status = 'error';
         $metadata = $task->getMetadata();

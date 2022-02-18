@@ -2,48 +2,28 @@
 
 namespace Tests;
 
+use Closure;
+use Firebase\JWT\JWT;
+use Google\ApiCore\ApiException;
+use Google\Cloud\Tasks\V2\Queue;
+use Google\Cloud\Tasks\V2\RetryConfig;
+use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Illuminate\Support\Facades\Event;
 use Mockery;
+use Stackkit\LaravelGoogleCloudTasksQueue\TaskCreated;
+use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
 class TestCase extends \Orchestra\Testbench\TestCase
 {
+    use DatabaseTransactions;
+
     /**
-     * @var \Mockery\Mock $client
+     * @var \Mockery\Mock|CloudTasksClient $client
      */
     public $client;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->forwardToEmulatorClient();
-    }
-
-    /**
-     * Forward the Tasks Client to the local emulator.
-     *
-     * @return void
-     */
-    private function forwardToEmulatorClient(): void
-    {
-        $this->client = $this->instance(
-            CloudTasksClient::class,
-            Mockery::mock(
-                new CloudTasksClient([
-                    'apiEndpoint' => 'localhost:8123',
-                    'transport' => 'grpc',
-                    'transportConfig' => [
-                        'grpc' => [
-                            'stubOpts' => [
-                                'credentials' => \Grpc\ChannelCredentials::createInsecure()
-                            ]
-                        ]
-                    ]
-                ])
-            )->makePartial()
-        );
-    }
 
     /**
      * Get package providers.  At a minimum this is the package being tested, but also
@@ -84,6 +64,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'handler' => env('CLOUD_TASKS_HANDLER', 'http://docker.for.mac.localhost:8080/handle-task'),
             'service_account_email' => 'info@stackkit.io',
         ]);
+        $app['config']->set('queue.failed.driver', 'database-uuids');
     }
 
     protected function setConfigValue($key, $value)
@@ -91,65 +72,100 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->app['config']->set('queue.connections.my-cloudtasks-connection.' . $key, $value);
     }
 
-    protected function sleep(int $ms)
+    public function dispatch($job)
     {
-        usleep($ms * 1000);
-    }
+        $payload = null;
+        $task = null;
 
-    public function clearTables()
-    {
-        DB::table('failed_jobs')->truncate();
-        DB::table('stackkit_cloud_tasks')->truncate();
-    }
+        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$task) {
+            $payload = json_decode($event->task->getHttpRequest()->getBody(), true);
+            $task = $event->task;
 
-    protected function logFilePath(): string
-    {
-        return __DIR__ . '/laravel/storage/logs/laravel.log';
-    }
+            request()->headers->set('X-Cloudtasks-Taskname', $task->getName());
+        });
 
-    protected function clearLaravelStorageFile()
-    {
-        if (!file_exists($this->logFilePath())) {
-            touch($this->logFilePath());
-            return;
-        }
+        dispatch($job);
 
-        file_put_contents($this->logFilePath(), '');
-    }
+        return new class($payload, $task) {
+            public array $payload = [];
+            public Task $task;
 
-    protected function assertLogEmpty()
-    {
-        $this->assertEquals('', file_get_contents($this->logFilePath()));
-    }
-
-    protected function assertLogContains(string $contains)
-    {
-        $attempts = 0;
-
-        while (true) {
-            $attempts++;
-
-            if (file_exists($this->logFilePath())) {
-                $contents = file_get_contents($this->logFilePath());
-
-                if (!empty($contents)) {
-                    $this->assertStringContainsString($contains, $contents);
-                    return;
-                }
+            public function __construct(array $payload, Task $task)
+            {
+                $this->payload = $payload;
+                $this->task = $task;
             }
 
-            if ($attempts >= 50) {
-                break;
+            public function run(): void
+            {
+                rescue(function (): void {
+                    app(TaskHandler::class)->handle($this->payload);
+                });
+
+                $taskExecutionCount = request()->header('X-CloudTasks-TaskExecutionCount', 0);
+                request()->headers->set('X-CloudTasks-TaskExecutionCount', $taskExecutionCount + 1);
             }
 
-            usleep(0.1 * 1000000);
-        }
+            public function runWithoutExceptionHandler(): void
+            {
+                app(TaskHandler::class)->handle($this->payload);
 
-        $this->fail('The log file does not contain: ' . $contains);
+                $taskExecutionCount = request()->header('X-CloudTasks-TaskExecutionCount', 0);
+                request()->headers->set('X-CloudTasks-TaskExecutionCount', $taskExecutionCount + 1);
+            }
+        };
     }
 
-    protected function getLogContents()
+    public function runFromPayload(array $payload): void
     {
-        return file_exists($this->logFilePath()) ? file_get_contents($this->logFilePath()) : '';
+        rescue(function () use ($payload) {
+            app(TaskHandler::class)->handle($payload);
+        });
+    }
+
+    public function dispatchAndRun($job): void
+    {
+        $this->runFromPayload($this->dispatch($job));
+    }
+
+    public function assertTaskDeleted(string $taskId): void
+    {
+        try {
+            $this->client->getTask($taskId);
+
+            $this->fail('Getting the task should throw an exception but it did not.');
+        } catch (ApiException $e) {
+            $this->assertStringContainsString('The task no longer exists', $e->getMessage());
+        }
+    }
+
+    public function assertTaskExists(string $taskId): void
+    {
+        try {
+            $task = $this->client->getTask($taskId);
+
+            $this->assertInstanceOf(Task::class, $task);
+        } catch (ApiException $e) {
+            $this->fail('Task [' . $taskId . '] should exist but it does not (or something else went wrong).');
+        }
+    }
+
+    protected function addIdTokenToHeader(?Closure $closure = null): void
+    {
+        $base = [
+            'iss' => 'https://accounts.google.com',
+            'aud' => 'http://docker.for.mac.localhost:8080/handle-task',
+            'exp' => time() + 10,
+        ];
+
+        if ($closure) {
+            $base = $closure($base);
+        }
+
+        $privateKey = file_get_contents(__DIR__ . '/../tests/Support/self-signed-private-key.txt');
+
+        $token = JWT::encode($base, $privateKey, 'RS256', 'abc123');
+
+        request()->headers->set('Authorization', 'Bearer ' . $token);
     }
 }

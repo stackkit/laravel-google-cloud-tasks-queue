@@ -18,7 +18,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     private $client;
     private $default;
-    private $config;
+    public $config;
 
     public function __construct(array $config, CloudTasksClient $client)
     {
@@ -75,7 +75,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         MonitoringService::make()->addToMonitor($queue, $task);
 
-        $this->client->createTask($queueName, $task);
+        $createdTask = CloudTasksApi::createTask($queueName, $task);
+
+        event(new TaskCreated($createdTask));
     }
 
     public function pop($queue = null)
@@ -100,14 +102,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     {
         $config = $this->config;
 
+        $queue = $job->getQueue() ?: $this->config['queue']; // @todo: make this a helper method somewhere.
+
         $taskName = $this->client->taskName(
             $config['project'],
             $config['location'],
-            $job->getQueue(),
+            $queue,
             request()->header('X-Cloudtasks-Taskname')
         );
 
-        $this->client->deleteTask($taskName);
+        CloudTasksApi::deleteTask($taskName);
     }
 
     /**
