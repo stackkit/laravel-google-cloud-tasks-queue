@@ -241,7 +241,7 @@ class TaskHandlerTest extends TestCase
                 ->setMaxAttempts(3)
                 ->setMaxRetryDuration(new Duration(['seconds' => 3]))
         );
-        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(time() + 1)->byDefault();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(time() + 10)->byDefault();
 
         $job = $this->dispatch(new FailingJob());
 

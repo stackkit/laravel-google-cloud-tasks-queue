@@ -66,13 +66,14 @@ class TestCase extends \Orchestra\Testbench\TestCase
         }
 
         $app['config']->set('database.default', 'testbench');
+        $port = env('DB_DRIVER') === 'mysql' ? 3307 : 5432;
         $app['config']->set('database.connections.testbench', [
-            'driver'   => 'mysql',
-            'host' => env('CI_DB_HOST', env('DB_HOST')),
-            'port' => env('CI_DB_PORT', env('DB_PORT')),
-            'database' => env('CI_DB_DATABASE', env('DB_DATABASE')),
-            'username' => env('CI_DB_USERNAME', env('DB_USERNAME')),
-            'password' => env('CI_DB_PASSWORD', env('DB_PASSWORD')),
+            'driver'   => env('DB_DRIVER', 'mysql'),
+            'host' => '127.0.0.1',
+            'port' => $port,
+            'database' => 'cloudtasks',
+            'username' => 'cloudtasks',
+            'password' => 'cloudtasks',
             'prefix'   => '',
         ]);
 

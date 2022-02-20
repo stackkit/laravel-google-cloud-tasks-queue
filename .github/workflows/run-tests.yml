@@ -11,6 +11,7 @@ jobs:
 
     strategy:
       matrix:
+        db: ['mysql', 'pgsql']
         payload:
           - { queue: 'github-actions-laravel9-php81', laravel: '9.*', php: '8.1', 'testbench': '7.*'}
           - { queue: 'github-actions-laravel9-php80', laravel: '9.*', php: '8.0', 'testbench': '7.*'}
@@ -22,7 +23,7 @@ jobs:
           - { queue: 'github-actions-laravel6-php80', laravel: '6.*', php: '8.0', 'testbench': '4.*' }
           - { queue: 'github-actions-laravel6-php74', laravel: '6.*', php: '7.4', 'testbench': '4.*' }
 
-    name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }}
+    name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db }}
 
     steps:
       - name: Checkout code
@@ -35,23 +36,24 @@ jobs:
           extensions: mbstring, dom, fileinfo
           coverage: none
 
-      - name: Set up MySQL
+      - name: Set up MySQL and PostgreSQL
         run: |
-          sudo /etc/init.d/mysql start
-          mysql -e 'CREATE DATABASE test;' -uroot -proot
-
+          MYSQL_PORT=3307 POSTGRES_PORT=5432 docker compose up ${{ matrix.db }} -d
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.payload.laravel }}" "orchestra/testbench:${{ matrix.payload.testbench }}" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction --no-suggest
+          if [ "${{ matrix.db }}" = "mysql" ]; then
+            while ! mysqladmin ping --host=127.0.0.1 --user=cloudtasks --port=3307 --password=cloudtasks --silent; do
+              echo "Waiting for MySQL..."
+              sleep 1
+            done
+          else
+            echo "Not waiting for MySQL."
+          fi
       - name: Execute tests
         env:
-          CI_DB_DRIVER: mysql
-          CI_DB_HOST: 127.0.0.1
-          CI_DB_PORT: 3306
-          CI_DB_DATABASE: test
-          CI_DB_USERNAME: root
-          CI_DB_PASSWORD: root
+          DB_DRIVER: ${{ matrix.db }}
           CI_CLOUD_TASKS_PROJECT_ID: ${{ secrets.CI_CLOUD_TASKS_PROJECT_ID }}
           CI_CLOUD_TASKS_QUEUE: ${{ secrets.CI_CLOUD_TASKS_QUEUE }}
           CI_CLOUD_TASKS_LOCATION: ${{ secrets.CI_CLOUD_TASKS_LOCATION }}

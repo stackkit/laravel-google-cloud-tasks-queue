@@ -88,7 +88,7 @@ class CloudTasksApiTest extends TestCase
 
         // Assert
         $this->assertMatchesRegularExpression(
-            '/projects\/' . env('CI_CLOUD_TASKS_PROJECT_ID') . '\/locations\/' . env('CI_CLOUD_TASKS_LOCATION') . '\/queues\/' . env('CI_CLOUD_TASKS_QUEUE') . '\/tasks\/\d{19,}$/',
+            '/projects\/' . env('CI_CLOUD_TASKS_PROJECT_ID') . '\/locations\/' . env('CI_CLOUD_TASKS_LOCATION') . '\/queues\/' . env('CI_CLOUD_TASKS_QUEUE') . '\/tasks\/\d+$/',
             $taskName
         );
     }
