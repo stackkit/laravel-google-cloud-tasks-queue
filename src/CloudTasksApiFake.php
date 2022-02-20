@@ -42,7 +42,14 @@ class CloudTasksApiFake implements CloudTasksApiContract
         $this->deletedTasks[] = $taskName;
     }
 
-    public function getRetryUntilTimestamp(CloudTasksJob $job): ?int
+    public function getTask(string $taskName): Task
+    {
+        return (new Task())
+            ->setName($taskName);
+    }
+
+
+    public function getRetryUntilTimestamp(string $taskName): ?int
     {
         return null;
     }

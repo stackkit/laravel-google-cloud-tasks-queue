@@ -12,6 +12,7 @@
         <testsuite name="Testsuite">
             <file>./tests/ConfigTest.php</file>
             <file>./tests/TaskHandlerTest.php</file>
+            <file>./tests/CloudTasksApiTest.php</file>
         </testsuite>
     </testsuites>
     <php>

@@ -94,7 +94,7 @@ class TaskHandler
         // max retry duration has been set. If that duration
         // has passed, it should stop trying altogether.
         if ($job->attempts() > 0) {
-            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($job));
+            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp(request()->header('X-Cloudtasks-Taskname')));
         }
 
         app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
