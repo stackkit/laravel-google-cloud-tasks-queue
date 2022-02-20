@@ -165,7 +165,7 @@ class CloudTasksApiTest extends TestCase
             $this->client->queueName(
                 env('CI_CLOUD_TASKS_PROJECT_ID'),
                 env('CI_CLOUD_TASKS_LOCATION'),
-                env('CI_CLOUD_TASKS_QUEUE')
+                env('CI_CLOUD_TASKS_CUSTOM_QUEUE', env('CI_CLOUD_TASKS_QUEUE'))
             ),
             $cloudTask,
         );

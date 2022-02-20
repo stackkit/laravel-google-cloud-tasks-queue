@@ -7,31 +7,22 @@ on:
 
 jobs:
   php-tests:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        php: [8.1, 8.0, 7.4]
-        laravel: [9.*, 8.*, 7.*, 6.*]
-        os: [ubuntu-latest]
-        include:
-          - laravel: 9.*
-            testbench: 7.*
-          - laravel: 8.*
-            testbench: 6.*
-          - laravel: 7.*
-            testbench: 5.*
-          - laravel: 6.*
-            testbench: 4.*
-        exclude:
-          - laravel: 9.*
-            php: 7.4
-          - laravel: 6.*
-            php: 8.1
-          - laravel: 7.*
-            php: 8.1
+        payload:
+          - { queue: 'github-actions-laravel9-php81', laravel: '9.*', php: '8.1', 'testbench': '7.*'}
+          - { queue: 'github-actions-laravel9-php80', laravel: '9.*', php: '8.0', 'testbench': '7.*'}
+          - { queue: 'github-actions-laravel8-php81', laravel: '8.*', php: '8.1', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel8-php80', laravel: '8.*', php: '8.0', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel8-php74', laravel: '8.*', php: '7.4', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel7-php80', laravel: '7.*', php: '8.0', 'testbench': '5.*' }
+          - { queue: 'github-actions-laravel7-php74', laravel: '7.*', php: '7.4', 'testbench': '5.*' }
+          - { queue: 'github-actions-laravel6-php80', laravel: '6.*', php: '8.0', 'testbench': '4.*' }
+          - { queue: 'github-actions-laravel6-php74', laravel: '6.*', php: '7.4', 'testbench': '4.*' }
 
-    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }}
 
     steps:
       - name: Checkout code
@@ -40,7 +31,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
+          php-version: ${{ matrix.payload.php }}
           extensions: mbstring, dom, fileinfo
           coverage: none
 
@@ -51,7 +42,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer require "laravel/framework:${{ matrix.payload.laravel }}" "orchestra/testbench:${{ matrix.payload.testbench }}" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction --no-suggest
       - name: Execute tests
         env:
@@ -66,6 +57,7 @@ jobs:
           CI_CLOUD_TASKS_LOCATION: ${{ secrets.CI_CLOUD_TASKS_LOCATION }}
           CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL: ${{ secrets.CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL }}
           CI_SERVICE_ACCOUNT_JSON_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_JSON_KEY }}
+          CI_CLOUD_TASKS_CUSTOM_QUEUE: ${{ matrix.payload.queue }}
         run: |
           echo $CI_SERVICE_ACCOUNT_JSON_KEY > tests/Support/gcloud-key-valid.json
           vendor/bin/phpunit
