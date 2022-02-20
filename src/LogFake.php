@@ -7,51 +7,51 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use PHPUnit\Framework\Assert as PHPUnit;
 use Psr\Log\LoggerInterface;
 
-class LogFake implements LoggerInterface
+class LogFake
 {
     private array $loggedMessages = [];
 
-    public function emergency(\Stringable|string $message, array $context = []): void
+    public function emergency(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function alert(\Stringable|string $message, array $context = []): void
+    public function alert(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function critical(\Stringable|string $message, array $context = []): void
+    public function critical(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function error(\Stringable|string $message, array $context = []): void
+    public function error(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function warning(\Stringable|string $message, array $context = []): void
+    public function warning(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function notice(\Stringable|string $message, array $context = []): void
+    public function notice(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function info(\Stringable|string $message, array $context = []): void
+    public function info(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function debug(\Stringable|string $message, array $context = []): void
+    public function debug(string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function log($level, \Stringable|string $message, array $context = []): void
+    public function log($level, string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }

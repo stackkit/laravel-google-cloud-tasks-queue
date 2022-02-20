@@ -44,9 +44,22 @@ jobs:
           extensions: mbstring, dom, fileinfo
           coverage: none
 
+      - name: Set up MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -e 'CREATE DATABASE test;' -uroot -proot
+
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction --no-suggest
       - name: Execute tests
-        run: vendor/bin/phpunit
+        env:
+          CI_DB_DRIVER: mysql
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_PORT: 3306
+          CI_DB_DATABASE: test
+          CI_DB_USERNAME: root
+          CI_DB_PASSWORD: root
+        run: |
+          vendor/bin/phpunit

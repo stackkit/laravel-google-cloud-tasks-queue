@@ -11,6 +11,7 @@ use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\InteractsWithTime;
+use Illuminate\Support\Str;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
@@ -60,7 +61,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest = $this->createHttpRequest();
         $httpRequest->setUrl($this->config['handler']);
         $httpRequest->setHttpMethod(HttpMethod::POST);
-        $httpRequest->setBody($payload);
+        $httpRequest->setBody(
+            // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
+            // Since we are using and expecting the uuid in some places
+            // we will add it manually here if it's not present yet.
+            $this->withUuid($payload)
+        );
 
         $task = $this->createTask();
         $task->setHttpRequest($httpRequest);
@@ -78,6 +84,17 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $createdTask = CloudTasksApi::createTask($queueName, $task);
 
         event(new TaskCreated($createdTask));
+    }
+
+    private function withUuid(string $payload): string
+    {
+        $decoded = json_decode($payload, true);
+
+        if (!isset($decoded['uuid'])) {
+            $decoded['uuid'] = (string) Str::uuid();
+        }
+
+        return json_encode($decoded);
     }
 
     public function pop($queue = null)

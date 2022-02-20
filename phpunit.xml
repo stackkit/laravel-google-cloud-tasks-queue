@@ -21,6 +21,7 @@
         <env name="CACHE_DRIVER" value="array"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="MAIL_DRIVER" value="log"/>
+        <env name="GOOGLE_APPLICATION_CREDENTIALS" value="./tests/Support/gcloud-key-valid.json" />
         <env name="QUEUE_DRIVER" value="cloudtasks"/>
         <env name="DB_CONNECTION" value="mysql" />
         <env name="DB_HOST" value="127.0.0.1" />

@@ -5,17 +5,21 @@ namespace Tests;
 use Firebase\JWT\ExpiredException;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Protobuf\Duration;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksJob;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
+use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
 use UnexpectedValueException;
@@ -107,14 +111,9 @@ class TaskHandlerTest extends TestCase
         Event::fake([JobProcessing::class, JobProcessed::class]);
 
         // Act
-        $this->dispatch(new SimpleJob())->run();
+        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
 
         // Assert
-        Event::assertDispatchedTimes(JobProcessing::class, 1);
-        Event::assertDispatchedTimes(JobProcessed::class, 1);
-        Event::assertDispatched(JobProcessed::class, function (JobProcessed $event) {
-            return $event->job->resolveName() === 'Tests\\Support\\SimpleJob';
-        });
         Log::assertLogged('SimpleJob:success');
     }
 
@@ -243,7 +242,7 @@ class TaskHandlerTest extends TestCase
                 ->setMaxRetryDuration(new Duration(['seconds' => 3]))
         );
         CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(time() + 1)->byDefault();
-        Event::fake([JobExceptionOccurred::class, JobFailed::class]);
+
         $job = $this->dispatch(new FailingJob());
 
         // Act & Assert
@@ -251,8 +250,9 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         # After 2 attempts both Laravel versions should report the same: 2 errors and 0 failures.
-        Event::assertDispatchedTimes(JobExceptionOccurred::class, 2);
-        Event::assertNotDispatched(JobFailed::class);
+        $task = StackkitCloudTask::whereTaskUuid($job->payload['uuid'])->firstOrFail();
+        $this->assertEquals(2, $task->getNumberOfAttempts());
+        $this->assertEquals('error', $task->status);
 
         $job->run();
 
@@ -261,15 +261,15 @@ class TaskHandlerTest extends TestCase
         # Laravel 8+: don't fail because retryUntil has not yet passed.
 
         if (version_compare(app()->version(), '8.0.0', '<')) {
-            Event::assertDispatched(JobFailed::class);
+            $this->assertEquals('failed', $task->fresh()->status);
             return;
         } else {
-            Event::assertNotDispatched(JobFailed::class);
+            $this->assertEquals('error', $task->fresh()->status);
         }
 
         CloudTasksApi::shouldReceive('getRetryUntilTimestamp')->andReturn(time() - 1);
         $job->run();
 
-        Event::assertDispatched(JobFailed::class);
+        $this->assertEquals('failed', $task->fresh()->status);
     }
 }

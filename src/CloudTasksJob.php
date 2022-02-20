@@ -33,6 +33,11 @@ class CloudTasksJob extends LaravelJob implements JobContract
         return $this->job['uuid'];
     }
 
+    public function uuid(): string
+    {
+        return $this->job['uuid'];
+    }
+
     public function getRawBody()
     {
         return json_encode($this->job);

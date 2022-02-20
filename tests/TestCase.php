@@ -43,6 +43,17 @@ class TestCase extends \Orchestra\Testbench\TestCase
     }
 
     /**
+     * Define database migrations.
+     *
+     * @return void
+     */
+    protected function defineDatabaseMigrations()
+    {
+        $this->loadMigrationsFrom(__DIR__ . '/../migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/../vendor/orchestra/testbench-core/laravel/migrations');
+    }
+
+    /**
      * Define environment setup.
      *
      * @param  \Illuminate\Foundation\Application $app
@@ -53,6 +64,17 @@ class TestCase extends \Orchestra\Testbench\TestCase
         foreach (glob(storage_path('framework/cache/data/*/*/*')) as $file) {
             unlink($file);
         }
+
+        $app['config']->set('database.default', 'testbench');
+        $app['config']->set('database.connections.testbench', [
+            'driver'   => 'mysql',
+            'host' => env('CI_DB_HOST', env('DB_HOST')),
+            'port' => env('CI_DB_PORT', env('DB_PORT')),
+            'database' => env('CI_DB_DATABASE', env('DB_DATABASE')),
+            'username' => env('CI_DB_USERNAME', env('DB_USERNAME')),
+            'password' => env('CI_DB_PASSWORD', env('DB_PASSWORD')),
+            'prefix'   => '',
+        ]);
 
         $app['config']->set('cache.default', 'file');
         $app['config']->set('queue.default', 'my-cloudtasks-connection');
@@ -65,6 +87,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'service_account_email' => 'info@stackkit.io',
         ]);
         $app['config']->set('queue.failed.driver', 'database-uuids');
+        $app['config']->set('queue.failed.database', 'testbench');
     }
 
     protected function setConfigValue($key, $value)
@@ -167,5 +190,10 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $token = JWT::encode($base, $privateKey, 'RS256', 'abc123');
 
         request()->headers->set('Authorization', 'Bearer ' . $token);
+    }
+
+    protected function assertDatabaseCount($table, int $count, $connection = null)
+    {
+        $this->assertEquals($count, DB::connection($connection)->table($table)->count());
     }
 }
