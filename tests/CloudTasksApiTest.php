@@ -161,7 +161,6 @@ class CloudTasksApiTest extends TestCase
         $cloudTask = new Task();
         $cloudTask->setHttpRequest($httpRequest);
 
-
         $createdTask = CloudTasksApi::createTask(
             $this->client->queueName(
                 env('CI_CLOUD_TASKS_PROJECT_ID'),
@@ -177,7 +176,7 @@ class CloudTasksApiTest extends TestCase
             sleep(1);
             $secondsSlept += 1;
 
-            if ($secondsSlept >= 30) {
+            if ($secondsSlept >= 180) {
                 $this->fail('Task took too long to get executed.');
             }
         }
