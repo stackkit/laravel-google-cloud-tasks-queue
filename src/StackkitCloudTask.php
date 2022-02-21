@@ -2,26 +2,53 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use const JSON_PRETTY_PRINT;
+use function Safe\json_encode;
+use function Safe\json_decode;
 
+/**
+ * @property int $id
+ * @property string $queue
+ * @property string $task_uuid
+ * @property string $name
+ * @property string $status
+ * @property string|null $metadata
+ * @property string|null $payload
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class StackkitCloudTask extends Model
 {
     protected $guarded = [];
 
-    public function scopeNewestFirst($builder)
+    public static function findByUuid(string $uuid): StackkitCloudTask
+    {
+        return self::whereTaskUuid($uuid)->firstOrFail();
+    }
+
+    /**
+     * @param Builder<StackkitCloudTask> $builder
+     * @return Builder<StackkitCloudTask>
+     */
+    public function scopeNewestFirst(Builder $builder): Builder
     {
         return $builder->orderByDesc('created_at');
     }
 
-    public function scopeFailed($builder)
+    /**
+     * @param Builder<StackkitCloudTask> $builder
+     * @return Builder<StackkitCloudTask>
+     */
+    public function scopeFailed(Builder $builder): Builder
     {
         return $builder->whereStatus('failed');
     }
 
-    public function getMetadata()
+    public function getMetadata(): array
     {
         $value = $this->metadata;
 
@@ -29,31 +56,19 @@ class StackkitCloudTask extends Model
             return [];
         }
 
-        if (is_string($value)) {
-            $decoded = json_decode($value, true);
+        $decoded = json_decode($value, true);
 
-            return is_array($decoded) ? $decoded : [];
-        }
-
-        return is_array($value) ? $value : [];
+        return is_array($decoded) ? $decoded : [];
     }
 
-    /**
-     * @return int
-     */
-    public function getNumberOfAttempts()
+    public function getNumberOfAttempts(): int
     {
-        $events = Arr::get($this->getMetadata(), 'events', []);
-
-        return count(array_filter($events, function (array $event) {
-            return in_array(
-                $event['status'],
-                ['running']
-            );
-        }));
+        return collect($this->getEvents())
+            ->where('status', 'running')
+            ->count();
     }
 
-    public function setMetadata($key, $value)
+    public function setMetadata(string $key, mixed $value): void
     {
         $metadata = $this->getMetadata();
 
@@ -62,24 +77,32 @@ class StackkitCloudTask extends Model
         $this->metadata = json_encode($metadata);
     }
 
-    public function incrementAttempts()
+    public function addMetadataEvent(array $event): void
     {
-        //
+        $metadata = $this->getMetadata();
+
+        $metadata['events'] ??= [];
+
+        $metadata['events'][] = $event;
+
+        $this->metadata = json_encode($metadata);
     }
 
-    public function getEvents()
+    public function getEvents(): array
     {
         Carbon::setTestNowAndTimezone(now()->utc());
 
+        /** @var array $events */
         $events = Arr::get($this->getMetadata(), 'events', []);
 
-        return array_map(function (array $event) {
+        return collect($events)->map(function ($event) {
+            /** @var array $event */
             $event['diff'] = Carbon::parse($event['datetime'])->diffForHumans();
             return $event;
-        }, $events);
+        })->toArray();
     }
 
-    public function getPayloadPretty()
+    public function getPayloadPretty(): string
     {
         $payload = $this->getMetadata()['payload'] ?? '[]';
 

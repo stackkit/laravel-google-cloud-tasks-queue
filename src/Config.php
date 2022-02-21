@@ -6,7 +6,7 @@ use Error;
 
 class Config
 {
-    public static function validate(array $config)
+    public static function validate(array $config): void
     {
         if (empty($config['project'])) {
             throw new Error(Errors::invalidProject());

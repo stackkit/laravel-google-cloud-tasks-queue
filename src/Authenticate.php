@@ -2,9 +2,16 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
 class Authenticate
 {
-    public function handle($request, $next)
+    /**
+     * @return Response|never
+     */
+    public function handle(Request $request, Closure $next)
     {
         return CloudTasks::check($request) ? $next($request) : abort(403);
     }

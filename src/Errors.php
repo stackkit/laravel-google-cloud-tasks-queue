@@ -4,22 +4,22 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 class Errors
 {
-    public static function invalidProject()
+    public static function invalidProject(): string
     {
         return 'Google Cloud project not provided. To fix this, set the STACKKIT_CLOUD_TASKS_PROJECT environment variable';
     }
 
-    public static function invalidLocation()
+    public static function invalidLocation(): string
     {
         return 'Google Cloud Tasks location not provided. To fix this, set the STACKKIT_CLOUD_TASKS_LOCATION environment variable';
     }
 
-    public static function invalidHandler()
+    public static function invalidHandler(): string
     {
         return 'Google Cloud Tasks handler not provided. To fix this, set the STACKKIT_CLOUD_TASKS_HANDLER environment variable';
     }
 
-    public static function invalidServiceAccountEmail()
+    public static function invalidServiceAccountEmail(): string
     {
         return 'Google Service Account email address not provided. This is needed to secure the handler so it is only accessible by Google. To fix this, set the STACKKIT_CLOUD_TASKS_SERVICE_EMAIL environment variable';
     }

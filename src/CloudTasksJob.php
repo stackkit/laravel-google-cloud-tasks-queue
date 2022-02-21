@@ -2,33 +2,34 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Container\Container;
 use Illuminate\Queue\Jobs\Job as LaravelJob;
 use Illuminate\Contracts\Queue\Job as JobContract;
+use function Safe\json_encode;
 
 class CloudTasksJob extends LaravelJob implements JobContract
 {
-    private $job;
-    private $attempts;
-    private $maxTries;
-    public $retryUntil = null;
+    private array $job;
+    private ?int $attempts;
+    private ?int $maxTries;
+    public ?int $retryUntil = null;
 
     /**
      * @var CloudTasksQueue
      */
     public $cloudTasksQueue;
 
-    public function __construct($job, CloudTasksQueue $cloudTasksQueue)
+    public function __construct(array $job, CloudTasksQueue $cloudTasksQueue)
     {
         $this->job = $job;
         $this->container = Container::getInstance();
         $this->cloudTasksQueue = $cloudTasksQueue;
+        /** @var \stdClass $command */
         $command = unserialize($job['data']['command']);
         $this->queue = $command->queue;
     }
 
-    public function getJobId()
+    public function getJobId(): string
     {
         return $this->job['uuid'];
     }
@@ -38,64 +39,64 @@ class CloudTasksJob extends LaravelJob implements JobContract
         return $this->job['uuid'];
     }
 
-    public function getRawBody()
+    public function getRawBody(): string
     {
         return json_encode($this->job);
     }
 
-    public function attempts()
+    public function attempts(): ?int
     {
         return $this->attempts;
     }
 
-    public function setAttempts($attempts)
+    public function setAttempts(int $attempts): void
     {
         $this->attempts = $attempts;
     }
 
-    public function setMaxTries($maxTries)
+    public function setMaxTries(int $maxTries): void
     {
-        if ((int) $maxTries === -1) {
+        if ($maxTries === -1) {
             $maxTries = 0;
         }
 
         $this->maxTries = $maxTries;
     }
 
-    public function maxTries()
+    public function maxTries(): ?int
     {
         return $this->maxTries;
     }
 
-    public function setQueue($queue)
+    public function setQueue(string $queue): void
     {
         $this->queue = $queue;
     }
 
-    public function setRetryUntil($retryUntil)
+    public function setRetryUntil(?int $retryUntil): void
     {
         $this->retryUntil = $retryUntil;
     }
 
-    public function retryUntil()
+    public function retryUntil(): ?int
     {
         return $this->retryUntil;
     }
 
     // timeoutAt was renamed to retryUntil in 8.x but we still support this.
-    public function timeoutAt()
+    public function timeoutAt(): ?int
     {
         return $this->retryUntil;
     }
 
-    public function delete()
+    public function delete(): void
     {
         parent::delete();
 
         $this->cloudTasksQueue->delete($this);
     }
 
-    public function fire()
+    public function fire(): void
     {
         $this->attempts++;
 

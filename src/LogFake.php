@@ -51,17 +51,20 @@ class LogFake
         $this->loggedMessages[] = $message;
     }
 
+    /**
+     * @param string $level
+     */
     public function log($level, string $message, array $context = []): void
     {
         $this->loggedMessages[] = $message;
     }
 
-    public function channel()
+    public function channel(): self
     {
         return $this;
     }
 
-    public function assertLogged(string $message)
+    public function assertLogged(string $message): void
     {
         PHPUnit::assertTrue(in_array($message, $this->loggedMessages), 'The message [' . $message . '] was not logged.');
     }

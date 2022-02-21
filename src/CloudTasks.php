@@ -4,7 +4,7 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Closure;
 
-class CloudTasks
+final class CloudTasks
 {
     /**
      * The callback that should be used to authenticate Cloud Tasks users.
@@ -34,8 +34,6 @@ class CloudTasks
      */
     public static function check($request)
     {
-        return (static::$authUsing ?: function () {
-            return app()->environment('local');
-        })($request);
+        return (static::$authUsing)($request);
     }
 }

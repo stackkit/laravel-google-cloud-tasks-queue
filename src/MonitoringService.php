@@ -2,24 +2,37 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Exception;
+use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use function Safe\json_decode;
 
 class MonitoringService
 {
-    public static function make()
+    public static function make(): MonitoringService
     {
         return new MonitoringService();
     }
 
-    public function addToMonitor($queue, Task $task)
+    private function getTaskBody(Task $task): string
+    {
+        $httpRequest = $task->getHttpRequest();
+
+        if (! $httpRequest instanceof HttpRequest) {
+            throw new Exception('Task does not have a HTTP request.');
+        }
+
+        return $httpRequest->getBody();
+    }
+
+    public function addToMonitor(string $queue, Task $task): void
     {
         $metadata = new TaskMetadata();
-        $metadata->payload = $task->getHttpRequest()->getBody();
+        $metadata->payload = $this->getTaskBody($task);
         $metadata->addEvent('queued', [
             'queue' => $queue,
         ]);
@@ -29,7 +42,7 @@ class MonitoringService
                 'task_uuid' => $this->getTaskUuid($task),
                 'name' => $this->getTaskName($task),
                 'queue' => $queue,
-                'payload' =>  $task->getHttpRequest()->getBody(),
+                'payload' =>  $this->getTaskBody($task),
                 'status' => 'queued',
                 'metadata' => $metadata->toJson(),
                 'created_at' => now()->utc(),
@@ -37,44 +50,40 @@ class MonitoringService
             ]);
     }
 
-    public function markAsRunning($uuid)
+    public function markAsRunning(string $uuid): void
     {
-        $task = StackkitCloudTask::whereTaskUuid($uuid)->firstOrFail();
+        $task = StackkitCloudTask::findByUuid($uuid);
 
         $task->status = 'running';
-        $metadata = $task->getMetadata();
-        $events = Arr::get($metadata, 'events', []);
-        $events[] = [
+        $task->addMetadataEvent([
             'status' => $task->status,
             'datetime' => now()->utc()->toDateTimeString(),
-        ];
-        $task->setMetadata('events', $events);
+        ]);
 
         $task->save();
     }
 
-    public function markAsSuccessful($uuid)
+    public function markAsSuccessful(string $uuid): void
     {
-        $task = StackkitCloudTask::whereTaskUuid($uuid)->firstOrFail();
+        $task = StackkitCloudTask::findByUuid($uuid);
 
         $task->status = 'successful';
-        $metadata = $task->getMetadata();
-        $events = Arr::get($metadata, 'events', []);
-        $events[] = [
+        $task->addMetadataEvent([
             'status' => $task->status,
             'datetime' => now()->utc()->toDateTimeString(),
-        ];
-        $task->setMetadata('events', $events);
+        ]);
 
         $task->save();
     }
 
-    public function markAsError(JobExceptionOccurred $event)
+    public function markAsError(JobExceptionOccurred $event): void
     {
-        $task = StackkitCloudTask::whereTaskUuid($event->job->uuid())
-            ->first();
+        /** @var CloudTasksJob $job */
+        $job = $event->job;
 
-        if (!$task) {
+        try {
+            $task = StackkitCloudTask::findByUuid($job->uuid());
+        } catch (ModelNotFoundException $e) {
             return;
         }
 
@@ -83,43 +92,44 @@ class MonitoringService
         }
 
         $task->status = 'error';
-        $metadata = $task->getMetadata();
-        $events = Arr::get($metadata, 'events', []);
-        $events[] = [
+        $task->addMetadataEvent([
             'status' => $task->status,
             'datetime' => now()->utc()->toDateTimeString(),
-        ];
-        $task->setMetadata('events', $events);
+        ]);
         $task->setMetadata('exception', (string) $event->exception);
 
         $task->save();
     }
 
-    public function markAsFailed(JobFailed $event)
+    public function markAsFailed(JobFailed $event): void
     {
-        $task = StackkitCloudTask::whereTaskUuid($event->job->uuid())->firstOrFail();
+        /** @var CloudTasksJob $job */
+        $job = $event->job;
+
+        $task = StackkitCloudTask::findByUuid($job->uuid());
 
         $task->status = 'failed';
-        $metadata = $task->getMetadata();
-        $events = Arr::get($metadata, 'events', []);
-        $events[] = [
+        $task->addMetadataEvent([
             'status' => $task->status,
             'datetime' => now()->utc()->toDateTimeString(),
-        ];
-        $task->setMetadata('events', $events);
+        ]);
 
         $task->save();
     }
 
-    private function getTaskName(Task $task)
+    private function getTaskName(Task $task): string
     {
-        $decode = json_decode($task->getHttpRequest()->getBody(), true);
+        /** @var array $decode */
+        $decode = json_decode($this->getTaskBody($task), true);
 
         return $decode['displayName'];
     }
 
-    private function getTaskUuid(Task $task)
+    private function getTaskUuid(Task $task): string
     {
-        return json_decode($task->getHttpRequest()->getBody())->uuid;
+        /** @var array $task */
+        $task = json_decode($this->getTaskBody($task), true);
+
+        return $task['uuid'];
     }
 }

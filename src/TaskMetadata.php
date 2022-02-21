@@ -2,6 +2,8 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use function Safe\json_encode;
+
 class TaskMetadata
 {
     /**
@@ -14,11 +16,7 @@ class TaskMetadata
      */
     public $payload;
 
-    /**
-     * @param string $status
-     * @return void
-     */
-    public function addEvent($status, array $additional = [])
+    public function addEvent(string $status, array $additional = []): void
     {
         $event = [
             'status' => $status,
@@ -28,7 +26,7 @@ class TaskMetadata
         $this->events[] = array_merge($additional, $event);
     }
 
-    public function toArray()
+    public function toArray(): array
     {
         return [
             'events' => $this->events,
@@ -36,12 +34,12 @@ class TaskMetadata
         ];
     }
 
-    public function toJson()
+    public function toJson(): string
     {
         return json_encode($this->toArray());
     }
 
-    public static function createFromArray(array $data)
+    public static function createFromArray(array $data): TaskMetadata
     {
         $metadata = new TaskMetadata();
 

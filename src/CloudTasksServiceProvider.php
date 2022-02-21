@@ -12,10 +12,12 @@ use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
+use function Safe\file_get_contents;
+use function Safe\json_decode;
 
 class CloudTasksServiceProvider extends LaravelServiceProvider
 {
-    public function boot(QueueManager $queue, Router $router)
+    public function boot(QueueManager $queue, Router $router): void
     {
         $this->authorization();
 
@@ -38,7 +40,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->gate();
 
         CloudTasks::auth(function ($request) {
-            return app()->environment('local') ||
+            return app()->environment('local', 'testing') ||
                 Gate::check('viewCloudTasks', [$request->user()]);
         });
     }
@@ -59,7 +61,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
     }
 
-    private function registerClient()
+    private function registerClient(): void
     {
         $this->app->singleton(CloudTasksClient::class, function () {
             return new CloudTasksClient();
@@ -69,33 +71,33 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->app->bind('cloud-tasks-api', CloudTasksApiConcrete::class);
     }
 
-    private function registerConnector(QueueManager $queue)
+    private function registerConnector(QueueManager $queue): void
     {
         $queue->addConnector('cloudtasks', function () {
             return new CloudTasksConnector;
         });
     }
 
-    private function registerViews()
+    private function registerViews(): void
     {
         $this->loadViewsFrom(__DIR__ . '/../views', 'cloud-tasks');
     }
 
-    private function registerAssets()
+    private function registerAssets(): void
     {
         $this->publishes([
             __DIR__ . '/../dashboard/dist' => public_path('vendor/cloud-tasks'),
         ], ['cloud-tasks-assets']);
     }
 
-    private function registerMigrations()
+    private function registerMigrations(): void
     {
         $this->loadMigrationsFrom([
             __DIR__ . '/../migrations',
         ]);
     }
 
-    private function registerRoutes(Router $router)
+    private function registerRoutes(Router $router): void
     {
         $router->post('handle-task', [TaskHandler::class, 'handle']);
 
@@ -121,24 +123,22 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
     }
 
-    private function registerMonitoring()
+    private function registerMonitoring(): void
     {
         app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
-            MonitoringService::make()->markAsRunning(
-                $event->job->uuid()
-            );
+            if ($event->job instanceof CloudTasksJob) {
+                MonitoringService::make()->markAsRunning($event->job->uuid());
+            }
         });
 
         app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            MonitoringService::make()->markAsSuccessful(
-                $event->job->uuid()
-            );
+            if ($event->job instanceof CloudTasksJob) {
+                MonitoringService::make()->markAsSuccessful($event->job->uuid());
+            }
         });
 
         app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
-            MonitoringService::make()->markAsError(
-                $event
-            );
+            MonitoringService::make()->markAsError($event);
         });
 
         app('events')->listen(JobFailed::class, function ($event) {

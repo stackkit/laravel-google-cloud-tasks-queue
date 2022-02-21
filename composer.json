@@ -10,10 +10,13 @@
     "require": {
         "ext-json": "*",
         "phpseclib/phpseclib": "~2.0",
-        "google/cloud-tasks": "^1.10"
+        "google/cloud-tasks": "^1.10",
+        "thecodingmachine/safe": "^2.1"
     },
     "require-dev": {
-        "orchestra/testbench": "^4.0 || ^5.0 || ^6.0 || ^7.0"
+        "orchestra/testbench": "^4.0 || ^5.0 || ^6.0 || ^7.0",
+        "nunomaduro/larastan": "^1.0 || ^2.0",
+        "thecodingmachine/phpstan-safe-rule": "^1.2"
     },
     "autoload": {
         "psr-4": {
@@ -22,7 +25,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Tests\\": "tests/",
+            "Factories\\": "factories/"
         }
     },
     "extra": {

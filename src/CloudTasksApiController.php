@@ -5,12 +5,14 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Stackkit\LaravelGoogleCloudTasksQueue\Entities\StatRow;
 use const STR_PAD_LEFT;
 
 class CloudTasksApiController
 {
-    public function dashboard()
+    public function dashboard(): array
     {
         $dbDriver = config('database.connections.' . config('database.default') . '.driver');
 
@@ -29,6 +31,9 @@ class CloudTasksApiController
             ],
         ][$dbDriver];
 
+        /**
+         * @var array<StatRow> $stats
+         */
         $stats = DB::table((new StackkitCloudTask())->getTable())
             ->where('created_at', '>=', now()->utc()->startOfDay())
             ->select(
@@ -52,6 +57,7 @@ class CloudTasksApiController
                 ]
             )
             ->get()
+            ->map(fn($row) => StatRow::createFromObject($row))
             ->toArray();
 
         $response = [
@@ -98,6 +104,9 @@ class CloudTasksApiController
         return $response;
     }
 
+    /**
+     * @return Collection<int, StackkitCloudTask>
+     */
     public function tasks()
     {
         Carbon::setTestNowAndTimezone(now()->utc());
@@ -112,12 +121,12 @@ class CloudTasksApiController
                 [$hour, $minute] = explode(':', request('time'));
 
                 return $builder
-                    ->where('created_at', '>=', now()->setTime($hour, $minute, 0))
-                    ->where('created_at', '<=', now()->setTime($hour, $minute, 59));
+                    ->where('created_at', '>=', now()->setTime((int) $hour, (int) $minute, 0))
+                    ->where('created_at', '<=', now()->setTime((int) $hour, (int) $minute, 59));
             })
             ->when(request('hour'), function (Builder $builder, $hour) {
-                return $builder->where('created_at', '>=', now()->setTime($hour, 0, 0))
-                    ->where('created_at', '<=', now()->setTime($hour, 59, 59));
+                return $builder->where('created_at', '>=', now()->setTime((int) $hour, 0, 0))
+                    ->where('created_at', '<=', now()->setTime((int) $hour, 59, 59));
             })
             ->when(request('queue'), function (Builder $builder, $queue) {
                 return $builder->where('queue', $queue);
@@ -130,26 +139,23 @@ class CloudTasksApiController
 
         $maxId = $tasks->max('id');
 
-        return $tasks->map(function (StackkitCloudTask $task) use ($tasks, $maxId)
+        return $tasks->map(function (StackkitCloudTask $task) use ($maxId)
         {
-                return [
-                    'uuid' => $task->task_uuid,
-                    'id' => str_pad($task->id, strlen($maxId), 0, STR_PAD_LEFT),
-                    'name' => $task->name,
-                    'status' => $task->status,
-                    'attempts' => $task->getNumberOfAttempts(),
-                    'created' => $task->created_at->diffForHumans(),
-                    'queue' => $task->queue,
-                ];
-            });
+            return [
+                'uuid' => $task->task_uuid,
+                'id' => str_pad((string) $task->id, strlen($maxId), '0', STR_PAD_LEFT),
+                'name' => $task->name,
+                'status' => $task->status,
+                'attempts' => $task->getNumberOfAttempts(),
+                'created' => $task->created_at ? $task->created_at->diffForHumans() : null,
+                'queue' => $task->queue,
+            ];
+        });
     }
 
-    public function task($uuid)
+    public function task(string $uuid): array
     {
-        /**
-         * @var StackkitCloudTask $task
-         */
-        $task = StackkitCloudTask::whereTaskUuid($uuid)->firstOrFail();
+        $task = StackkitCloudTask::findByUuid($uuid);
 
         return [
             'id' => $task->id,

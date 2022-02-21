@@ -4,11 +4,24 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\WorkerOptions;
+use stdClass;
+use UnexpectedValueException;
+use function Safe\json_decode;
 
 class TaskHandler
 {
+    /**
+     * @var array
+     */
     private $config;
+
+    /**
+     * @var CloudTasksClient
+     */
+    private $client;
 
     /**
      * @var CloudTasksQueue
@@ -25,11 +38,7 @@ class TaskHandler
         $this->client = $client;
     }
 
-    /**
-     * @param $task
-     * @throws CloudTasksException
-     */
-    public function handle($task = null)
+    public function handle(?array $task = null): void
     {
         $task = $task ?: $this->captureTask();
 
@@ -42,17 +51,20 @@ class TaskHandler
         $this->handleTask($task);
     }
 
-    private function loadQueueConnectionConfiguration($task)
+    private function loadQueueConnectionConfiguration(array $task): void
     {
+        /**
+         * @var stdClass $command
+         */
         $command = unserialize($task['data']['command']);
-        $connection = $command->connection ?? config('queue.default');
+        $connection = $command->command ?? config('queue.default');
         $this->config = array_merge(
-            config("queue.connections.{$connection}"),
+            (array) config("queue.connections.{$connection}"),
             ['connection' => $connection]
         );
     }
 
-    private function setQueue()
+    private function setQueue(): void
     {
         $this->queue = new CloudTasksQueue($this->config, $this->client);
     }
@@ -60,7 +72,7 @@ class TaskHandler
     /**
      * @throws CloudTasksException
      */
-    private function captureTask()
+    private function captureTask(): array
     {
         $input = (string) (request()->getContent());
 
@@ -70,18 +82,14 @@ class TaskHandler
 
         $task = json_decode($input, true);
 
-        if (is_null($task)) {
+        if (!is_array($task)) {
             throw new CloudTasksException('Could not decode incoming task');
         }
 
         return $task;
     }
 
-    /**
-     * @param $task
-     * @throws CloudTasksException
-     */
-    private function handleTask($task)
+    private function handleTask(array $task): void
     {
         $job = new CloudTasksJob($task, $this->queue);
 
@@ -94,13 +102,19 @@ class TaskHandler
         // max retry duration has been set. If that duration
         // has passed, it should stop trying altogether.
         if ($job->attempts() > 0) {
-            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp(request()->header('X-Cloudtasks-Taskname')));
+            $taskName = request()->header('X-Cloudtasks-Taskname');
+
+            if (!is_string($taskName)) {
+                throw new UnexpectedValueException('Expected task name to be a string.');
+            }
+
+            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($taskName));
         }
 
         app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
     }
 
-    private function loadQueueRetryConfig(CloudTasksJob $job)
+    private function loadQueueRetryConfig(CloudTasksJob $job): void
     {
         $queue = $job->getQueue() ?: $this->config['queue'];
 
