@@ -68,7 +68,10 @@ class StackkitCloudTask extends Model
             ->count();
     }
 
-    public function setMetadata(string $key, mixed $value): void
+    /**
+     * @param mixed $value
+     */
+    public function setMetadata(string $key, $value): void
     {
         $metadata = $this->getMetadata();
 
