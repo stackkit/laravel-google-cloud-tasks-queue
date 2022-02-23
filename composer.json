@@ -11,7 +11,7 @@
         "ext-json": "*",
         "phpseclib/phpseclib": "~2.0",
         "google/cloud-tasks": "^1.10",
-        "thecodingmachine/safe": "^2.1"
+        "thecodingmachine/safe": "^1.0|^2.0"
     },
     "require-dev": {
         "orchestra/testbench": "^4.0 || ^5.0 || ^6.0 || ^7.0",
