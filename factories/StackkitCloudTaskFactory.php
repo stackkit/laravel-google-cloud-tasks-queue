@@ -15,7 +15,7 @@ class StackkitCloudTaskFactory extends Factory
     public function definition()
     {
         return [
-            'status' => 'pending',
+            'status' => 'queued',
             'queue' => 'barbequeue',
             'task_uuid' => (string) Str::uuid(),
             'name' => 'SimpleJob',
