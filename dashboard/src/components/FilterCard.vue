@@ -23,7 +23,7 @@
       v-model="status"
       class="bg-white py-2 px-3 w-full rounded border"
     >
-      <option :value="null">List default</option>
+      <option value="">List default</option>
       <option value="queued">Queued</option>
       <option value="running">Running</option>
       <option value="successful">Successful</option>

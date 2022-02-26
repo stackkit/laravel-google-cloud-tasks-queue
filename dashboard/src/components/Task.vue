@@ -11,7 +11,7 @@ const task = ref({
   status: 'loading',
 })
 
-fetch(`http://localhost:8000/cloud-tasks-api/task/${route.params.uuid}`)
+fetch(`${import.meta.env.VITE_API_URL}/cloud-tasks-api/task/${route.params.uuid}`)
   .then((response) => response.json())
   .then((response) => (task.value = response))
 

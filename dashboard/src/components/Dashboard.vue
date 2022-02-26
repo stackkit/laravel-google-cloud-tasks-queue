@@ -16,7 +16,7 @@ const dashboard = ref({
 
 const tsLoaded = Math.floor(Date.now() / 1000)
 
-fetch('http://localhost:8000/cloud-tasks-api/dashboard')
+fetch(`${import.meta.env.VITE_API_URL}/cloud-tasks-api/dashboard`)
   .then((response) => response.json())
   .then((response) => (dashboard.value = response))
 </script>

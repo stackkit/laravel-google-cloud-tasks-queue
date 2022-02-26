@@ -2,7 +2,13 @@ import { onUnmounted, watch } from 'vue'
 import { onBeforeRouteUpdate } from 'vue-router'
 
 export async function fetchTasks(into, query = {}) {
+  let paused = false
+
   const f = async function (into) {
+    if (paused) {
+      return
+    }
+
     const url = new URL(window.location.href)
     const queryParams = new URLSearchParams(url.search)
 
@@ -10,12 +16,14 @@ export async function fetchTasks(into, query = {}) {
       queryParams.append(name, value)
     }
 
+    paused = true
     fetch(
-      `http://localhost:8000/cloud-tasks-api/tasks?${queryParams.toString()}`
+      `${import.meta.env.VITE_API_URL}/cloud-tasks-api/tasks?${queryParams.toString()}`
     )
       .then((response) => response.json())
       .then((response) => {
         into.value = response
+        paused = false
       })
   }
 
@@ -42,5 +50,6 @@ export async function fetchTasks(into, query = {}) {
   onUnmounted(() => {
     clearInterval(interval)
     document.removeEventListener('visibilitychange', onVisibilityChange)
+    paused = false
   })
 }

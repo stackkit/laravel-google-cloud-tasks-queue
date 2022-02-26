@@ -10,15 +10,12 @@ use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
 use function Safe\json_encode;
 use function Safe\json_decode;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
-    use InteractsWithTime;
-
     /**
      * @var CloudTasksClient
      */
