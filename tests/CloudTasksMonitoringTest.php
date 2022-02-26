@@ -2,7 +2,6 @@
 
 namespace Tests;
 
-use Factories\StackkitCloudTaskFactory;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Support\Carbon;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
@@ -19,7 +18,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function test_loading_dashboard_works()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()->create();
+        factory(StackkitCloudTask::class)->create();
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/dashboard');
@@ -40,13 +39,15 @@ class CloudTasksMonitoringTest extends TestCase
         $thisHour = now()->startOfHour();
         $thisDay = now()->startOfDay();
 
-        StackkitCloudTaskFactory::new()
-            ->crossJoinSequence(
-                [['status' => 'failed'], ['status' => 'queued']],
-                [['created_at' => $thisMinute], ['created_at' => $thisHour], ['created_at' => $thisDay], ['created_at' => $lastMinute]]
-            )
-            ->count(8)
-            ->create();
+        factory(StackkitCloudTask::class)->create(['status' => 'queued', 'created_at' => $thisMinute]);
+        factory(StackkitCloudTask::class)->create(['status' => 'queued', 'created_at' => $thisHour]);
+        factory(StackkitCloudTask::class)->create(['status' => 'queued', 'created_at' => $thisDay]);
+        factory(StackkitCloudTask::class)->create(['status' => 'queued', 'created_at' => $lastMinute]);
+
+        factory(StackkitCloudTask::class)->create(['status' => 'failed', 'created_at' => $thisMinute]);
+        factory(StackkitCloudTask::class)->create(['status' => 'failed', 'created_at' => $thisHour]);
+        factory(StackkitCloudTask::class)->create(['status' => 'failed', 'created_at' => $thisDay]);
+        factory(StackkitCloudTask::class)->create(['status' => 'failed', 'created_at' => $lastMinute]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/dashboard');
@@ -67,19 +68,14 @@ class CloudTasksMonitoringTest extends TestCase
     public function tasks_shows_newest_first()
     {
         // Arrange
-        $tasks = StackkitCloudTaskFactory::new()
-            ->count(2)
-            ->sequence(
-                ['created_at' => now()->subMinute()],
-                ['created_at' => now()],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->subMinute()]);
+        $task = factory(StackkitCloudTask::class)->create(['created_at' => now()]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks');
 
         // Assert
-        $this->assertEquals($tasks[1]->task_uuid, $response->json('0.uuid'));
+        $this->assertEquals($task->task_uuid, $response->json('0.uuid'));
     }
 
     /**
@@ -88,13 +84,8 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_shows_tasks_only_from_today()
     {
         // Arrange
-        $tasks = StackkitCloudTaskFactory::new()
-            ->count(2)
-            ->sequence(
-                ['created_at' => today()],
-                ['created_at' => today()->subDay()],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['created_at' => today()]);
+        factory(StackkitCloudTask::class)->create(['created_at' => today()->subDay()]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks');
@@ -109,13 +100,8 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_can_filter_only_failed_tasks()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()
-            ->count(2)
-            ->sequence(
-                ['status' => 'pending'],
-                ['status' => 'failed'],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['status' => 'pending']);
+        factory(StackkitCloudTask::class)->create(['status' => 'failed']);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?filter=failed');
@@ -130,15 +116,10 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_can_filter_tasks_created_at_exact_time()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()
-            ->count(4)
-            ->sequence(
-                ['created_at' => now()->setTime(15,4, 59)],
-                ['created_at' => now()->setTime(16, 5, 0)],
-                ['created_at' => now()->setTime(16, 5, 59)],
-                ['created_at' => now()->setTime(16, 6, 0)],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(15,4, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,5, 0)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,5, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,6, 0)]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?time=16:05');
@@ -153,14 +134,9 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_can_filter_tasks_created_at_exact_hour()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()
-            ->count(4)
-            ->sequence(
-                ['created_at' => now()->setTime(15,59, 59)],
-                ['created_at' => now()->setTime(16, 5, 59)],
-                ['created_at' => now()->setTime(16, 32, 32)],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(15,59, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,5, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,32, 32)]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?hour=16');
@@ -175,14 +151,9 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_can_filter_tasks_by_queue()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()
-            ->count(3)
-            ->sequence(
-                ['queue' => 'barbequeue'],
-                ['queue' => 'barbequeue-priority'],
-                ['queue' => 'barbequeue-priority'],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['queue' => 'barbequeue']);
+        factory(StackkitCloudTask::class)->create(['queue' => 'barbequeue-priority']);
+        factory(StackkitCloudTask::class)->create(['queue' => 'barbequeue-priority']);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?queue=barbequeue-priority');
@@ -197,15 +168,10 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_can_filter_tasks_by_status()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()
-            ->count(4)
-            ->sequence(
-                ['status' => 'queued'],
-                ['status' => 'pending'],
-                ['status' => 'failed'],
-                ['status' => 'failed'],
-            )
-            ->create();
+        factory(StackkitCloudTask::class)->create(['status' => 'queued']);
+        factory(StackkitCloudTask::class)->create(['status' => 'pending']);
+        factory(StackkitCloudTask::class)->create(['status' => 'failed']);
+        factory(StackkitCloudTask::class)->create(['status' => 'failed']);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?status=failed');
@@ -220,9 +186,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_shows_max_100_tasks()
     {
         // Arrange
-        StackkitCloudTaskFactory::new()
-            ->count(101)
-            ->create();
+        factory(StackkitCloudTask::class)->times(101)->create();
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks');
@@ -237,7 +201,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_returns_the_correct_task_fields()
     {
         // Arrange
-        $task = StackkitCloudTaskFactory::new()->create();
+        $task = factory(StackkitCloudTask::class)->create();
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks');
@@ -258,7 +222,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_returns_info_about_a_specific_task()
     {
         // Arrange
-        $task = StackkitCloudTaskFactory::new()->create();
+        $task = factory(StackkitCloudTask::class)->create();
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/task/' . $task->task_uuid);
@@ -287,7 +251,7 @@ class CloudTasksMonitoringTest extends TestCase
         $task = StackkitCloudTask::first();
         $this->assertSame(0, $tasksBefore);
         $this->assertSame(1, $tasksAfter);
-        $this->assertDatabaseHas(StackkitCloudTask::class, [
+        $this->assertDatabaseHas((new StackkitCloudTask())->getTable(), [
             'queue' => 'barbequeue',
             'status' => 'queued',
             'name' => SimpleJob::class,
