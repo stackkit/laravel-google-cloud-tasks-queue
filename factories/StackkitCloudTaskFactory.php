@@ -23,4 +23,15 @@ class StackkitCloudTaskFactory extends Factory
             'payload' => '{}',
         ];
     }
+
+    /**
+     * Add a new cross joined sequenced state transformation to the model definition.
+     *
+     * @param  array  $sequence
+     * @return static
+     */
+    public function crossJoinSequence(...$sequence)
+    {
+        return $this->state(new CrossJoinSequence(...$sequence));
+    }
 }

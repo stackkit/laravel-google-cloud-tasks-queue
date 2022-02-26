@@ -2,9 +2,9 @@
 
 namespace Tests;
 
-use Carbon\Carbon;
 use Factories\StackkitCloudTaskFactory;
 use Google\Cloud\Tasks\V2\RetryConfig;
+use Illuminate\Support\Carbon;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
@@ -34,7 +34,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function it_counts_the_number_of_tasks()
     {
         // Arrange
-        $this->travelTo(Carbon::parse('2022-01-01 15:15:00'));
+        Carbon::setTestNow(Carbon::parse('2022-01-01 15:15:00'));
         $lastMinute = now()->startOfMinute()->subMinute();
         $thisMinute = now()->startOfMinute();
         $thisHour = now()->startOfHour();
@@ -302,7 +302,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function when_a_job_is_running_it_will_be_updated_in_the_monitor()
     {
         // Arrange
-        $this->travelTo(now());
+        \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -328,7 +328,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function when_a_job_is_successful_it_will_be_updated_in_the_monitor()
     {
         // Arrange
-        $this->travelTo(now());
+        \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -354,7 +354,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function when_a_job_errors_it_will_be_updated_in_the_monitor()
     {
         // Arrange
-        $this->travelTo(now());
+        \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -381,7 +381,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function when_a_job_fails_it_will_be_updated_in_the_monitor()
     {
         // Arrange
-        $this->travelTo(now());
+        \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
         CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
