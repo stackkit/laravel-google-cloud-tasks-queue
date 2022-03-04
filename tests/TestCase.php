@@ -96,6 +96,14 @@ class TestCase extends \Orchestra\Testbench\TestCase
         ]);
         $app['config']->set('queue.failed.driver', 'database-uuids');
         $app['config']->set('queue.failed.database', 'testbench');
+
+        $disableMonitorPrefix = 'when_monitoring_is_disabled';
+
+        if (substr($this->getName(), 0, strlen($disableMonitorPrefix)) === $disableMonitorPrefix) {
+            $app['config']->set('cloud-tasks.monitor.enabled', false);
+        } else {
+            $app['config']->set('cloud-tasks.monitor.enabled', true);
+        }
     }
 
     protected function setConfigValue($key, $value)

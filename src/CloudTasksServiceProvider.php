@@ -22,6 +22,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
         $this->registerClient();
         $this->registerConnector($queue);
+        $this->registerConfig();
         $this->registerViews();
         $this->registerAssets();
         $this->registerMigrations();
@@ -77,20 +78,41 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
     }
 
+    private function registerConfig(): void
+    {
+        $this->publishes([
+            __DIR__ . '/../config/cloud-tasks.php' => config_path('cloud-tasks.php'),
+        ], ['cloud-tasks']);
+
+        $this->mergeConfigFrom(__DIR__ . '/../config/cloud-tasks.php', 'cloud-tasks');
+    }
+
     private function registerViews(): void
     {
+        if (CloudTasks::monitorDisabled()) {
+            return;
+        }
+
         $this->loadViewsFrom(__DIR__ . '/../views', 'cloud-tasks');
     }
 
     private function registerAssets(): void
     {
+        if (CloudTasks::monitorDisabled()) {
+            return;
+        }
+
         $this->publishes([
             __DIR__ . '/../dashboard/dist' => public_path('vendor/cloud-tasks'),
-        ], ['cloud-tasks-assets']);
+        ], ['cloud-tasks']);
     }
 
     private function registerMigrations(): void
     {
+        if (CloudTasks::monitorDisabled()) {
+            return;
+        }
+
         $this->loadMigrationsFrom([
             __DIR__ . '/../migrations',
         ]);
@@ -98,7 +120,11 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerRoutes(Router $router): void
     {
-        $router->post('handle-task', [TaskHandler::class, 'handle']);
+        $router->post('handle-task', [TaskHandler::class, 'handle'])->name('cloud-tasks.handle-task');
+
+        if (config('cloud-tasks.monitor.enabled') === false) {
+            return;
+        }
 
         $router->middleware(Authenticate::class)->group(function () use ($router) {
             $router->get('cloud-tasks/{view?}', function () {
@@ -116,34 +142,18 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 'cloud-tasks.index'
             );
 
-            $router->get('cloud-tasks-api/dashboard', [CloudTasksApiController::class, 'dashboard']);
-            $router->get('cloud-tasks-api/tasks', [CloudTasksApiController::class, 'tasks']);
-            $router->get('cloud-tasks-api/task/{uuid}', [CloudTasksApiController::class, 'task']);
+            $router->get('cloud-tasks-api/dashboard', [CloudTasksApiController::class, 'dashboard'])->name('cloud-tasks.api.dashboard');
+            $router->get('cloud-tasks-api/tasks', [CloudTasksApiController::class, 'tasks'])->name('cloud-tasks.api.tasks');
+            $router->get('cloud-tasks-api/task/{uuid}', [CloudTasksApiController::class, 'task'])->name('cloud-tasks.api.task');
         });
     }
 
     private function registerMonitoring(): void
     {
-        app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
-            if ($event->job instanceof CloudTasksJob) {
-                MonitoringService::make()->markAsRunning($event->job->uuid());
+        app('events')->listen(JobFailed::class, function (JobFailed $event) {
+            if (!$event->job instanceof CloudTasksJob) {
+                return;
             }
-        });
-
-        app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            if ($event->job instanceof CloudTasksJob) {
-                MonitoringService::make()->markAsSuccessful($event->job->uuid());
-            }
-        });
-
-        app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
-            MonitoringService::make()->markAsError($event);
-        });
-
-        app('events')->listen(JobFailed::class, function ($event) {
-            MonitoringService::make()->markAsFailed(
-                $event
-            );
 
             $config = $event->job->cloudTasksQueue->config;
 
@@ -151,6 +161,42 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 $config['connection'], $event->job->getQueue() ?: $config['queue'],
                 $event->job->getRawBody(), $event->exception
             );
+        });
+
+        app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
+            if (!CloudTasks::monitorEnabled()) {
+                return;
+            }
+
+            if ($event->job instanceof CloudTasksJob) {
+                MonitoringService::make()->markAsRunning($event->job->uuid());
+            }
+        });
+
+        app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
+            if (!CloudTasks::monitorEnabled()) {
+                return;
+            }
+
+            if ($event->job instanceof CloudTasksJob) {
+                MonitoringService::make()->markAsSuccessful($event->job->uuid());
+            }
+        });
+
+        app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
+            if (!CloudTasks::monitorEnabled()) {
+                return;
+            }
+
+            MonitoringService::make()->markAsError($event);
+        });
+
+        app('events')->listen(JobFailed::class, function ($event) {
+            if (!CloudTasks::monitorEnabled()) {
+                return;
+            }
+
+            MonitoringService::make()->markAsFailed($event);
         });
     }
 }

@@ -3,8 +3,12 @@
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\RetryConfig;
+use Illuminate\Routing\Route;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksServiceProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Tests\Support\FailingJob;
@@ -263,6 +267,22 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
+    public function when_monitoring_is_disabled_jobs_will_not_be_added_to_the_monitor()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        config()->set('cloud-tasks.monitor.enabled', false);
+
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        $this->assertDatabaseCount((new StackkitCloudTask())->getTable(), 0);
+    }
+
+    /**
+     * @test
+     */
     public function when_a_job_is_running_it_will_be_updated_in_the_monitor()
     {
         // Arrange
@@ -369,5 +389,71 @@ class CloudTasksMonitoringTest extends TestCase
             ],
             $events[6]
         );
+    }
+
+    /**
+     * @test
+     */
+    public function test_publish()
+    {
+        // Arrange
+        config()->set('cloud-tasks.monitor.enabled', true);
+
+        // Act & Assert
+        $expectedPublishBase = dirname(__DIR__);
+
+        $this->artisan('vendor:publish --tag=cloud-tasks --force')
+            ->expectsOutput('Copied File [' . $expectedPublishBase . '/config/cloud-tasks.php] To [/config/cloud-tasks.php]')
+            ->expectsOutput('Copied Directory [' . $expectedPublishBase . '/dashboard/dist] To [/public/vendor/cloud-tasks]')
+            ->expectsOutput('Publishing complete.');
+    }
+
+    /**
+     * @test
+     */
+    public function when_monitoring_is_enabled_it_adds_the_necessary_routes()
+    {
+        // Act
+        $routes = app(Router::class)->getRoutes();
+
+        // Assert
+        $this->assertInstanceOf(Route::class, $routes->getByName('cloud-tasks.handle-task'));
+        $this->assertInstanceOf(Route::class, $routes->getByName('cloud-tasks.index'));
+        $this->assertInstanceOf(Route::class, $routes->getByName('cloud-tasks.api.dashboard'));
+        $this->assertInstanceOf(Route::class, $routes->getByName('cloud-tasks.api.tasks'));
+        $this->assertInstanceOf(Route::class, $routes->getByName('cloud-tasks.api.task'));
+    }
+
+    /**
+     * @test
+     */
+    public function when_monitoring_is_enabled_it_adds_the_necessary_migrations()
+    {
+        $this->assertTrue(in_array(dirname(__DIR__) . '/src/../migrations', app('migrator')->paths()));
+    }
+
+    /**
+     * @test
+     */
+    public function when_monitoring_is_disabled_it_adds_the_necessary_migrations()
+    {
+        $this->assertEmpty(app('migrator')->paths());
+    }
+
+    /**
+     * @test
+     */
+    public function when_monitoring_is_disabled_it_does_not_add_the_monitor_routes()
+    {
+        // Act
+        $routes = app(Router::class)->getRoutes();
+
+        // Assert
+        $this->assertInstanceOf(Route::class, $routes->getByName('cloud-tasks.handle-task'));
+        $this->assertNull($routes->getByName('cloud-tasks.index'));
+        $this->assertNull($routes->getByName('cloud-tasks.api.dashboard'));
+        $this->assertNull($routes->getByName('cloud-tasks.api.tasks'));
+        $this->assertNull($routes->getByName('cloud-tasks.api.task'));
+
     }
 }

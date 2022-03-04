@@ -36,4 +36,24 @@ final class CloudTasks
     {
         return (static::$authUsing)($request);
     }
+
+    /**
+     * Determine if the monitor is enabled.
+     *
+     * @return bool
+     */
+    public static function monitorEnabled(): bool
+    {
+        return config('cloud-tasks.monitor.enabled') === true;
+    }
+
+    /**
+     * Determine if the monitor is disabled.
+     *
+     * @return bool
+     */
+    public static function monitorDisabled(): bool
+    {
+        return self::monitorEnabled() === false;
+    }
 }
