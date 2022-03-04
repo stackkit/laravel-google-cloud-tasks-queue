@@ -62,5 +62,4 @@ jobs:
           CI_CLOUD_TASKS_CUSTOM_QUEUE: ${{ matrix.payload.queue }}
         run: |
           echo $CI_SERVICE_ACCOUNT_JSON_KEY > tests/Support/gcloud-key-valid.json
-          vendor/bin/phpstan analyse --memory-limit=2G
           vendor/bin/phpunit
