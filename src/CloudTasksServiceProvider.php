@@ -90,7 +90,8 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     private function registerViews(): void
     {
         if (CloudTasks::monitorDisabled()) {
-            return;
+            // Larastan needs this view registered to check the service provider correctly.
+            // return;
         }
 
         $this->loadViewsFrom(__DIR__ . '/../views', 'cloud-tasks');
