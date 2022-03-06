@@ -11,11 +11,12 @@ const task = ref({
   status: 'loading',
 })
 
-fetch(`${import.meta.env.VITE_API_URL}/cloud-tasks-api/task/${route.params.uuid}`)
+fetch(`${import.meta.env.VITE_API_URL || ''}/cloud-tasks-api/task/${route.params.uuid}`)
   .then((response) => response.json())
   .then((response) => (task.value = response))
 
 const titles = {
+  scheduled: 'Scheduled',
   queued: 'Added to the queue',
   running: 'Running',
   successful: 'Successful',
@@ -46,6 +47,13 @@ const titles = {
                   class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 inline-block mb-1 px-1.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800"
                   >{{ task.queue }}</span
                 >
+              </div>
+              <div v-if="event['scheduled_at']">
+                <span
+                    class="bg-gray-200 text-gray-800 text-xs font-medium mr-2 inline-block mb-1 px-1.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800"
+                >
+                  Scheduled: {{ event['scheduled_at'] }} (UTC)
+                </span>
               </div>
             </h3>
             <Popper

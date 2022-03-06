@@ -33,9 +33,19 @@ class MonitoringService
     {
         $metadata = new TaskMetadata();
         $metadata->payload = $this->getTaskBody($task);
-        $metadata->addEvent('queued', [
+
+        $data = [
             'queue' => $queue,
-        ]);
+        ];
+
+        if ($task->hasScheduleTime()) {
+            $status = 'scheduled';
+            $data['scheduled_at'] = $task->getScheduleTime()->toDateTime()->format('Y-m-d H:i:s');
+        } else {
+            $status = 'queued';
+        }
+
+        $metadata->addEvent($status, $data);
 
         DB::table('stackkit_cloud_tasks')
             ->insert([
@@ -43,7 +53,7 @@ class MonitoringService
                 'name' => $this->getTaskName($task),
                 'queue' => $queue,
                 'payload' =>  $this->getTaskBody($task),
-                'status' => 'queued',
+                'status' => $status,
                 'metadata' => $metadata->toJson(),
                 'created_at' => now()->utc(),
                 'updated_at' => now()->utc(),

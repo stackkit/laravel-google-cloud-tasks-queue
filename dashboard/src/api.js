@@ -18,7 +18,7 @@ export async function fetchTasks(into, query = {}) {
 
     paused = true
     fetch(
-      `${import.meta.env.VITE_API_URL}/cloud-tasks-api/tasks?${queryParams.toString()}`
+      `${import.meta.env.VITE_API_URL || ''}/cloud-tasks-api/tasks?${queryParams.toString()}`
     )
       .then((response) => response.json())
       .then((response) => {

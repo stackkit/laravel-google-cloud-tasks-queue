@@ -283,6 +283,31 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
+    public function when_a_job_is_scheduled_it_will_be_added_as_such()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        Carbon::setTestNow(now());
+        $tasksBefore = StackkitCloudTask::count();
+
+        $job = $this->dispatch((new SimpleJob())->delay(now()->addSeconds(10)));
+        $tasksAfter = StackkitCloudTask::count();
+
+        // Assert
+        $task = StackkitCloudTask::first();
+        $this->assertSame(0, $tasksBefore);
+        $this->assertSame(1, $tasksAfter);
+        $this->assertDatabaseHas((new StackkitCloudTask())->getTable(), [
+            'queue' => 'barbequeue',
+            'status' => 'scheduled',
+            'name' => SimpleJob::class,
+        ]);
+        $this->assertEquals(now()->addSeconds(10)->toDateTimeString(), $task->getEvents()[0]['scheduled_at']);
+    }
+
+    /**
+     * @test
+     */
     public function when_a_job_is_running_it_will_be_updated_in_the_monitor()
     {
         // Arrange

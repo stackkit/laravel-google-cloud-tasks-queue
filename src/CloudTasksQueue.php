@@ -122,7 +122,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $createdTask = CloudTasksApi::createTask($queueName, $task);
 
-        event((new TaskCreated)->queue($queue)->task($createdTask));
+        event((new TaskCreated)->queue($queue)->task($task));
     }
 
     private function withUuid(string $payload): string

@@ -28,7 +28,7 @@ function ucfirst(input) {
 .task-error {
   @apply bg-red-100/50 text-red-600/50
 }
-.task-queued {
+.task-queued, .task-scheduled {
   @apply bg-gray-100 text-gray-500
 }
 .task-running {
