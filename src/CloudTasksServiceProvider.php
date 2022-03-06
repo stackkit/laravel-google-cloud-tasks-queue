@@ -151,6 +151,14 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerMonitoring(): void
     {
+        app('events')->listen(TaskCreated::class, function (TaskCreated $event) {
+            if (CloudTasks::monitorDisabled()) {
+                return;
+            }
+
+            MonitoringService::make()->addToMonitor($event->queue, $event->task);
+        });
+
         app('events')->listen(JobFailed::class, function (JobFailed $event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
