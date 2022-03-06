@@ -104,11 +104,12 @@ More info: https://cloud.google.com/docs/authentication/production
 
 ## Service Account Roles
 
-If you're not using your master service account (which have all of the abilities), you must add the following roles to make it works:
+If you're not using your master service account (which has all abilities), you must add the following roles to make it works:
 1. App Engine Viewer
 2. Cloud Tasks Enqueuer
 3. Cloud Tasks Viewer
-4. Service Account User
+4. Cloud Tasks Task Deleter
+5. Service Account User
 
 # Configuring the queue
 
