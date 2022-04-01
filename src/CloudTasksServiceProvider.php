@@ -94,22 +94,22 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         }
 
         $router->post('cloud-tasks-api/login', [CloudTasksApiController::class, 'login'])->name('cloud-tasks.api.login');
-        $router->middleware(Authenticate::class)->group(function () use ($router) {
-            $router->get('cloud-tasks/{view?}', function () {
-                return view('cloud-tasks::layout', [
-                    'manifest' => json_decode(file_get_contents(public_path('vendor/cloud-tasks/manifest.json')), true),
-                    'isDownForMaintenance' => app()->isDownForMaintenance(),
-                    'cloudTasksScriptVariables' => [
-                        'path' => 'cloud-tasks',
-                    ],
-                ]);
-            })->where(
-                'view',
-                '(.+)'
-            )->name(
-                'cloud-tasks.index'
-            );
+        $router->get('cloud-tasks/{view?}', function () {
+            return view('cloud-tasks::layout', [
+                'manifest' => json_decode(file_get_contents(public_path('vendor/cloud-tasks/manifest.json')), true),
+                'isDownForMaintenance' => app()->isDownForMaintenance(),
+                'cloudTasksScriptVariables' => [
+                    'path' => 'cloud-tasks',
+                ],
+            ]);
+        })->where(
+            'view',
+            '(.+)'
+        )->name(
+            'cloud-tasks.index'
+        );
 
+        $router->middleware(Authenticate::class)->group(function () use ($router) {
             $router->get('cloud-tasks-api/dashboard', [CloudTasksApiController::class, 'dashboard'])->name('cloud-tasks.api.dashboard');
             $router->get('cloud-tasks-api/tasks', [CloudTasksApiController::class, 'tasks'])->name('cloud-tasks.api.tasks');
             $router->get('cloud-tasks-api/task/{uuid}', [CloudTasksApiController::class, 'task'])->name('cloud-tasks.api.task');
