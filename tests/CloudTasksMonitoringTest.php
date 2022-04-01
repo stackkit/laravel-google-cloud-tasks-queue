@@ -479,6 +479,72 @@ class CloudTasksMonitoringTest extends TestCase
         $this->assertNull($routes->getByName('cloud-tasks.api.dashboard'));
         $this->assertNull($routes->getByName('cloud-tasks.api.tasks'));
         $this->assertNull($routes->getByName('cloud-tasks.api.task'));
+    }
 
+    /**
+     * @test
+     */
+    public function monitoring_is_password_protected()
+    {
+        // Arrange
+        $this->defaultHeaders['Authorization'] = '';
+
+        // Act
+        $response = $this->getJson('/cloud-tasks-api/dashboard');
+
+        // Assert
+        $this->assertEquals(403, $response->status());
+    }
+
+    /**
+     * @test
+     */
+    public function can_enter_with_token()
+    {
+        // Arrange
+        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
+
+        // Act
+        $response = $this->getJson('/cloud-tasks-api/dashboard');
+
+        // Assert
+        $this->assertEquals(200, $response->status());
+    }
+
+    /**
+     * @test
+     */
+    public function token_can_expire()
+    {
+        // Arrange
+        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(Carbon::create(2020, 5, 15, 15, 15, 15)->timestamp);
+
+        // Act & Assert
+        Carbon::setTestNow(Carbon::create(2020, 5, 15, 15, 15, 14));
+        $this->assertEquals(200, $this->getJson('/cloud-tasks-api/dashboard')->status());
+        Carbon::setTestNow(Carbon::create(2020, 5, 15, 15, 15, 15));
+        $this->assertEquals(403, $this->getJson('/cloud-tasks-api/dashboard')->status());
+    }
+
+    /**
+     * @test
+     */
+    public function there_is_a_login_endpoint()
+    {
+        // Arrange
+        Carbon::setTestNow($now = now());
+        config()->set('cloud-tasks.monitor.password', bcrypt('test123'));
+
+        // Act
+        $invalidPassword = $this->postJson('/cloud-tasks-api/login', ['password' => 'hey']);
+        $validPassword = $this->postJson('/cloud-tasks-api/login', ['password' => 'test123']);
+
+        // Assert
+        $this->assertSame('', $invalidPassword->content());
+        $this->assertStringStartsWith('ey', $validPassword->content());
+        $validUntil = decrypt($validPassword->content());
+
+        // the token should be valid for 15 minutes.
+        $this->assertSame($now->timestamp + 900, $validUntil);
     }
 }

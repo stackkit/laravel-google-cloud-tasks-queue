@@ -13,6 +13,6 @@ class Authenticate
      */
     public function handle(Request $request, Closure $next)
     {
-        return CloudTasks::check($request) ? $next($request) : abort(403);
+        return CloudTasks::check($request) ? $next($request) : response()->json('', 403);
     }
 }

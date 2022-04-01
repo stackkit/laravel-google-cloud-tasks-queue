@@ -1,7 +1,39 @@
 import { onUnmounted, watch } from 'vue'
 import { onBeforeRouteUpdate } from 'vue-router'
 
-export async function fetchTasks(into, query = {}) {
+export async function callApi({
+  endpoint,
+  router,
+  body = null,
+  method = 'GET',
+  login = false,
+} = {}) {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL || ''}/cloud-tasks-api/${endpoint}`,
+    {
+      method,
+      ...(body ? { body } : {}),
+      headers: {
+        ...(!login
+          ? {
+              Authorization: `Bearer ${localStorage.getItem(
+                'cloud-tasks-token'
+              )}`,
+            }
+          : {}),
+      },
+    }
+  )
+
+  if (response.status === 403 && !login) {
+    localStorage.removeItem('cloud-tasks-token')
+    router.push({ name: 'login' })
+  }
+
+  return login ? await response.text() : await response.json()
+}
+
+export async function fetchTasks(into, query = {}, router) {
   let paused = false
 
   const f = async function (into) {
@@ -17,14 +49,11 @@ export async function fetchTasks(into, query = {}) {
     }
 
     paused = true
-    fetch(
-      `${import.meta.env.VITE_API_URL || ''}/cloud-tasks-api/tasks?${queryParams.toString()}`
-    )
-      .then((response) => response.json())
-      .then((response) => {
-        into.value = response
-        paused = false
-      })
+    into.value = await callApi({
+      endpoint: `tasks?${queryParams.toString()}`,
+      router,
+    })
+    paused = false
   }
 
   f(into)

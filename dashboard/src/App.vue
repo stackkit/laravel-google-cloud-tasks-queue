@@ -24,9 +24,6 @@
   --popper-theme-box-shadow: 0 6px 30px -6px rgba(0, 0, 0, 0.25);
 }
 </style>
-<script>
+<script setup>
 import Menu from './components/Menu.vue'
-export default {
-  components: { Menu },
-}
 </script>

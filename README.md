@@ -103,15 +103,10 @@ To make use of it, publish its assets:
 php artisan vendor:publish --tag=cloud-tasks-assets
 ```
 
-We expose a dashboard at the /cloud-tasks URI. By default, you will only be able to access this dashboard in the local environment. However, within your app/Providers/AppServiceProvider.php file, there is an authorization gate definition. This authorization gate controls access to Cloud Tasks in non-local environments. You are free to modify this gate as needed to restrict access to your Cloud Tasks installation:
+We expose a dashboard at the /cloud-tasks URI.
 
 
 ```php
-Gate::define('viewCloudTasks', function ($user) {
-    return in_array($user->email, [
-        'me@example.com',
-    ]);
-});
 ```
 
 # Authentication

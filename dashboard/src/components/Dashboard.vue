@@ -1,6 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { callApi } from '../api'
 
+const router = useRouter()
 const dashboard = ref({
   recent: {
     this_minute: '...',
@@ -14,11 +17,12 @@ const dashboard = ref({
   },
 })
 
-const tsLoaded = Math.floor(Date.now() / 1000)
-
-fetch(`${import.meta.env.VITE_API_URL || ''}/cloud-tasks-api/dashboard`)
-  .then((response) => response.json())
-  .then((response) => (dashboard.value = response))
+onMounted(async () => {
+  dashboard.value = await callApi({
+    endpoint: 'dashboard',
+    router,
+  })
+})
 </script>
 
 <template>

@@ -1,7 +1,9 @@
 <script setup>
-import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { callApi } from '../api'
 const route = useRoute()
+const router = useRouter()
 
 import Status from './Status.vue'
 import Icon from './Icon.vue'
@@ -11,9 +13,12 @@ const task = ref({
   status: 'loading',
 })
 
-fetch(`${import.meta.env.VITE_API_URL || ''}/cloud-tasks-api/task/${route.params.uuid}`)
-  .then((response) => response.json())
-  .then((response) => (task.value = response))
+onMounted(async () => {
+  task.value = await callApi({
+    endpoint: `task/${route.params.uuid}`,
+    router,
+  })
+})
 
 const titles = {
   scheduled: 'Scheduled',
@@ -50,7 +55,7 @@ const titles = {
               </div>
               <div v-if="event['scheduled_at']">
                 <span
-                    class="bg-gray-200 text-gray-800 text-xs font-medium mr-2 inline-block mb-1 px-1.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800"
+                  class="bg-gray-200 text-gray-800 text-xs font-medium mr-2 inline-block mb-1 px-1.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800"
                 >
                   Scheduled: {{ event['scheduled_at'] }} (UTC)
                 </span>

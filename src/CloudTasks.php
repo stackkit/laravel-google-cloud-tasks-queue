@@ -2,30 +2,12 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Carbon\Carbon;
 use Closure;
+use Throwable;
 
 final class CloudTasks
 {
-    /**
-     * The callback that should be used to authenticate Cloud Tasks users.
-     *
-     * @var \Closure
-     */
-    public static $authUsing;
-
-    /**
-     * Set the callback that should be used to authenticate Horizon users.
-     *
-     * @param  \Closure  $callback
-     * @return static
-     */
-    public static function auth(Closure $callback)
-    {
-        static::$authUsing = $callback;
-
-        return new static;
-    }
-
     /**
      * Determine if the given request can access the Cloud Tasks dashboard.
      *
@@ -34,7 +16,19 @@ final class CloudTasks
      */
     public static function check($request)
     {
-        return (static::$authUsing)($request);
+        $token = $request->bearerToken();
+
+        if (!$token) {
+            return false;
+        }
+
+        try {
+            $expireTimestamp = decrypt($token);
+
+            return $expireTimestamp > Carbon::now()->timestamp;
+        } catch (Throwable $e) {
+            return  false;
+        }
     }
 
     /**

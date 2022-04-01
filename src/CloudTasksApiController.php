@@ -7,11 +7,23 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Stackkit\LaravelGoogleCloudTasksQueue\Entities\StatRow;
 use const STR_PAD_LEFT;
 
 class CloudTasksApiController
 {
+    public function login(): ?string
+    {
+        $validPassword = Hash::check(request('password'), config('cloud-tasks.monitor.password'));
+
+        if (!$validPassword) {
+            return null;
+        }
+
+        return encrypt(Carbon::now()->timestamp + 900);
+    }
+
     public function dashboard(): array
     {
         $dbDriver = config('database.connections.' . config('database.default') . '.driver');

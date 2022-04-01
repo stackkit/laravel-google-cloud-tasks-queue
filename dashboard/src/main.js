@@ -6,6 +6,7 @@ import Popper from 'vue3-popper'
 
 // 1. Define route components.
 // These can be imported from other files
+import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
 import Recent from './components/Recent.vue'
 import Queued from './components/Queued.vue'
@@ -20,6 +21,11 @@ const routes = [
     name: 'home',
     path: '/',
     component: Dashboard,
+  },
+  {
+    name: 'login',
+    path: '/login',
+    component: Login,
   },
   {
     name: 'recent',
@@ -83,6 +89,14 @@ const router = createRouter({
   // 4. Provide the history implementation to use. We are using the hash history for simplicity here.
   history: createWebHistory(routerBasePath),
   routes, // short for `routes: routes`,
+})
+
+router.beforeEach((to, from, next) => {
+  const authenticated = localStorage.hasOwnProperty('cloud-tasks-token')
+  if (!authenticated && to.name !== 'login') {
+    return next({ name: 'login' })
+  }
+  return next()
 })
 
 createApp(App).use(router).component('Popper', Popper).mount('#app')

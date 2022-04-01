@@ -9,7 +9,6 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 use function Safe\file_get_contents;
 use function Safe\json_decode;
@@ -18,8 +17,6 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 {
     public function boot(QueueManager $queue, Router $router): void
     {
-        $this->authorization();
-
         $this->registerClient();
         $this->registerConnector($queue);
         $this->registerConfig();
@@ -28,37 +25,6 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->registerMigrations();
         $this->registerRoutes($router);
         $this->registerMonitoring();
-    }
-
-    /**
-     * Configure the Cloud Tasks authorization services.
-     *
-     * @return void
-     */
-    protected function authorization()
-    {
-        $this->gate();
-
-        CloudTasks::auth(function ($request) {
-            return app()->environment('local', 'testing') ||
-                Gate::check('viewCloudTasks', [$request->user()]);
-        });
-    }
-
-    /**
-     * Register the Cloud Tasks gate.
-     *
-     * This gate determines who can access Cloud Tasks in non-local environments.
-     *
-     * @return void
-     */
-    protected function gate()
-    {
-        Gate::define('viewCloudTasks', function ($user) {
-            return in_array($user->email, [
-                //
-            ]);
-        });
     }
 
     private function registerClient(): void
@@ -127,6 +93,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             return;
         }
 
+        $router->post('cloud-tasks-api/login', [CloudTasksApiController::class, 'login'])->name('cloud-tasks.api.login');
         $router->middleware(Authenticate::class)->group(function () use ($router) {
             $router->get('cloud-tasks/{view?}', function () {
                 return view('cloud-tasks::layout', [

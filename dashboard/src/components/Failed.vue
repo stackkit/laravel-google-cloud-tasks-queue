@@ -2,16 +2,22 @@
 import { ref } from 'vue'
 import { fetchTasks } from '../api'
 import Overview from './Overview.vue'
+import { useRouter } from 'vue-router'
 
 defineProps({
   tasks: Array,
 })
 
 const tasks = ref(null)
+const router = useRouter()
 
-fetchTasks(tasks, {
-  filter: 'failed',
-})
+fetchTasks(
+  tasks,
+  {
+    filter: 'failed',
+  },
+  router
+)
 </script>
 
 <template>

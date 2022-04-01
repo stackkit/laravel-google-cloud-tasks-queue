@@ -30,6 +30,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
         parent::setUp();
 
         $this->withFactories(__DIR__ . '/../factories');
+
+        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
     }
 
     /**
