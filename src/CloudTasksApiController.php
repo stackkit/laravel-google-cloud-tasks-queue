@@ -15,13 +15,19 @@ class CloudTasksApiController
 {
     public function login(): ?string
     {
-        $validPassword = Hash::check(request('password'), config('cloud-tasks.monitor.password'));
+        $password = config('cloud-tasks.monitor.password');
+
+        if (!is_string($password)) {
+            return null;
+        }
+
+        $validPassword = Hash::check(request('password'), $password);
 
         if (!$validPassword) {
             return null;
         }
 
-        return encrypt(Carbon::now()->timestamp + 900);
+        return encrypt(Carbon::now()->getTimestamp() + 900);
     }
 
     public function dashboard(): array

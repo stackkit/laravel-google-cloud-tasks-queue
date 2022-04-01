@@ -38,9 +38,11 @@ class MonitoringService
             'queue' => $queue,
         ];
 
-        if ($task->hasScheduleTime()) {
+        $scheduleTime = $task->getScheduleTime();
+
+        if ($scheduleTime) {
             $status = 'scheduled';
-            $data['scheduled_at'] = $task->getScheduleTime()->toDateTime()->format('Y-m-d H:i:s');
+            $data['scheduled_at'] = $scheduleTime->toDateTime()->format('Y-m-d H:i:s');
         } else {
             $status = 'queued';
         }
