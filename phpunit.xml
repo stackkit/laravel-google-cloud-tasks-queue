@@ -13,7 +13,7 @@
             <file>./tests/ConfigTest.php</file>
             <file>./tests/TaskHandlerTest.php</file>
             <file>./tests/CloudTasksApiTest.php</file>
-            <file>./tests/CloudTasksMonitoringTest.php</file>
+            <file>./tests/CloudTasksDashboardTest.php</file>
         </testsuite>
     </testsuites>
     <php>

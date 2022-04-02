@@ -122,15 +122,16 @@ Also, the dashboard has not been tested with high throughput queues.
 
 To make use of it, enable it through the `.env` file:
 
-  ```
-  CLOUD_TASKS_MONITOR_ENABLED=true
-  CLOUD_TASKS_MONITOR_ENABLED=MySecretLoginPasswordPleaseChangeThis
+  ```dotenv
+  STACKKIT_CLOUD_TASKS_DASHBOARD_ENABLED=true
+  STACKKIT_CLOUD_TASKS_DASHBOARD_PASSWORD=MySecretLoginPasswordPleaseChangeThis
   ```
 
-Then publish its assets:
+Then publish its assets and migrations:
 
-  ```
+  ```php
   php artisan vendor:publish --tag=cloud-tasks
+  php artisan migrate
   ```
 </details>
 <details>
@@ -140,15 +141,13 @@ Then publish its assets:
 Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the credentials file.
 
 More info: https://cloud.google.com/docs/authentication/production
-</details>
-<details>
-  <summary>Service Account Roles</summary>
 
 If you're not using your master service account (which has all abilities), you must add the following roles to make it works:
 1. App Engine Viewer
 2. Cloud Tasks Enqueuer
 3. Cloud Tasks Viewer
-4. Service Account User
+4. Cloud Tasks Task Deleter
+5. Service Account User
 </details>
 <details>
   <summary>Configuring the queue</summary>

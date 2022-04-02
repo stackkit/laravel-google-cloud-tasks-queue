@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Stackkit\LaravelGoogleCloudTasksQueue\Entities\StatRow;
 use const STR_PAD_LEFT;
 
@@ -15,13 +14,13 @@ class CloudTasksApiController
 {
     public function login(): ?string
     {
-        $password = config('cloud-tasks.monitor.password');
+        $password = config('cloud-tasks.dashboard.password');
 
         if (!is_string($password)) {
             return null;
         }
 
-        $validPassword = Hash::check(request('password'), $password);
+        $validPassword = hash_equals($password, request('password'));
 
         if (!$validPassword) {
             return null;
@@ -35,7 +34,7 @@ class CloudTasksApiController
         $dbDriver = config('database.connections.' . config('database.default') . '.driver');
 
         if (!in_array($dbDriver, ['mysql', 'pgsql'])) {
-            throw new Exception('Unsupported database driver for Cloud Tasks monitoring.');
+            throw new Exception('Unsupported database driver for Cloud Tasks dashboard.');
         }
 
         $groupBy = [

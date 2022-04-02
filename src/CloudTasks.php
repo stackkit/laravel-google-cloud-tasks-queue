@@ -32,22 +32,22 @@ final class CloudTasks
     }
 
     /**
-     * Determine if the monitor is enabled.
+     * Determine if the dashboard is enabled.
      *
      * @return bool
      */
-    public static function monitorEnabled(): bool
+    public static function dashboardEnabled(): bool
     {
-        return config('cloud-tasks.monitor.enabled') === true;
+        return config('cloud-tasks.dashboard.enabled') === true;
     }
 
     /**
-     * Determine if the monitor is disabled.
+     * Determine if the dashboard is disabled.
      *
      * @return bool
      */
-    public static function monitorDisabled(): bool
+    public static function dashboardDisabled(): bool
     {
-        return self::monitorEnabled() === false;
+        return self::dashboardEnabled() === false;
     }
 }

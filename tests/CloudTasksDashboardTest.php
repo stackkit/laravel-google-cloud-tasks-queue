@@ -6,15 +6,13 @@ use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Schema;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksServiceProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
 
-class CloudTasksMonitoringTest extends TestCase
+class CloudTasksDashboardTest extends TestCase
 {
     /**
      * @test
@@ -243,7 +241,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_a_job_is_dispatched_it_will_be_added_to_the_monitor()
+    public function when_a_job_is_dispatched_it_will_be_added_to_the_dashboard()
     {
         // Arrange
         CloudTasksApi::fake();
@@ -267,11 +265,11 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_monitoring_is_disabled_jobs_will_not_be_added_to_the_monitor()
+    public function when_dashboard_is_disabled_jobs_will_not_be_added_to_the_dashboard()
     {
         // Arrange
         CloudTasksApi::fake();
-        config()->set('cloud-tasks.monitor.enabled', false);
+        config()->set('cloud-tasks.dashboard.enabled', false);
 
         // Act
         $this->dispatch(new SimpleJob());
@@ -308,7 +306,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_a_job_is_running_it_will_be_updated_in_the_monitor()
+    public function when_a_job_is_running_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
         \Illuminate\Support\Carbon::setTestNow(now());
@@ -334,7 +332,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_a_job_is_successful_it_will_be_updated_in_the_monitor()
+    public function when_a_job_is_successful_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
         \Illuminate\Support\Carbon::setTestNow(now());
@@ -360,7 +358,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_a_job_errors_it_will_be_updated_in_the_monitor()
+    public function when_a_job_errors_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
         \Illuminate\Support\Carbon::setTestNow(now());
@@ -387,7 +385,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_a_job_fails_it_will_be_updated_in_the_monitor()
+    public function when_a_job_fails_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
         \Illuminate\Support\Carbon::setTestNow(now());
@@ -422,7 +420,7 @@ class CloudTasksMonitoringTest extends TestCase
     public function test_publish()
     {
         // Arrange
-        config()->set('cloud-tasks.monitor.enabled', true);
+        config()->set('cloud-tasks.dashboard.enabled', true);
 
         // Act & Assert
         $expectedPublishBase = dirname(__DIR__);
@@ -436,7 +434,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_monitoring_is_enabled_it_adds_the_necessary_routes()
+    public function when_dashboard_is_enabled_it_adds_the_necessary_routes()
     {
         // Act
         $routes = app(Router::class)->getRoutes();
@@ -452,7 +450,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_monitoring_is_enabled_it_adds_the_necessary_migrations()
+    public function when_dashboard_is_enabled_it_adds_the_necessary_migrations()
     {
         $this->assertTrue(in_array(dirname(__DIR__) . '/src/../migrations', app('migrator')->paths()));
     }
@@ -460,7 +458,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_monitoring_is_disabled_it_adds_the_necessary_migrations()
+    public function when_dashboard_is_disabled_it_adds_the_necessary_migrations()
     {
         $this->assertEmpty(app('migrator')->paths());
     }
@@ -468,7 +466,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function when_monitoring_is_disabled_it_does_not_add_the_monitor_routes()
+    public function when_dashboard_is_disabled_it_does_not_add_the_dashboard_routes()
     {
         // Act
         $routes = app(Router::class)->getRoutes();
@@ -484,7 +482,7 @@ class CloudTasksMonitoringTest extends TestCase
     /**
      * @test
      */
-    public function monitoring_is_password_protected()
+    public function dashboard_is_password_protected()
     {
         // Arrange
         $this->defaultHeaders['Authorization'] = '';
@@ -533,7 +531,7 @@ class CloudTasksMonitoringTest extends TestCase
     {
         // Arrange
         Carbon::setTestNow($now = now());
-        config()->set('cloud-tasks.monitor.password', bcrypt('test123'));
+        config()->set('cloud-tasks.dashboard.password', 'test123');
 
         // Act
         $invalidPassword = $this->postJson('/cloud-tasks-api/login', ['password' => 'hey']);

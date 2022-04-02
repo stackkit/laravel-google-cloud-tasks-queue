@@ -11,11 +11,11 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
 use function Safe\json_decode;
 
-class MonitoringService
+class DashboardService
 {
-    public static function make(): MonitoringService
+    public static function make(): DashboardService
     {
-        return new MonitoringService();
+        return new DashboardService();
     }
 
     private function getTaskBody(Task $task): string
@@ -29,7 +29,7 @@ class MonitoringService
         return $httpRequest->getBody();
     }
 
-    public function addToMonitor(string $queue, Task $task): void
+    public function add(string $queue, Task $task): void
     {
         $metadata = new TaskMetadata();
         $metadata->payload = $this->getTaskBody($task);

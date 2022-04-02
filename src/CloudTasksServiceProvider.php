@@ -24,7 +24,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->registerAssets();
         $this->registerMigrations();
         $this->registerRoutes($router);
-        $this->registerMonitoring();
+        $this->registerDashboard();
     }
 
     private function registerClient(): void
@@ -55,7 +55,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerViews(): void
     {
-        if (CloudTasks::monitorDisabled()) {
+        if (CloudTasks::dashboardDisabled()) {
             // Larastan needs this view registered to check the service provider correctly.
             // return;
         }
@@ -65,7 +65,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerAssets(): void
     {
-        if (CloudTasks::monitorDisabled()) {
+        if (CloudTasks::dashboardDisabled()) {
             return;
         }
 
@@ -76,7 +76,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerMigrations(): void
     {
-        if (CloudTasks::monitorDisabled()) {
+        if (CloudTasks::dashboardDisabled()) {
             return;
         }
 
@@ -89,7 +89,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     {
         $router->post('handle-task', [TaskHandler::class, 'handle'])->name('cloud-tasks.handle-task');
 
-        if (config('cloud-tasks.monitor.enabled') === false) {
+        if (CloudTasks::dashboardDisabled()) {
             return;
         }
 
@@ -116,14 +116,14 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
     }
 
-    private function registerMonitoring(): void
+    private function registerDashboard(): void
     {
         app('events')->listen(TaskCreated::class, function (TaskCreated $event) {
-            if (CloudTasks::monitorDisabled()) {
+            if (CloudTasks::dashboardDisabled()) {
                 return;
             }
 
-            MonitoringService::make()->addToMonitor($event->queue, $event->task);
+            DashboardService::make()->add($event->queue, $event->task);
         });
 
         app('events')->listen(JobFailed::class, function (JobFailed $event) {
@@ -140,39 +140,39 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
-            if (!CloudTasks::monitorEnabled()) {
+            if (!CloudTasks::dashboardEnabled()) {
                 return;
             }
 
             if ($event->job instanceof CloudTasksJob) {
-                MonitoringService::make()->markAsRunning($event->job->uuid());
+                DashboardService::make()->markAsRunning($event->job->uuid());
             }
         });
 
         app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            if (!CloudTasks::monitorEnabled()) {
+            if (!CloudTasks::dashboardEnabled()) {
                 return;
             }
 
             if ($event->job instanceof CloudTasksJob) {
-                MonitoringService::make()->markAsSuccessful($event->job->uuid());
+                DashboardService::make()->markAsSuccessful($event->job->uuid());
             }
         });
 
         app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
-            if (!CloudTasks::monitorEnabled()) {
+            if (!CloudTasks::dashboardEnabled()) {
                 return;
             }
 
-            MonitoringService::make()->markAsError($event);
+            DashboardService::make()->markAsError($event);
         });
 
         app('events')->listen(JobFailed::class, function ($event) {
-            if (!CloudTasks::monitorEnabled()) {
+            if (!CloudTasks::dashboardEnabled()) {
                 return;
             }
 
-            MonitoringService::make()->markAsFailed($event);
+            DashboardService::make()->markAsFailed($event);
         });
     }
 }
