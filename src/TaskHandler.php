@@ -57,7 +57,7 @@ class TaskHandler
          * @var stdClass $command
          */
         $command = unserialize($task['data']['command']);
-        $connection = $command->command ?? config('queue.default');
+        $connection = $command->connection ?? config('queue.default');
         $this->config = array_merge(
             (array) config("queue.connections.{$connection}"),
             ['connection' => $connection]

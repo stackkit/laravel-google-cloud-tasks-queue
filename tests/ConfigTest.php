@@ -31,7 +31,7 @@ class ConfigTest extends TestCase
     }
 
     /** @test */
-    public function handler_is_required()
+    public function there_is_a_sensible_handler_default()
     {
         $this->setConfigValue('handler', '');
 

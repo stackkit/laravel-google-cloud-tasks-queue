@@ -100,7 +100,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $availableAt = $this->availableAt($delay);
 
         $httpRequest = $this->createHttpRequest();
-        $httpRequest->setUrl($this->config['handler']);
+        $httpRequest->setUrl(Config::getHandler($this->config['handler']));
         $httpRequest->setHttpMethod(HttpMethod::POST);
         $httpRequest->setBody(
             // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.

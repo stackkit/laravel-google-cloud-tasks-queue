@@ -7,23 +7,21 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Queue\QueueManager;
-use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 use function Safe\file_get_contents;
 use function Safe\json_decode;
 
 class CloudTasksServiceProvider extends LaravelServiceProvider
 {
-    public function boot(QueueManager $queue, Router $router): void
+    public function boot(): void
     {
         $this->registerClient();
-        $this->registerConnector($queue);
+        $this->registerConnector();
         $this->registerConfig();
         $this->registerViews();
         $this->registerAssets();
         $this->registerMigrations();
-        $this->registerRoutes($router);
+        $this->registerRoutes();
         $this->registerDashboard();
     }
 
@@ -37,8 +35,13 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->app->bind('cloud-tasks-api', CloudTasksApiConcrete::class);
     }
 
-    private function registerConnector(QueueManager $queue): void
+    private function registerConnector(): void
     {
+        /**
+         * @var \Illuminate\Queue\QueueManager $queue
+         */
+        $queue = $this->app['queue'];
+
         $queue->addConnector('cloudtasks', function () {
             return new CloudTasksConnector;
         });
@@ -85,8 +88,13 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         ]);
     }
 
-    private function registerRoutes(Router $router): void
+    private function registerRoutes(): void
     {
+        /**
+         * @var \Illuminate\Routing\Router $router
+         */
+        $router = $this->app['router'];
+
         $router->post('handle-task', [TaskHandler::class, 'handle'])->name('cloud-tasks.handle-task');
 
         if (CloudTasks::dashboardDisabled()) {

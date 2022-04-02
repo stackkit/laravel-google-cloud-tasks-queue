@@ -78,13 +78,13 @@ Now that the package is installed, the final step is to set the correct environm
 
 Please check the table below on what the values mean and what their value should be.
 
-|Environment variable| Description                                                                                                                                                               |Example
-  |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---
-|`STACKKIT_CLOUD_TASKS_PROJECT`| The project your queue belongs to.                                                                                                                                        |`my-project`
-|`STACKKIT_CLOUD_TASKS_LOCATION`| The region where the AppEngine is hosted                                                                                                                                  |`europe-west6`
-|`STACKKIT_CLOUD_TASKS_HANDLER`| The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app with the `handle-task` path added                                         |`https://<your website>.com/handle-task`
-|`STACKKIT_CLOUD_TASKS_QUEUE`| The queue a job will be added to                                                                                                                                          |`emails`
-|`STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`| The email address of the AppEngine service account. Important, it should have the correct roles. See the section below which roles. |`my-service-account@appspot.gserviceaccount.com`
+| Environment variable                 | Description                                                                                                                                                                                |Example
+--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---
+| `STACKKIT_CLOUD_TASKS_PROJECT`       | The project your queue belongs to.                                                                                                                                                         |`my-project`
+| `STACKKIT_CLOUD_TASKS_LOCATION`      | The region where the AppEngine is hosted                                                                                                                                                   |`europe-west6`
+| `STACKKIT_CLOUD_TASKS_QUEUE`         | The queue a job will be added to                                                                                                                                                           |`emails`
+| `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL` | The email address of the AppEngine service account. Important, it should have the correct roles. See the section below which roles.                                                        |`my-service-account@appspot.gserviceaccount.com`
+| `STACKKIT_CLOUD_TASKS_HANDLER` (optional) | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app with the `handle-task` path added. By default we will use the URL that dispatched the job. |`https://<your website>.com/handle-task`
 </details>
 <details>
 <summary>
