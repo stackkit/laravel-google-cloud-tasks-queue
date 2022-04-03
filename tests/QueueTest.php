@@ -25,7 +25,7 @@ class QueueTest extends TestCase
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return $task->getHttpRequest()->getUrl() === 'http://docker.for.mac.localhost:8080/handle-task';
+            return $task->getHttpRequest()->getUrl() === 'http://docker.for.mac.localhost:8080';
         });
     }
 
