@@ -1,127 +1,119 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests;
 
-use Carbon\Carbon;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
-use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Timestamp;
-use Mockery;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
 
 class QueueTest extends TestCase
 {
-    private $client;
-    private $http;
-    private $task;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->client = Mockery::mock(CloudTasksClient::class)->makePartial();
-        $this->http = Mockery::mock(new HttpRequest)->makePartial();
-        $this->task = Mockery::mock(new Task);
-
-        $this->app->instance(CloudTasksClient::class, $this->client);
-        $this->app->instance(HttpRequest::class, $this->http);
-        $this->app->instance(Task::class, $this->task);
-
-        // ensure we don't actually call the Google API
-        $this->client->shouldReceive('createTask')->andReturnNull();
-    }
-
-    /** @test */
+    /**
+     * @test
+     */
     public function a_http_request_with_the_handler_url_is_made()
     {
-        SimpleJob::dispatch();
+        // Arrange
+        CloudTasksApi::fake();
 
-        $this->http
-            ->shouldHaveReceived('setUrl')
-            ->with('https://localhost/my-handler')
-            ->once();
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getUrl() === 'http://docker.for.mac.localhost:8080';
+        });
     }
 
-    /** @test */
+    /**
+     * @test
+     */
     public function it_posts_to_the_handler()
     {
-        SimpleJob::dispatch();
+        // Arrange
+        CloudTasksApi::fake();
 
-        $this->http->shouldHaveReceived('setHttpMethod')->with(HttpMethod::POST)->once();
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getHttpMethod() === HttpMethod::POST;
+        });
     }
 
-    /** @test */
+    /**
+     * @test
+     */
     public function it_posts_the_serialized_job_payload_to_the_handler()
     {
-        $job = new SimpleJob();
-        $job->dispatch();
+        // Arrange
+        CloudTasksApi::fake();
 
-        $this->http->shouldHaveReceived('setBody')->with(Mockery::on(function ($payload) use ($job) {
-            $decoded = json_decode($payload, true);
+        // Act
+        $this->dispatch($job = new SimpleJob());
 
-            if ($decoded['displayName'] != 'Tests\Support\SimpleJob') {
-                return false;
-            }
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) use ($job): bool {
+            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
 
-            if ($decoded['job'] != 'Illuminate\Queue\CallQueuedHandler@call') {
-                return false;
-            }
-
-            if ($decoded['data']['commandName'] != 'Tests\Support\SimpleJob') {
-                return false;
-            }
-
-            if ($decoded['data']['command'] != serialize($job)) {
-                return false;
-            }
-
-            return true;
-        }));
+            return $decoded['displayName'] === SimpleJob::class
+                && $decoded['job'] === 'Illuminate\Queue\CallQueuedHandler@call'
+                && $decoded['data']['command'] === serialize($job);
+        });
     }
 
-    /** @test */
-    public function it_creates_a_task_containing_the_http_request()
-    {
-        $this->task->shouldReceive('setHttpRequest')->once()->with($this->http);
-
-        SimpleJob::dispatch();
-    }
-
-    /** @test */
+    /**
+     * @test
+     */
     public function it_will_set_the_scheduled_time_when_dispatching_later()
     {
-        $inFiveMinutes = Carbon::now()->addMinutes(5);
+        // Arrange
+        CloudTasksApi::fake();
 
-        SimpleJob::dispatch()->delay($inFiveMinutes);
+        // Act
+        $inFiveMinutes = now()->addMinutes(5);
+        $this->dispatch((new SimpleJob())->delay($inFiveMinutes));
 
-        $this->task->shouldHaveReceived('setScheduleTime')->once()->with(Mockery::on(function (Timestamp $timestamp) use ($inFiveMinutes) {
-            return $timestamp->getSeconds() === $inFiveMinutes->timestamp;
-        }));
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) use ($inFiveMinutes): bool {
+            return $task->getScheduleTime()->getSeconds() === $inFiveMinutes->timestamp;
+        });
     }
 
-    /** @test */
+    /**
+     * @test
+     */
     public function it_posts_the_task_the_correct_queue()
     {
-        SimpleJob::dispatch();
+        // Arrange
+        CloudTasksApi::fake();
 
-        $this->client
-            ->shouldHaveReceived('createTask')
-            ->withArgs(function ($queueName) {
-                return $queueName === 'projects/test-project/locations/europe-west6/queues/test-queue';
-            });
-    }
+        // Act
+        $this->dispatch((new SimpleJob()));
+        $this->dispatch((new FailingJob())->onQueue('my-special-queue'));
 
-    /** @test */
-    public function it_posts_the_correct_task_the_queue()
-    {
-        SimpleJob::dispatch();
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
+            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
+            $command = unserialize($decoded['data']['command']);
 
-        $this->client
-            ->shouldHaveReceived('createTask')
-            ->withArgs(function ($queueName, $task) {
-                return $task === $this->task;
-            });
+            return $decoded['displayName'] === SimpleJob::class
+                && $command->queue === null
+                && $queueName === 'projects/my-test-project/locations/europe-west6/queues/barbequeue';
+        });
+
+        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
+            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
+            $command = unserialize($decoded['data']['command']);
+
+            return $decoded['displayName'] === FailingJob::class
+                && $command->queue === 'my-special-queue'
+                && $queueName === 'projects/my-test-project/locations/europe-west6/queues/my-special-queue';
+        });
     }
 }

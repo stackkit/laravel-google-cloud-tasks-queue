@@ -7,55 +7,23 @@ on:
 
 jobs:
   php-tests:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        php: [8.1, 8.0, 7.4, 7.3, 7.2]
-        laravel: [9.*, 8.*, 7.*, 6.*, 5.8.*, 5.7.*, 5.6.*]
-        os: [ubuntu-latest]
-        include:
-          - laravel: 9.*
-            testbench: 7.*
-          - laravel: 8.*
-            testbench: 6.*
-          - laravel: 7.*
-            testbench: 5.*
-          - laravel: 6.*
-            testbench: 4.*
-          - laravel: 5.8.*
-            testbench: 3.8.*
-          - laravel: 5.7.*
-            testbench: 3.7.*
-          - laravel: 5.6.*
-            testbench: 3.6.*
-        exclude:
-          - laravel: 9.*
-            php: 7.2
-          - laravel: 9.*
-            php: 7.3
-          - laravel: 9.*
-            php: 7.4
-          - laravel: 8.*
-            php: 7.2
-          - laravel: 5.8.*
-            php: 8.0
-          - laravel: 5.7.*
-            php: 8.0
-          - laravel: 5.6.*
-            php: 8.0
-          - laravel: 5.6.*
-            php: 8.1
-          - laravel: 5.7.*
-            php: 8.1
-          - laravel: 5.8.*
-            php: 8.1
-          - laravel: 6.*
-            php: 8.1
-          - laravel: 7.*
-            php: 8.1
+        db: ['mysql', 'pgsql']
+        payload:
+          - { queue: 'github-actions-laravel9-php81', laravel: '9.*', php: '8.1', 'testbench': '7.*'}
+          - { queue: 'github-actions-laravel9-php80', laravel: '9.*', php: '8.0', 'testbench': '7.*'}
+          - { queue: 'github-actions-laravel8-php81', laravel: '8.*', php: '8.1', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel8-php80', laravel: '8.*', php: '8.0', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel8-php74', laravel: '8.*', php: '7.4', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel7-php80', laravel: '7.*', php: '8.0', 'testbench': '5.*' }
+          - { queue: 'github-actions-laravel7-php74', laravel: '7.*', php: '7.4', 'testbench': '5.*' }
+          - { queue: 'github-actions-laravel6-php80', laravel: '6.*', php: '8.0', 'testbench': '4.*' }
+          - { queue: 'github-actions-laravel6-php74', laravel: '6.*', php: '7.4', 'testbench': '4.*' }
 
-    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db }}
 
     steps:
       - name: Checkout code
@@ -64,13 +32,34 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
+          php-version: ${{ matrix.payload.php }}
           extensions: mbstring, dom, fileinfo
           coverage: none
 
+      - name: Set up MySQL and PostgreSQL
+        run: |
+          MYSQL_PORT=3307 POSTGRES_PORT=5432 docker compose up ${{ matrix.db }} -d
       - name: Install dependencies
         run: |
-          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer require "laravel/framework:${{ matrix.payload.laravel }}" "orchestra/testbench:${{ matrix.payload.testbench }}" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction --no-suggest
+          if [ "${{ matrix.db }}" = "mysql" ]; then
+            while ! mysqladmin ping --host=127.0.0.1 --user=cloudtasks --port=3307 --password=cloudtasks --silent; do
+              echo "Waiting for MySQL..."
+              sleep 1
+            done
+          else
+            echo "Not waiting for MySQL."
+          fi
       - name: Execute tests
-        run: vendor/bin/phpunit
+        env:
+          DB_DRIVER: ${{ matrix.db }}
+          CI_CLOUD_TASKS_PROJECT_ID: ${{ secrets.CI_CLOUD_TASKS_PROJECT_ID }}
+          CI_CLOUD_TASKS_QUEUE: ${{ secrets.CI_CLOUD_TASKS_QUEUE }}
+          CI_CLOUD_TASKS_LOCATION: ${{ secrets.CI_CLOUD_TASKS_LOCATION }}
+          CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL: ${{ secrets.CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL }}
+          CI_SERVICE_ACCOUNT_JSON_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_JSON_KEY }}
+          CI_CLOUD_TASKS_CUSTOM_QUEUE: ${{ matrix.payload.queue }}
+        run: |
+          echo $CI_SERVICE_ACCOUNT_JSON_KEY > tests/Support/gcloud-key-valid.json
+          vendor/bin/phpunit

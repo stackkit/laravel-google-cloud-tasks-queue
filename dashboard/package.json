@@ -1,0 +1,22 @@
+{
+  "name": "cloud-tasks-dashboard",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.2.25",
+    "vue-router": "^4.0.12",
+    "vue3-popper": "^1.4.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^2.0.0",
+    "autoprefixer": "^10.4.2",
+    "postcss": "^8.4.5",
+    "prettier": "2.5.1",
+    "tailwindcss": "^3.0.18",
+    "vite": "^2.7.2"
+  }
+}

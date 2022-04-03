@@ -1,0 +1,18 @@
+services:
+  mysql:
+    image: mysql:8
+    ports:
+      - '${MYSQL_PORT:-3307}:3306'
+    environment:
+      MYSQL_USER: 'cloudtasks'
+      MYSQL_PASSWORD: 'cloudtasks'
+      MYSQL_DATABASE: 'cloudtasks'
+      MYSQL_ROOT_PASSWORD: 'root'
+  pgsql:
+    image: postgres:14
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: 'cloudtasks'
+      POSTGRES_PASSWORD: 'cloudtasks'
+      POSTGRES_DB: 'cloudtasks'

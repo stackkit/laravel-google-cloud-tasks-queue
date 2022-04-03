@@ -30,6 +30,6 @@ class SimpleJob implements ShouldQueue
      */
     public function handle()
     {
-        Mail::to('johndoe@example.com')->send(new TestMailable());
+        logger('SimpleJob:success');
     }
 }

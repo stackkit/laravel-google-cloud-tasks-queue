@@ -2,457 +2,274 @@
 
 namespace Tests;
 
-use Carbon\Carbon;
-use Firebase\JWT\JWT;
-use Firebase\JWT\SignatureInvalidException;
-use Google\Cloud\Tasks\V2\Attempt;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
-use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Timestamp;
-use Illuminate\Cache\Events\CacheHit;
-use Illuminate\Cache\Events\KeyWritten;
+use Firebase\JWT\ExpiredException;
+use Google\Cloud\Tasks\V2\RetryConfig;
+use Google\Protobuf\Duration;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Mail;
-use Mockery;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksJob;
+use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
-use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
-use Tests\Support\TestMailable;
+use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
+use Tests\Support\FailingJob;
+use Tests\Support\SimpleJob;
+use UnexpectedValueException;
 
 class TaskHandlerTest extends TestCase
 {
-    /**
-     * @var TaskHandler
-     */
-    private $handler;
-
-    private $jwt;
-
-    private $request;
-
-    private $cloudTasksClient;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->request = request();
-
-        // We don't have a valid token to test with, so for now act as if its always valid
-        $this->app->instance(JWT::class, ($this->jwt = Mockery::mock(new JWT())->byDefault()->makePartial()));
-        $this->jwt->shouldReceive('decode')->andReturn((object) [
-            'iss' => 'accounts.google.com',
-            'aud' => 'https://localhost/my-handler',
-            'exp' => time() + 10
-        ])->byDefault();
-
-        // Ensure we don't fetch the Google public key each test...
-        $googlePublicKey = Mockery::mock(app(OpenIdVerificator::class));
-        $googlePublicKey->shouldReceive('getPublicKey')->andReturnNull();
-        $googlePublicKey->shouldReceive('getKidFromOpenIdToken')->andReturnNull();
-
-        $cloudTasksClient = Mockery::mock(new CloudTasksClient())->byDefault();
-        $this->cloudTasksClient = $cloudTasksClient;
-
-        // Ensure we don't fetch the Queue name and attempts each test...
-        $cloudTasksClient->shouldReceive('queueName')->andReturn('my-queue');
-        $cloudTasksClient->shouldReceive('getQueue')
-            ->byDefault()
-            ->andReturn(new class {
-                public function getRetryConfig() {
-                    return new class {
-                        public function getMaxAttempts() {
-                            return 3;
-                        }
-
-                        public function hasMaxRetryDuration() {
-                            return true;
-                        }
-
-                        public function getMaxRetryDuration() {
-                            return new class {
-                                public function getSeconds() {
-                                    return 30;
-                                }
-                            };
-                        }
-                    };
-                }
-            });
-        $cloudTasksClient->shouldReceive('taskName')->andReturn('FakeTaskName');
-        $cloudTasksClient->shouldReceive('getTask')->byDefault()->andReturn(new class {
-            public function getFirstAttempt() {
-                return null;
-            }
-        });
-
-        $cloudTasksClient->shouldReceive('deleteTask')->andReturnNull();
-
-        $this->handler = new TaskHandler(
-            $cloudTasksClient,
-            request(),
-            $googlePublicKey
-        );
-
-        $this->request->headers->add(['Authorization' => 'Bearer 123']);
+        CloudTasksApi::fake();
     }
 
-    /** @test */
-    public function it_needs_an_authorization_header()
+    /**
+     * @test
+     */
+    public function the_task_handler_needs_an_open_id_token()
     {
-        $this->request->headers->remove('Authorization');
-
+        // Assert
         $this->expectException(CloudTasksException::class);
         $this->expectExceptionMessage('Missing [Authorization] header');
 
-        $this->handler->handle($this->simpleJob());
+        // Act
+        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
     }
 
-    /** @test */
-    public function it_will_validate_the_token_iss()
+    /**
+     * @test
+     */
+    public function the_task_handler_throws_an_exception_if_the_id_token_is_invalid()
     {
-        $this->jwt->shouldReceive('decode')->andReturn((object) [
-            'iss' => 'test',
-        ]);
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('The given OpenID token is not valid');
-        $this->handler->handle($this->simpleJob());
+        // Arrange
+        request()->headers->set('Authorization', 'Bearer my-invalid-token');
+
+        // Assert
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('Wrong number of segments');
+
+        // Act
+        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
     }
 
-    /** @test */
-    public function it_will_validate_the_token_handler()
+    /**
+     * @test
+     */
+    public function it_validates_the_token_expiration()
     {
-        $this->jwt->shouldReceive('decode')->andReturn((object) [
-            'iss' => 'accounts.google.com',
-            'aud' => '__incorrect_aud__'
-        ]);
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('The given OpenID token is not valid');
-        $this->handler->handle($this->simpleJob());
+        // Arrange
+        OpenIdVerificator::fake();
+        $this->addIdTokenToHeader(function (array $base) {
+            return ['exp' => time() - 5] + $base;
+        });
+
+        // Assert
+        $this->expectException(ExpiredException::class);
+        $this->expectExceptionMessage('Expired token');
+
+        // Act
+        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
     }
 
-    /** @test */
-    public function it_will_validate_the_token_expiration()
+    /**
+     * @test
+     */
+    public function it_validates_the_token_aud()
     {
-        $this->jwt->shouldReceive('decode')->andReturn((object) [
-            'iss' => 'accounts.google.com',
-            'aud' => 'https://localhost/my-handler',
-            'exp' => time() - 1
-        ]);
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('The given OpenID token has expired');
-        $this->handler->handle($this->simpleJob());
+        // Arrange
+        OpenIdVerificator::fake();
+        $this->addIdTokenToHeader(function (array $base) {
+            return ['aud' => 'invalid-aud'] + $base;
+        });
+
+        // Assert
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('Audience does not match');
+
+        // Act
+        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
     }
 
-    /** @test */
-    public function in_case_of_signature_verification_failure_it_will_retry()
+    /**
+     * @test
+     */
+    public function it_can_run_a_task()
     {
-        Event::fake();
+        // Arrange
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+        Event::fake([JobProcessing::class, JobProcessed::class]);
 
-        $this->jwt->shouldReceive('decode')->andThrow(SignatureInvalidException::class);
+        // Act
+        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
 
-        $this->expectException(SignatureInvalidException::class);
-
-        $this->handler->handle($this->simpleJob());
-
-        Event::assertDispatched(CacheHit::class);
-        Event::assertDispatched(KeyWritten::class);
+        // Assert
+        Log::assertLogged('SimpleJob:success');
     }
 
-    /** @test */
-    public function it_runs_the_incoming_job()
-    {
-        Mail::fake();
-
-        request()->headers->add(['Authorization' => 'Bearer 123']);
-
-        $this->handler->handle($this->simpleJob());
-
-        Mail::assertSent(TestMailable::class);
-    }
-
-    /** @test */
+    /**
+     * @test
+     */
     public function after_max_attempts_it_will_log_to_failed_table()
     {
-        $this->request->headers->add(['X-Cloudtasks-Queuename' => 'my-queue']);
+        // Arrange
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
+        $job = $this->dispatch(new FailingJob());
 
-        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 1]);
-        try {
-            $this->handler->handle($this->failingJob());
-        } catch (\Throwable $e) {
-            //
-        }
+        // Act & Assert
+        $this->assertDatabaseCount('failed_jobs', 0);
 
-        $this->assertCount(0, DB::table('failed_jobs')->get());
+        $job->run();
+        $this->assertDatabaseCount('failed_jobs', 0);
 
-        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 2]);
-        try {
-            $this->handler->handle($this->failingJob());
-        } catch (\Throwable $e) {
-            //
-        }
+        $job->run();
+        $this->assertDatabaseCount('failed_jobs', 0);
 
-        $this->assertDatabaseHas('failed_jobs', [
-            'connection' => 'my-cloudtasks-connection',
-            'queue' => 'my-queue',
-            'payload' => rtrim($this->failingJobPayload()),
-        ]);
+        $job->run();
+        $this->assertDatabaseCount('failed_jobs', 1);
     }
 
-    /** @test */
+    /**
+     * @test
+     */
     public function after_max_attempts_it_will_delete_the_task()
     {
-        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 2]);
+        // Arrange
+        OpenIdVerificator::fake();
 
-        rescue(function () {
-            $this->handler->handle($this->failingJob());
-        });
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
 
-        $this->cloudTasksClient->shouldHaveReceived('deleteTask')->once();
+        $job = $this->dispatch(new FailingJob());
+
+        // Act & Assert
+        $job->run();
+        CloudTasksApi::assertDeletedTaskCount(0);
+        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $job->run();
+        CloudTasksApi::assertDeletedTaskCount(0);
+        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $job->run();
+        CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 1);
     }
 
-    /** @test */
-    public function after_max_retry_until_it_will_delete_the_task()
+    /**
+     * @test
+     */
+    public function after_max_retry_until_it_will_log_to_failed_table_and_delete_the_task()
     {
-        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => 1]);
+        // Arrange
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxRetryDuration(new Duration(['seconds' => 30]))
+        );
+        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(1);
+        $job = $this->dispatch(new FailingJob());
 
-        $this->cloudTasksClient
-            ->shouldReceive('getTask')
-            ->byDefault()
-            ->andReturn(new class {
-                public function getFirstAttempt() {
-                    return (new Attempt())
-                        ->setDispatchTime(new Timestamp([
-                            'seconds' => time() - 29,
-                        ]));
-                }
-            });
+        // Act
+        $job->run();
 
-        rescue(function () {
-            $this->handler->handle($this->failingJob());
-        });
+        // Assert
+        CloudTasksApi::assertDeletedTaskCount(0);
+        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 0);
 
-        $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
+        // Act
+        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(1);
+        $job->run();
 
-        $this->cloudTasksClient->shouldReceive('getTask')
-            ->andReturn(new class {
-                public function getFirstAttempt() {
-                    return (new Attempt())
-                        ->setDispatchTime(new Timestamp([
-                            'seconds' => time() - 30,
-                        ]));
-                }
-            });
-
-        rescue(function () {
-            $this->handler->handle($this->failingJob());
-        });
-
-        $this->cloudTasksClient->shouldHaveReceived('deleteTask')->once();
+        // Assert
+        CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 1);
     }
 
-    /** @test */
+    /**
+     * @test
+     */
     public function test_unlimited_max_attempts()
     {
-        $this->cloudTasksClient->shouldReceive('getQueue')
-            ->byDefault()
-            ->andReturn(new class {
-                public function getRetryConfig() {
-                    return new class {
-                        public function getMaxAttempts() {
-                            return -1;
-                        }
+        // Arrange
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            // -1 is a valid option in Cloud Tasks to indicate there is no max.
+            (new RetryConfig())->setMaxAttempts(-1)
+        );
 
-                        public function hasMaxRetryDuration() {
-                            return false;
-                        }
-                    };
-                }
-            });
-
-        for ($i = 0; $i < 50; $i++) {
-            $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => $i]);
-
-            rescue(function () {
-                $this->handler->handle($this->failingJob());
-            });
-
-            $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
+        // Act
+        $job = $this->dispatch(new FailingJob());
+        foreach (range(1, 50) as $attempt) {
+            $job->run();
+            CloudTasksApi::assertDeletedTaskCount(0);
+            CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+            $this->assertDatabaseCount('failed_jobs', 0);
         }
     }
 
     /**
      * @test
-     * @dataProvider whenIsJobFailingProvider
      */
-    public function job_max_attempts_is_ignored_if_has_retry_until($example)
+    public function test_max_attempts_in_combination_with_retry_until()
     {
+        // Laravel 5, 6, 7: check both max_attempts and retry_until before failing a job.
+        // Laravel 8+: if retry_until, only check that
+
         // Arrange
-        $this->request->headers->add(['X-CloudTasks-TaskRetryCount' => $example['retryCount']]);
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())
+                ->setMaxAttempts(3)
+                ->setMaxRetryDuration(new Duration(['seconds' => 3]))
+        );
+        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(time() + 10)->byDefault();
 
-        if (array_key_exists('travelSeconds', $example)) {
-            Carbon::setTestNow(Carbon::now()->addSeconds($example['travelSeconds']));
-        }
+        $job = $this->dispatch(new FailingJob());
 
-        $this->cloudTasksClient->shouldReceive('getQueue')
-            ->byDefault()
-            ->andReturn(new class() {
-                public function getRetryConfig() {
-                    return new class {
-                        public function getMaxAttempts() {
-                            return 3;
-                        }
+        // Act & Assert
+        $job->run();
+        $job->run();
 
-                        public function hasMaxRetryDuration() {
-                            return true;
-                        }
+        # After 2 attempts both Laravel versions should report the same: 2 errors and 0 failures.
+        $task = StackkitCloudTask::whereTaskUuid($job->payload['uuid'])->firstOrFail();
+        $this->assertEquals(2, $task->getNumberOfAttempts());
+        $this->assertEquals('error', $task->status);
 
-                        public function getMaxRetryDuration() {
-                            return new class {
-                                public function getSeconds() {
-                                    return 30;
-                                }
-                            };
-                        }
-                    };
-                }
-            });
+        $job->run();
 
-        $this->cloudTasksClient
-            ->shouldReceive('getTask')
-            ->byDefault()
-            ->andReturn(new class {
-                public function getFirstAttempt() {
-                    return (new Attempt())
-                        ->setDispatchTime(new Timestamp([
-                            'seconds' => time(),
-                        ]));
-                }
-            });
+        # Max attempts was reached
+        # Laravel 5, 6, 7: fail because max attempts was reached
+        # Laravel 8+: don't fail because retryUntil has not yet passed.
 
-        rescue(function () {
-            $this->handler->handle($this->failingJob());
-        });
-
-        if ($example['shouldHaveFailed']) {
-            $this->cloudTasksClient->shouldHaveReceived('deleteTask');
+        if (version_compare(app()->version(), '8.0.0', '<')) {
+            $this->assertEquals('failed', $task->fresh()->status);
+            return;
         } else {
-            $this->cloudTasksClient->shouldNotHaveReceived('deleteTask');
-        }
-    }
-
-    public function whenIsJobFailingProvider()
-    {
-        $this->createApplication();
-
-        // 8.x behavior: if retryUntil, only check that.
-        // 6.x behavior: if retryUntil, check that, otherwise check maxAttempts
-
-        // max retry count is 3
-        // max retryUntil is 30 seconds
-
-        if (version_compare(app()->version(), '8.0.0', '>=')) {
-            return [
-                [
-                    [
-                        'retryCount' => 1,
-                        'shouldHaveFailed' => false,
-                    ],
-                ],
-                [
-                    [
-                        'retryCount' => 2,
-                        'shouldHaveFailed' => false,
-                    ],
-                ],
-                [
-                    [
-                        'retryCount' => 1,
-                        'travelSeconds' => 29,
-                        'shouldHaveFailed' => false,
-                    ],
-                ],
-                [
-                    [
-                        'retryCount' => 1,
-                        'travelSeconds' => 31,
-                        'shouldHaveFailed' => true,
-                    ],
-                ],
-                [
-                    [
-                        'retryCount' => 1,
-                        'travelSeconds' => 32,
-                        'shouldHaveFailed' => true,
-                    ],
-                ],
-                [
-                    [
-                        'retryCount' => 1,
-                        'travelSeconds' => 31,
-                        'shouldHaveFailed' => true,
-                    ],
-                ],
-            ];
+            $this->assertEquals('error', $task->fresh()->status);
         }
 
-        return [
-            [
-                [
-                    'retryCount' => 1,
-                    'shouldHaveFailed' => false,
-                ],
-            ],
-            [
-                [
-                    'retryCount' => 2,
-                    'shouldHaveFailed' => true,
-                ],
-            ],
-            [
-                [
-                    'retryCount' => 1,
-                    'travelSeconds' => 29,
-                    'shouldHaveFailed' => false,
-                ],
-            ],
-            [
-                [
-                    'retryCount' => 1,
-                    'travelSeconds' => 31,
-                    'shouldHaveFailed' => true,
-                ],
-            ],
-            [
-                [
-                    'retryCount' => 1,
-                    'travelSeconds' => 32,
-                    'shouldHaveFailed' => true,
-                ],
-            ],
-            [
-                [
-                    'retryCount' => 1,
-                    'travelSeconds' => 32,
-                    'shouldHaveFailed' => true,
-                ],
-            ],
-        ];
-    }
+        CloudTasksApi::shouldReceive('getRetryUntilTimestamp')->andReturn(time() - 1);
+        $job->run();
 
-    private function simpleJob()
-    {
-        return json_decode(file_get_contents(__DIR__ . '/Support/test-job-payload.json'), true);
-    }
-
-    private function failingJobPayload()
-    {
-        return file_get_contents(__DIR__ . '/Support/failing-job-payload.json');
-    }
-
-    private function failingJob()
-    {
-        return json_decode($this->failingJobPayload(), true);
+        $this->assertEquals('failed', $task->fresh()->status);
     }
 }

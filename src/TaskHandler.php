@@ -2,19 +2,26 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\Attempt;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
-use Illuminate\Http\Request;
-use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Queue\Worker;
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\WorkerOptions;
+use stdClass;
+use UnexpectedValueException;
+use function Safe\json_decode;
 
 class TaskHandler
 {
-    private $request;
-    private $publicKey;
+    /**
+     * @var array
+     */
     private $config;
+
+    /**
+     * @var CloudTasksClient
+     */
+    private $client;
 
     /**
      * @var CloudTasksQueue
@@ -26,18 +33,12 @@ class TaskHandler
      */
     private $retryConfig = null;
 
-    public function __construct(CloudTasksClient $client, Request $request, OpenIdVerificator $publicKey)
+    public function __construct(CloudTasksClient $client)
     {
         $this->client = $client;
-        $this->request = $request;
-        $this->publicKey = $publicKey;
     }
 
-    /**
-     * @param $task
-     * @throws CloudTasksException
-     */
-    public function handle($task = null)
+    public function handle(?array $task = null): void
     {
         $task = $task ?: $this->captureTask();
 
@@ -45,24 +46,25 @@ class TaskHandler
 
         $this->setQueue();
 
-        $this->authorizeRequest();
-
-        $this->listenForEvents();
+        OpenIdVerificator::verify(request()->bearerToken(), $this->config);
 
         $this->handleTask($task);
     }
 
-    private function loadQueueConnectionConfiguration($task)
+    private function loadQueueConnectionConfiguration(array $task): void
     {
+        /**
+         * @var stdClass $command
+         */
         $command = unserialize($task['data']['command']);
         $connection = $command->connection ?? config('queue.default');
         $this->config = array_merge(
-            config("queue.connections.{$connection}"),
+            (array) config("queue.connections.{$connection}"),
             ['connection' => $connection]
         );
     }
 
-    private function setQueue()
+    private function setQueue(): void
     {
         $this->queue = new CloudTasksQueue($this->config, $this->client);
     }
@@ -70,45 +72,7 @@ class TaskHandler
     /**
      * @throws CloudTasksException
      */
-    public function authorizeRequest()
-    {
-        if (!$this->request->hasHeader('Authorization')) {
-            throw new CloudTasksException('Missing [Authorization] header');
-        }
-
-        $openIdToken = $this->request->bearerToken();
-        $kid = $this->publicKey->getKidFromOpenIdToken($openIdToken);
-
-        $decodedToken = $this->publicKey->decodeOpenIdToken($openIdToken, $kid);
-
-        $this->validateToken($decodedToken);
-    }
-
-    /**
-     * https://developers.google.com/identity/protocols/oauth2/openid-connect#validatinganidtoken
-     *
-     * @param $openIdToken
-     * @throws CloudTasksException
-     */
-    protected function validateToken($openIdToken)
-    {
-        if (!in_array($openIdToken->iss, ['https://accounts.google.com', 'accounts.google.com'])) {
-            throw new CloudTasksException('The given OpenID token is not valid');
-        }
-
-        if ($openIdToken->aud != $this->config['handler']) {
-            throw new CloudTasksException('The given OpenID token is not valid');
-        }
-
-        if ($openIdToken->exp < time()) {
-            throw new CloudTasksException('The given OpenID token has expired');
-        }
-    }
-
-    /**
-     * @throws CloudTasksException
-     */
-    private function captureTask()
+    private function captureTask(): array
     {
         $input = (string) (request()->getContent());
 
@@ -118,93 +82,44 @@ class TaskHandler
 
         $task = json_decode($input, true);
 
-        if (is_null($task)) {
+        if (!is_array($task)) {
             throw new CloudTasksException('Could not decode incoming task');
         }
 
         return $task;
     }
 
-    private function listenForEvents()
-    {
-        app('events')->listen(JobFailed::class, function ($event) {
-            app('queue.failer')->log(
-                $this->config['connection'], $event->job->getQueue(),
-                $event->job->getRawBody(), $event->exception
-            );
-        });
-    }
-
-    /**
-     * @param $task
-     * @throws CloudTasksException
-     */
-    private function handleTask($task)
+    private function handleTask(array $task): void
     {
         $job = new CloudTasksJob($task, $this->queue);
 
-        $this->loadQueueRetryConfig();
+        $this->loadQueueRetryConfig($job);
 
-        $job->setAttempts(request()->header('X-CloudTasks-TaskRetryCount') + 1);
-        $job->setQueue(request()->header('X-Cloudtasks-Queuename'));
+        $job->setAttempts((int) request()->header('X-CloudTasks-TaskExecutionCount'));
         $job->setMaxTries($this->retryConfig->getMaxAttempts());
 
         // If the job is being attempted again we also check if a
         // max retry duration has been set. If that duration
         // has passed, it should stop trying altogether.
-        if ($job->attempts() > 1) {
-            $job->setRetryUntil($this->getRetryUntilTimestamp($job));
+        if ($job->attempts() > 0) {
+            $taskName = request()->header('X-Cloudtasks-Taskname');
+
+            if (!is_string($taskName)) {
+                throw new UnexpectedValueException('Expected task name to be a string.');
+            }
+
+            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($taskName));
         }
 
-        $worker = $this->getQueueWorker();
-
-        $worker->process($this->config['connection'], $job, new WorkerOptions());
+        app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
     }
 
-    private function loadQueueRetryConfig()
+    private function loadQueueRetryConfig(CloudTasksJob $job): void
     {
-        $queueName = $this->client->queueName(
-            $this->config['project'],
-            $this->config['location'],
-            request()->header('X-Cloudtasks-Queuename')
-        );
+        $queue = $job->getQueue() ?: $this->config['queue'];
 
-        $this->retryConfig = $this->client->getQueue($queueName)->getRetryConfig();
-    }
+        $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
 
-    private function getRetryUntilTimestamp(CloudTasksJob $job)
-    {
-        $task = $this->client->getTask(
-            $this->client->taskName(
-                $this->config['project'],
-                $this->config['location'],
-                $job->getQueue(),
-                request()->header('X-Cloudtasks-Taskname')
-            )
-        );
-
-        $attempt = $task->getFirstAttempt();
-
-        if (!$attempt instanceof Attempt) {
-            return null;
-        }
-
-        if (! $this->retryConfig->hasMaxRetryDuration()) {
-            return null;
-        }
-
-        $maxDurationInSeconds = $this->retryConfig->getMaxRetryDuration()->getSeconds();
-
-        $firstAttemptTimestamp = $attempt->getDispatchTime()->toDateTime()->getTimestamp();
-
-        return $firstAttemptTimestamp + $maxDurationInSeconds;
-    }
-
-    /**
-     * @return Worker
-     */
-    private function getQueueWorker()
-    {
-        return app('queue.worker');
+        $this->retryConfig = CloudTasksApi::getRetryConfig($queueName);
     }
 }
