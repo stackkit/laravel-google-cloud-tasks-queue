@@ -52,9 +52,9 @@ Please check the table below for supported Laravel and PHP versions:
       'handler' => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
       'queue' => env('STACKKIT_CLOUD_TASKS_QUEUE', 'default'),
       'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
-      // Optional: The deadline for requests sent to the worker. If the worker does not
-      // respond by this deadline then the request is cancelled and the attempt is
-      // marked as a DEADLINE_EXCEEDED failure.
+      // Optional: The deadline in seconds for requests sent to the worker. If the worker
+      // does not respond by this deadline then the request is cancelled and the attempt
+      // is marked as a DEADLINE_EXCEEDED failure.
       'dispatch_deadline' => null,
   ],
   ```
