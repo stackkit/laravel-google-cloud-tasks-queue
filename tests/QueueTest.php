@@ -88,6 +88,25 @@ class QueueTest extends TestCase
     /**
      * @test
      */
+    public function test_dispatch_deadline_config()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        $this->setConfigValue('dispatch_deadline', 30);
+
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->hasDispatchDeadline()
+                && $task->getDispatchDeadline()->getSeconds() === 30;
+        });
+    }
+
+    /**
+     * @test
+     */
     public function it_posts_the_task_the_correct_queue()
     {
         // Arrange
