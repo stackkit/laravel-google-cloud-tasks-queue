@@ -18,7 +18,7 @@ class OpenIdVerificatorConcrete extends Facade
         (new AccessToken())->verify(
             $token,
             [
-                'audience' => $config['handler'],
+                'audience' => app('queue')->getHandler(),
                 'throwException' => true,
             ]
         );

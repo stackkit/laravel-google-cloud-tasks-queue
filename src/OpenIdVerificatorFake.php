@@ -17,7 +17,7 @@ class OpenIdVerificatorFake
         (new AccessToken())->verify(
             $token,
             [
-                'audience' => $config['handler'],
+                'audience' => app('queue')->getHandler(),
                 'throwException' => true,
                 'certsLocation' => __DIR__ . '/../tests/Support/self-signed-public-key-as-jwk.json',
             ]
