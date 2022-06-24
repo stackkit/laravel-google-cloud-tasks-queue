@@ -108,7 +108,14 @@ class TaskHandler
                 throw new UnexpectedValueException('Expected task name to be a string.');
             }
 
-            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($taskName));
+            $fullTaskName = $this->client->taskName(
+                $this->config['project'],
+                $this->config['location'],
+                $job->getQueue() ?: $this->config['queue'],
+                $taskName,
+            );
+
+            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($fullTaskName));
         }
 
         app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
