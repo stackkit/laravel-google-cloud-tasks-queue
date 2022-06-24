@@ -95,7 +95,7 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
-        $job->setAttempts((int) request()->header('X-CloudTasks-TaskExecutionCount'));
+        $job->setAttempts((int) request()->header('X-CloudTasks-TaskRetryCount'));
         $job->setMaxTries($this->retryConfig->getMaxAttempts());
 
         // If the job is being attempted again we also check if a
@@ -117,6 +117,8 @@ class TaskHandler
 
             $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($fullTaskName));
         }
+
+        $job->setAttempts($job->attempts() + 1);
 
         app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
     }
