@@ -95,7 +95,7 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
-        $job->setAttempts((int) request()->header('X-CloudTasks-TaskExecutionCount'));
+        $job->setAttempts((int) request()->header('X-CloudTasks-TaskRetryCount'));
         $job->setMaxTries($this->retryConfig->getMaxAttempts());
 
         // If the job is being attempted again we also check if a
@@ -108,8 +108,17 @@ class TaskHandler
                 throw new UnexpectedValueException('Expected task name to be a string.');
             }
 
-            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($taskName));
+            $fullTaskName = $this->client->taskName(
+                $this->config['project'],
+                $this->config['location'],
+                $job->getQueue() ?: $this->config['queue'],
+                $taskName,
+            );
+
+            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($fullTaskName));
         }
+
+        $job->setAttempts($job->attempts() + 1);
 
         app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
     }

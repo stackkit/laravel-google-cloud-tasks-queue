@@ -95,11 +95,4 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
         $this->cloudTasksQueue->delete($this);
     }
-
-    public function fire(): void
-    {
-        $this->attempts++;
-
-        parent::fire();
-    }
 }
