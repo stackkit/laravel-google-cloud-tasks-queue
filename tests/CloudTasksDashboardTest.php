@@ -425,10 +425,17 @@ class CloudTasksDashboardTest extends TestCase
         // Act & Assert
         $expectedPublishBase = dirname(__DIR__);
 
-        $this->artisan('vendor:publish --tag=cloud-tasks --force')
-            ->expectsOutput('Copied File [' . $expectedPublishBase . '/config/cloud-tasks.php] To [/config/cloud-tasks.php]')
-            ->expectsOutput('Copied Directory [' . $expectedPublishBase . '/dashboard/dist] To [/public/vendor/cloud-tasks]')
-            ->expectsOutput('Publishing complete.');
+        if (version_compare(app()->version(), '9.0.0', '>=')) {
+            $this->artisan('vendor:publish --tag=cloud-tasks --force')
+                ->expectsOutputToContain('Publishing [cloud-tasks] assets.')
+                ->expectsOutputToContain('Copying file [' . $expectedPublishBase . '/config/cloud-tasks.php] to [config/cloud-tasks.php]')
+                ->expectsOutputToContain('Copying directory [' . $expectedPublishBase . '/dashboard/dist] to [public/vendor/cloud-tasks]');
+        } else {
+            $this->artisan('vendor:publish --tag=cloud-tasks --force')
+                ->expectsOutput('Copied File [' . $expectedPublishBase . '/config/cloud-tasks.php] To [/config/cloud-tasks.php]')
+                ->expectsOutput('Copied Directory [' . $expectedPublishBase . '/dashboard/dist] To [/public/vendor/cloud-tasks]')
+                ->expectsOutput('Publishing complete.');
+        }
     }
 
     /**
