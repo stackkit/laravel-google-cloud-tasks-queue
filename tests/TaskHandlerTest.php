@@ -268,17 +268,17 @@ class TaskHandlerTest extends TestCase
 
         // Act & Assert
         $job->run();
-        CloudTasksApi::assertDeletedTaskCount(0);
-        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
-        $this->assertDatabaseCount('failed_jobs', 0);
-
-        $job->run();
-        CloudTasksApi::assertDeletedTaskCount(0);
-        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
-        $this->assertDatabaseCount('failed_jobs', 0);
-
-        $job->run();
         CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $job->run();
+        CloudTasksApi::assertDeletedTaskCount(2);
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $job->run();
+        CloudTasksApi::assertDeletedTaskCount(3);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 1);
     }
@@ -300,8 +300,8 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         // Assert
-        CloudTasksApi::assertDeletedTaskCount(0);
-        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+        CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 0);
 
         // Act
@@ -309,7 +309,7 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         // Assert
-        CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertDeletedTaskCount(2);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 1);
     }
@@ -330,8 +330,8 @@ class TaskHandlerTest extends TestCase
         $job = $this->dispatch(new FailingJob());
         foreach (range(1, 50) as $attempt) {
             $job->run();
-            CloudTasksApi::assertDeletedTaskCount(0);
-            CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+            CloudTasksApi::assertDeletedTaskCount($attempt);
+            CloudTasksApi::assertTaskDeleted($job->task->getName());
             $this->assertDatabaseCount('failed_jobs', 0);
         }
     }
@@ -407,5 +407,27 @@ class TaskHandlerTest extends TestCase
         );
 
         Log::assertLogged('EncryptedJob:success');
+    }
+
+    public function failing_jobs_are_released()
+    {
+        // Arrange
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
+
+        // Act
+        $job = $this->dispatch(new FailingJob());
+
+        CloudTasksApi::assertDeletedTaskCount(0);
+        CloudTasksApi::assertCreatedTaskCount(1);
+        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
+
+        $job->run();
+
+        CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertCreatedTaskCount(2);
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
     }
 }

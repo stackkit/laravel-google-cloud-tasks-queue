@@ -91,4 +91,9 @@ class CloudTasksApiFake implements CloudTasksApiContract
 
         Assert::assertTrue($count > 0, 'Task was not created.');
     }
+
+    public function assertCreatedTaskCount(int $count): void
+    {
+        Assert::assertCount($count, $this->createdTasks);
+    }
 }

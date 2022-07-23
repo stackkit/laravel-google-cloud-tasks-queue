@@ -95,4 +95,11 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
         $this->cloudTasksQueue->delete($this);
     }
+
+    public function release($delay = 0)
+    {
+        parent::release();
+
+        $this->cloudTasksQueue->release($this, $delay);
+    }
 }
