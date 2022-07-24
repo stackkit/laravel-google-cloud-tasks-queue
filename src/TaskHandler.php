@@ -124,7 +124,7 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
-        $job->setAttempts((int) request()->header('X-CloudTasks-TaskRetryCount'));
+        $job->setAttempts($task['internal']['attempts']);
         $job->setMaxTries($this->retryConfig->getMaxAttempts());
 
         // If the job is being attempted again we also check if a

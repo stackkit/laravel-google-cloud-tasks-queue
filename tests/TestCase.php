@@ -149,6 +149,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
                 rescue(function (): void {
                     app(TaskHandler::class)->handle($this->payload);
                 });
+
+                $this->payload = $this->incrementAttempts($this->payload);
             }
 
             public function runWithoutExceptionHandler(): void
@@ -158,6 +160,17 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
                 app(TaskHandler::class)->handle($this->payload);
 
+                $this->payload = $this->incrementAttempts($this->payload);
+            }
+
+            private function incrementAttempts(string $payload): string
+            {
+                $decoded = \Safe\json_decode($payload, true);
+
+                $decoded['internal']['attempts'] ??= 0;
+                $decoded['internal']['attempts']++;
+
+                return json_encode($decoded);
             }
         };
     }

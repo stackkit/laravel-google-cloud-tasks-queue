@@ -143,11 +143,19 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // we will add it manually here if it's not present yet.
         [$payload, $uuid] = $this->withUuid($payload);
 
+        // Since 3.x tasks are released back onto the queue after an exception has
+        // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
+        // value and need to manually set and update the number of times a task has been attempted.
+        $payload = $this->withAttempts($payload);
+
         $httpRequest->setBody($payload);
 
         $task = $this->createTask();
         $task->setHttpRequest($httpRequest);
 
+        // The deadline for requests sent to the app. If the app does not respond by
+        // this deadline then the request is cancelled and the attempt is marked as
+        // a failure. Cloud Tasks will retry the task according to the RetryConfig.
         if (!empty($this->config['dispatch_deadline'])) {
             $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
         }
@@ -180,6 +188,20 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             json_encode($decoded),
             $decoded['uuid'],
         ];
+    }
+
+    private function withAttempts(string $payload): string
+    {
+        /** @var array $decoded */
+        $decoded = json_decode($payload, true);
+
+        if (!isset($decoded['internal']['attempts'])) {
+            $decoded['internal']['attempts'] = 0;
+        } else {
+            $decoded['internal']['attempts']++;
+        }
+
+        return json_encode($decoded);
     }
 
     /**
