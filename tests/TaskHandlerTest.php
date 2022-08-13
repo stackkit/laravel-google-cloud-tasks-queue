@@ -5,21 +5,16 @@ namespace Tests;
 use Firebase\JWT\ExpiredException;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Protobuf\Duration;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Queue\Events\JobExceptionOccurred;
-use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Queue;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksJob;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
+use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
 use UnexpectedValueException;
@@ -271,5 +266,23 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         $this->assertEquals('failed', $task->fresh()->status);
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_handle_encrypted_jobs()
+    {
+        // Arrange
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+
+        // Act
+        $job = $this->dispatch(new EncryptedJob());
+        $job->run();
+
+        // Assert
+        $this->assertEquals('O:26:"Tests\Support\EncryptedJob":0:{}', decrypt($job->payload['data']['command']));
+        Log::assertLogged('EncryptedJob:success');
     }
 }
