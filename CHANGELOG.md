@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 3.2.0 - 2022-08-13
+
+**Added**
+
+- Added support for jobs that use the `Illuminate\Contracts\Queue\ShouldBeEncrypted` contract
+
 ## 3.1.4 - 2022-06-24
 
 **Fixed**
