@@ -24,9 +24,9 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->job = $job;
         $this->container = Container::getInstance();
         $this->cloudTasksQueue = $cloudTasksQueue;
-        /** @var \stdClass $command */
-        $command = unserialize($job['data']['command']);
-        $this->queue = $command->queue;
+        
+        $command = TaskHandler::getCommandProperties($job['data']['command']);
+        $this->queue = $command['queue'] ?? config('queue.connections.' .config('queue.default') . '.queue');
     }
 
     public function getJobId(): string

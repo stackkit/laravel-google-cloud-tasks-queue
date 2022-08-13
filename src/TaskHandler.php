@@ -5,8 +5,10 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\WorkerOptions;
+use Illuminate\Support\Str;
 use stdClass;
 use UnexpectedValueException;
 use function Safe\json_decode;
@@ -56,8 +58,8 @@ class TaskHandler
         /**
          * @var stdClass $command
          */
-        $command = unserialize($task['data']['command']);
-        $connection = $command->connection ?? config('queue.default');
+        $command = self::getCommandProperties($task['data']['command']);
+        $connection = $command['connection'] ?? config('queue.default');
         $this->config = array_merge(
             (array) config("queue.connections.{$connection}"),
             ['connection' => $connection]
@@ -130,5 +132,18 @@ class TaskHandler
         $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
 
         $this->retryConfig = CloudTasksApi::getRetryConfig($queueName);
+    }
+
+    public static function getCommandProperties(string $command): array
+    {
+        if (Str::startsWith($command, 'O:')) {
+            return (array) unserialize($command, ['allowed_classes' => false]);
+        }
+
+        if (app()->bound(Encrypter::class)) {
+            return (array) unserialize(app(Encrypter::class)->decrypt($command), ['allowed_classes' => false]);
+        }
+
+        return [];
     }
 }

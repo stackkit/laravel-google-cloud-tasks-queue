@@ -7,6 +7,7 @@ namespace Tests;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\Task;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
 
@@ -137,19 +138,19 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = unserialize($decoded['data']['command']);
+            $command = TaskHandler::getCommandProperties($decoded['data']['command']);
 
             return $decoded['displayName'] === SimpleJob::class
-                && $command->queue === null
+                && $command['queue'] === null
                 && $queueName === 'projects/my-test-project/locations/europe-west6/queues/barbequeue';
         });
 
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = unserialize($decoded['data']['command']);
+            $command = TaskHandler::getCommandProperties($decoded['data']['command']);
 
             return $decoded['displayName'] === FailingJob::class
-                && $command->queue === 'my-special-queue'
+                && $command['queue'] === 'my-special-queue'
                 && $queueName === 'projects/my-test-project/locations/europe-west6/queues/my-special-queue';
         });
     }
