@@ -273,6 +273,10 @@ class TaskHandlerTest extends TestCase
      */
     public function it_can_handle_encrypted_jobs()
     {
+        if (version_compare(app()->version(), '8.0.0', '<')) {
+            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
+        }
+
         // Arrange
         OpenIdVerificator::fake();
         Log::swap(new LogFake());
@@ -282,7 +286,11 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         // Assert
-        $this->assertEquals('O:26:"Tests\Support\EncryptedJob":0:{}', decrypt($job->payload['data']['command']));
+        $this->assertStringContainsString(
+            'O:26:"Tests\Support\EncryptedJob"',
+            decrypt($job->payload['data']['command']),
+        );
+
         Log::assertLogged('EncryptedJob:success');
     }
 }
