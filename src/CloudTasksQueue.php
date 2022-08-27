@@ -52,9 +52,15 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function push($job, $data = '', $queue = null)
     {
-        $this->pushToCloudTasks($queue, $this->createPayload(
-            $job, $this->getQueue($queue), $data
-        ));
+        return $this->enqueueUsing(
+            $job,
+            $this->createPayload($job, $this->getQueue($queue), $data),
+            $queue,
+            null,
+            function ($payload, $queue) {
+                return $this->pushRaw($payload, $queue);
+            }
+        );
     }
 
     /**
@@ -63,11 +69,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * @param string  $payload
      * @param string|null  $queue
      * @param array  $options
-     * @return void
+     * @return string
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $this->pushToCloudTasks($queue, $payload);
+        return $this->pushToCloudTasks($queue, $payload);
     }
 
     /**
@@ -81,9 +87,15 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        $this->pushToCloudTasks($queue, $this->createPayload(
-            $job, $this->getQueue($queue), $data
-        ), $delay);
+        return $this->enqueueUsing(
+            $job,
+            $this->createPayload($job, $this->getQueue($queue), $data),
+            $queue,
+            $delay,
+            function ($payload, $queue, $delay) {
+                return $this->pushToCloudTasks($queue, $payload, $delay);
+            }
+        );
     }
 
     /**
@@ -92,7 +104,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * @param string|null  $queue
      * @param string  $payload
      * @param \DateTimeInterface|\DateInterval|int $delay
-     * @return void
+     * @return string
      */
     protected function pushToCloudTasks($queue, $payload, $delay = 0)
     {
@@ -103,12 +115,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest = $this->createHttpRequest();
         $httpRequest->setUrl($this->getHandler());
         $httpRequest->setHttpMethod(HttpMethod::POST);
-        $httpRequest->setBody(
-            // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
-            // Since we are using and expecting the uuid in some places
-            // we will add it manually here if it's not present yet.
-            $this->withUuid($payload)
-        );
+
+        // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
+        // Since we are using and expecting the uuid in some places
+        // we will add it manually here if it's not present yet.
+        [$payload, $uuid] = $this->withUuid($payload);
+
+        $httpRequest->setBody($payload);
 
         $task = $this->createTask();
         $task->setHttpRequest($httpRequest);
@@ -128,9 +141,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $createdTask = CloudTasksApi::createTask($queueName, $task);
 
         event((new TaskCreated)->queue($queue)->task($task));
+
+        return $uuid;
     }
 
-    private function withUuid(string $payload): string
+    private function withUuid(string $payload): array
     {
         /** @var array $decoded */
         $decoded = json_decode($payload, true);
@@ -139,7 +154,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $decoded['uuid'] = (string) Str::uuid();
         }
 
-        return json_encode($decoded);
+        return [
+            json_encode($decoded),
+            $decoded['uuid'],
+        ];
     }
 
     /**
