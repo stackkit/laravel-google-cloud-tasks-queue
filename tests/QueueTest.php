@@ -6,6 +6,9 @@ namespace Tests;
 
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Queue\Events\JobQueued;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\FailingJob;
@@ -152,6 +155,30 @@ class QueueTest extends TestCase
             return $decoded['displayName'] === FailingJob::class
                 && $command['queue'] === 'my-special-queue'
                 && $queueName === 'projects/my-test-project/locations/europe-west6/queues/my-special-queue';
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_dispatch_after_commit()
+    {
+        if (version_compare(app()->version(), '8.0.0', '<')) {
+            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
+        }
+
+        // Arrange
+        CloudTasksApi::fake();
+        Event::fake();
+
+        // Act & Assert
+        Event::assertNotDispatched(JobQueued::class);
+        DB::beginTransaction();
+        SimpleJob::dispatch()->afterCommit();
+        Event::assertNotDispatched(JobQueued::class);
+        DB::commit();
+        Event::assertDispatched(JobQueued::class, function (JobQueued $event) {
+            return $event->job instanceof SimpleJob;
         });
     }
 }

@@ -9,11 +9,14 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
+use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
@@ -26,6 +29,118 @@ class TaskHandlerTest extends TestCase
         parent::setUp();
 
         CloudTasksApi::fake();
+    }
+
+    /**
+     * @test
+     * @testWith [true]
+     *           [false]
+     */
+    public function it_returns_responses_for_empty_payloads($debug)
+    {
+        // Arrange
+        config()->set('app.debug', $debug);
+
+        // Act
+        $response = $this->postJson(action([TaskHandler::class, 'handle']));
+
+        // Assert
+        if ($debug) {
+            $response->assertJsonValidationErrors('task');
+        } else {
+            $response->assertNotFound();
+        }
+    }
+
+    /**
+     * @test
+     * @testWith [true]
+     *           [false]
+     */
+    public function it_returns_responses_for_invalid_json($debug)
+    {
+        // Arrange
+        config()->set('app.debug', $debug);
+
+        // Act
+        $response = $this->call(
+            'POST',
+            action([TaskHandler::class, 'handle']),
+            [],
+            [],
+            [],
+            [
+                'HTTP_ACCEPT' => 'application/json',
+            ],
+            'test',
+        );
+
+        // Assert
+        if ($debug) {
+            $response->assertJsonValidationErrors('task');
+            $this->assertEquals('The json must be a valid JSON string.', $response->json('errors.json.0'));
+        } else {
+            $response->assertNotFound();
+        }
+    }
+
+    /**
+     * @test
+     * @testWith ["{\"invalid\": \"data\"}", "The task.data field is required."]
+     *           ["{\"data\": \"\"}", "The task.data field is required."]
+     *           ["{\"data\": \"test\"}", "The task.data must be an array."]
+     */
+    public function it_returns_responses_for_invalid_payloads(string $payload, string $expectedMessage)
+    {
+        // Arrange
+
+        // Act
+        $response = $this->call(
+            'POST',
+            action([TaskHandler::class, 'handle']),
+            [],
+            [],
+            [],
+            [
+                'HTTP_ACCEPT' => 'application/json',
+            ],
+            $payload,
+        );
+
+        // Assert
+        $response->assertJsonValidationErrors('task.data');
+        $this->assertEquals($expectedMessage, $response->json(['errors', 'task.data', 0]));
+    }
+
+    /**
+     * @test
+     * @testWith [true]
+     *           [false]
+     */
+    public function it_validates_headers(bool $withHeaders)
+    {
+        // Arrange
+        $this->withExceptionHandling();
+
+        // Act
+        $response = $this->postJson(
+            action([TaskHandler::class, 'handle']),
+            [],
+            $withHeaders
+                ? [
+                    'X-CloudTasks-Taskname' => 'MyTask',
+                    'X-CloudTasks-TaskRetryCount' => 0,
+                ] : []
+        );
+
+        // Assert
+        if ($withHeaders) {
+            $response->assertJsonMissingValidationErrors('name_header');
+            $response->assertJsonMissingValidationErrors('retry_count_header');
+        } else {
+            $response->assertJsonValidationErrors('name_header');
+            $response->assertJsonValidationErrors('retry_count_header');
+        }
     }
 
     /**
@@ -245,7 +360,7 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         # After 2 attempts both Laravel versions should report the same: 2 errors and 0 failures.
-        $task = StackkitCloudTask::whereTaskUuid($job->payload['uuid'])->firstOrFail();
+        $task = StackkitCloudTask::whereTaskUuid($job->payloadAsArray['uuid'])->firstOrFail();
         $this->assertEquals(2, $task->getNumberOfAttempts());
         $this->assertEquals('error', $task->status);
 
@@ -288,7 +403,7 @@ class TaskHandlerTest extends TestCase
         // Assert
         $this->assertStringContainsString(
             'O:26:"Tests\Support\EncryptedJob"',
-            decrypt($job->payload['data']['command']),
+            decrypt($job->payloadAsArray['data']['command']),
         );
 
         Log::assertLogged('EncryptedJob:success');

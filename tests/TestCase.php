@@ -116,10 +116,12 @@ class TestCase extends \Orchestra\Testbench\TestCase
     public function dispatch($job)
     {
         $payload = null;
+        $payloadAsArray = [];
         $task = null;
 
-        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$task) {
-            $payload = json_decode($event->task->getHttpRequest()->getBody(), true);
+        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$payloadAsArray, &$task) {
+            $payload = $event->task->getHttpRequest()->getBody();
+            $payloadAsArray = json_decode($payload, true);
             $task = $event->task;
 
             request()->headers->set('X-Cloudtasks-Taskname', $task->getName());
@@ -127,32 +129,35 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         dispatch($job);
 
-        return new class($payload, $task) {
-            public array $payload = [];
+        return new class($payload, $payloadAsArray, $task) {
+            public string $payload;
+            public array $payloadAsArray;
             public Task $task;
 
-            public function __construct(array $payload, Task $task)
+            public function __construct(string $payload, array $payloadAsArray, Task $task)
             {
                 $this->payload = $payload;
+                $this->payloadAsArray = $payloadAsArray;
                 $this->task = $task;
             }
 
             public function run(): void
             {
+                $taskRetryCount = request()->header('X-CloudTasks-TaskRetryCount', -1);
+                request()->headers->set('X-CloudTasks-TaskRetryCount', $taskRetryCount + 1);
+
                 rescue(function (): void {
                     app(TaskHandler::class)->handle($this->payload);
                 });
-
-                $taskRetryCount = request()->header('X-CloudTasks-TaskRetryCount', 0);
-                request()->headers->set('X-CloudTasks-TaskRetryCount', $taskRetryCount + 1);
             }
 
             public function runWithoutExceptionHandler(): void
             {
+                $taskRetryCount = request()->header('X-CloudTasks-TaskRetryCount', -1);
+                request()->headers->set('X-CloudTasks-TaskRetryCount', $taskRetryCount + 1);
+
                 app(TaskHandler::class)->handle($this->payload);
 
-                $taskRetryCount = request()->header('X-CloudTasks-TaskRetryCount', 0);
-                request()->headers->set('X-CloudTasks-TaskRetryCount', $taskRetryCount + 1);
             }
         };
     }

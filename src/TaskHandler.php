@@ -9,6 +9,8 @@ use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Safe\Exceptions\JsonException;
 use stdClass;
 use UnexpectedValueException;
 use function Safe\json_decode;
@@ -40,9 +42,9 @@ class TaskHandler
         $this->client = $client;
     }
 
-    public function handle(?array $task = null): void
+    public function handle(?string $task = null): void
     {
-        $task = $task ?: $this->captureTask();
+        $task = $this->captureTask($task);
 
         $this->loadQueueConnectionConfiguration($task);
 
@@ -51,6 +53,47 @@ class TaskHandler
         OpenIdVerificator::verify(request()->bearerToken(), $this->config);
 
         $this->handleTask($task);
+    }
+
+    /**
+     * @param string|array|null $task
+     * @return array
+     * @throws JsonException
+     */
+    private function captureTask($task): array
+    {
+        $task = $task ?: (string) (request()->getContent());
+
+        try {
+            $array = json_decode($task, true);
+        } catch (JsonException $e) {
+            $array = [];
+        }
+
+        $validator = validator([
+            'json' => $task,
+            'task' => $array,
+            'name_header' => request()->header('X-CloudTasks-Taskname'),
+            'retry_count_header' => request()->header('X-CloudTasks-TaskRetryCount'),
+        ], [
+            'json' => 'required|json',
+            'task' => 'required|array',
+            'task.data' => 'required|array',
+            'name_header' => 'required|string',
+            'retry_count_header' => 'required|numeric',
+        ]);
+
+        try {
+            $validator->validate();
+        } catch (ValidationException $e) {
+            if (config('app.debug')) {
+                throw $e;
+            } else {
+                abort(404);
+            }
+        }
+
+        return json_decode($task, true);
     }
 
     private function loadQueueConnectionConfiguration(array $task): void
@@ -69,26 +112,6 @@ class TaskHandler
     private function setQueue(): void
     {
         $this->queue = new CloudTasksQueue($this->config, $this->client);
-    }
-
-    /**
-     * @throws CloudTasksException
-     */
-    private function captureTask(): array
-    {
-        $input = (string) (request()->getContent());
-
-        if (!$input) {
-            throw new CloudTasksException('Could not read incoming task');
-        }
-
-        $task = json_decode($input, true);
-
-        if (!is_array($task)) {
-            throw new CloudTasksException('Could not decode incoming task');
-        }
-
-        return $task;
     }
 
     private function handleTask(array $task): void
