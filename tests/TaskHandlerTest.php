@@ -129,17 +129,14 @@ class TaskHandlerTest extends TestCase
             $withHeaders
                 ? [
                     'X-CloudTasks-Taskname' => 'MyTask',
-                    'X-CloudTasks-TaskRetryCount' => 0,
                 ] : []
         );
 
         // Assert
         if ($withHeaders) {
             $response->assertJsonMissingValidationErrors('name_header');
-            $response->assertJsonMissingValidationErrors('retry_count_header');
         } else {
             $response->assertJsonValidationErrors('name_header');
-            $response->assertJsonValidationErrors('retry_count_header');
         }
     }
 

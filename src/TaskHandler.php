@@ -75,13 +75,11 @@ class TaskHandler
             'json' => $task,
             'task' => $array,
             'name_header' => request()->header('X-CloudTasks-Taskname'),
-            'retry_count_header' => request()->header('X-CloudTasks-TaskRetryCount'),
         ], [
             'json' => 'required|json',
             'task' => 'required|array',
             'task.data' => 'required|array',
             'name_header' => 'required|string',
-            'retry_count_header' => 'required|numeric',
         ]);
 
         try {

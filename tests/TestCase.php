@@ -143,9 +143,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
             public function run(): void
             {
-                $taskRetryCount = request()->header('X-CloudTasks-TaskRetryCount', -1);
-                request()->headers->set('X-CloudTasks-TaskRetryCount', $taskRetryCount + 1);
-
                 rescue(function (): void {
                     app(TaskHandler::class)->handle($this->payload);
                 });
@@ -155,9 +152,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
             public function runWithoutExceptionHandler(): void
             {
-                $taskRetryCount = request()->header('X-CloudTasks-TaskRetryCount', -1);
-                request()->headers->set('X-CloudTasks-TaskRetryCount', $taskRetryCount + 1);
-
                 app(TaskHandler::class)->handle($this->payload);
 
                 $this->payload = $this->incrementAttempts($this->payload);
