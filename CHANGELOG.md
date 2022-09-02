@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 3.2.1 - 2022-09-02
+
+**Fixed**
+
+- Jobs were dispatched before a DB commit if `after_commit` or `afterCommit()` was used. This has now been corrected.
+
+**Added**
+
+- Request validation for the TaskHandler endpoint.
+
 ## 3.2.0 - 2022-08-13
 
 **Added**
