@@ -31,6 +31,12 @@ class DashboardService
 
     public function add(string $queue, Task $task): void
     {
+        $uuid = $this->getTaskUuid($task);
+
+        if (StackkitCloudTask::whereTaskUuid($uuid)->exists()) {
+            return;
+        }
+
         $metadata = new TaskMetadata();
         $metadata->payload = $this->getTaskBody($task);
 
@@ -51,7 +57,7 @@ class DashboardService
 
         DB::table('stackkit_cloud_tasks')
             ->insert([
-                'task_uuid' => $this->getTaskUuid($task),
+                'task_uuid' => $uuid,
                 'name' => $this->getTaskName($task),
                 'queue' => $queue,
                 'payload' =>  $this->getTaskBody($task),
