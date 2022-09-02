@@ -46,7 +46,7 @@ class TaskHandlerTest extends TestCase
 
         // Assert
         if ($debug) {
-            $response->assertJsonValidationErrorFor('task');
+            $response->assertJsonValidationErrors('task');
         } else {
             $response->assertNotFound();
         }
@@ -77,7 +77,7 @@ class TaskHandlerTest extends TestCase
 
         // Assert
         if ($debug) {
-            $response->assertJsonValidationErrorFor('task');
+            $response->assertJsonValidationErrors('task');
             $this->assertEquals('The json must be a valid JSON string.', $response->json('errors.json.0'));
         } else {
             $response->assertNotFound();
@@ -108,7 +108,7 @@ class TaskHandlerTest extends TestCase
         );
 
         // Assert
-        $response->assertJsonValidationErrorFor('task.data');
+        $response->assertJsonValidationErrors('task.data');
         $this->assertEquals($expectedMessage, $response->json(['errors', 'task.data', 0]));
     }
 
