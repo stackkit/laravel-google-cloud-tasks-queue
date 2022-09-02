@@ -43,6 +43,25 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     }
 
     /**
+     * Fallback method for Laravel 6x and 7x
+     *
+     * @param  \Closure|string|object  $job
+     * @param  string  $payload
+     * @param  string  $queue
+     * @param  \DateTimeInterface|\DateInterval|int|null  $delay
+     * @param  callable  $callback
+     * @return mixed
+     */
+    protected function enqueueUsing($job, $payload, $queue, $delay, $callback)
+    {
+        if (method_exists(parent::class, 'enqueueUsing')) {
+            return parent::enqueueUsing($job, $payload, $queue, $delay, $callback);
+        }
+
+        return $callback($payload, $queue, $delay);
+    }
+
+    /**
      * Push a new job onto the queue.
      *
      * @param string|object  $job

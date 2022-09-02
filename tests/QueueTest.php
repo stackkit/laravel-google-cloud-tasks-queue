@@ -163,6 +163,10 @@ class QueueTest extends TestCase
      */
     public function it_can_dispatch_after_commit()
     {
+        if (version_compare(app()->version(), '8.0.0', '<')) {
+            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
+        }
+
         // Arrange
         CloudTasksApi::fake();
         Event::fake();
