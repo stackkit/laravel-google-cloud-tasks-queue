@@ -144,7 +144,7 @@ class QueueTest extends TestCase
             $command = TaskHandler::getCommandProperties($decoded['data']['command']);
 
             return $decoded['displayName'] === SimpleJob::class
-                && $command['queue'] === null
+                && ($command['queue'] ?? null) === null
                 && $queueName === 'projects/my-test-project/locations/europe-west6/queues/barbequeue';
         });
 
@@ -161,7 +161,7 @@ class QueueTest extends TestCase
     /**
      * @test
      */
-    public function it_can_dispatch_after_commit()
+    public function it_can_dispatch_after_commit_inline()
     {
         if (version_compare(app()->version(), '8.0.0', '<')) {
             $this->markTestSkipped('Not supported by Laravel 7.x and below.');
@@ -175,6 +175,31 @@ class QueueTest extends TestCase
         Event::assertNotDispatched(JobQueued::class);
         DB::beginTransaction();
         SimpleJob::dispatch()->afterCommit();
+        Event::assertNotDispatched(JobQueued::class);
+        DB::commit();
+        Event::assertDispatched(JobQueued::class, function (JobQueued $event) {
+            return $event->job instanceof SimpleJob;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_dispatch_after_commit_through_config()
+    {
+        if (version_compare(app()->version(), '8.0.0', '<')) {
+            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
+        }
+
+        // Arrange
+        CloudTasksApi::fake();
+        Event::fake();
+        $this->setConfigValue('after_commit', true);
+
+        // Act & Assert
+        Event::assertNotDispatched(JobQueued::class);
+        DB::beginTransaction();
+        SimpleJob::dispatch();
         Event::assertNotDispatched(JobQueued::class);
         DB::commit();
         Event::assertDispatched(JobQueued::class, function (JobQueued $event) {

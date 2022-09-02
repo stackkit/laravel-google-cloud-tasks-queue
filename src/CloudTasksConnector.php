@@ -23,6 +23,6 @@ class CloudTasksConnector implements ConnectorInterface
             };
         }
 
-        return new CloudTasksQueue($config, app(CloudTasksClient::class));
+        return new CloudTasksQueue($config, app(CloudTasksClient::class), $config['after_commit'] ?? null);
     }
 }
