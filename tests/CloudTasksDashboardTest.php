@@ -259,7 +259,7 @@ class CloudTasksDashboardTest extends TestCase
             'name' => SimpleJob::class,
         ]);
         $payload = \Safe\json_decode($task->getMetadata()['payload'], true);
-        $this->assertSame($payload, $job->payload);
+        $this->assertSame($payload, $job->payloadAsArray);
     }
 
     /**
