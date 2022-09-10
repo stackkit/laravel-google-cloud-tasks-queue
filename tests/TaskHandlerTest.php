@@ -7,6 +7,7 @@ use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Protobuf\Duration;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -239,13 +240,13 @@ class TaskHandlerTest extends TestCase
         // Act & Assert
         $this->assertDatabaseCount('failed_jobs', 0);
 
-        $job->run();
+        $releasedJob = $job->runAndGetReleasedJob();
         $this->assertDatabaseCount('failed_jobs', 0);
 
-        $job->run();
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
         $this->assertDatabaseCount('failed_jobs', 0);
 
-        $job->run();
+        $releasedJob->run();
         $this->assertDatabaseCount('failed_jobs', 1);
     }
 
@@ -264,17 +265,17 @@ class TaskHandlerTest extends TestCase
         $job = $this->dispatch(new FailingJob());
 
         // Act & Assert
-        $job->run();
+        $releasedJob = $job->runAndGetReleasedJob();
         CloudTasksApi::assertDeletedTaskCount(1);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 0);
 
-        $job->run();
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
         CloudTasksApi::assertDeletedTaskCount(2);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 0);
 
-        $job->run();
+        $releasedJob->run();
         CloudTasksApi::assertDeletedTaskCount(3);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 1);
@@ -294,7 +295,7 @@ class TaskHandlerTest extends TestCase
         $job = $this->dispatch(new FailingJob());
 
         // Act
-        $job->run();
+        $releasedJob = $job->runAndGetReleasedJob();
 
         // Assert
         CloudTasksApi::assertDeletedTaskCount(1);
@@ -303,7 +304,7 @@ class TaskHandlerTest extends TestCase
 
         // Act
         CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(1);
-        $job->run();
+        $releasedJob->run();
 
         // Assert
         CloudTasksApi::assertDeletedTaskCount(2);
@@ -353,15 +354,15 @@ class TaskHandlerTest extends TestCase
         $job = $this->dispatch(new FailingJob());
 
         // Act & Assert
-        $job->run();
-        $job->run();
+        $releasedJob = $job->runAndGetReleasedJob();
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
 
         # After 2 attempts both Laravel versions should report the same: 2 errors and 0 failures.
-        $task = StackkitCloudTask::whereTaskUuid($job->payloadAsArray['uuid'])->firstOrFail();
+        $task = StackkitCloudTask::whereTaskUuid($job->payloadAsArray('uuid'))->firstOrFail();
         $this->assertEquals(2, $task->getNumberOfAttempts());
         $this->assertEquals('error', $task->status);
 
-        $job->run();
+        $releasedJob->run();
 
         # Max attempts was reached
         # Laravel 5, 6, 7: fail because max attempts was reached
@@ -375,7 +376,7 @@ class TaskHandlerTest extends TestCase
         }
 
         CloudTasksApi::shouldReceive('getRetryUntilTimestamp')->andReturn(time() - 1);
-        $job->run();
+        $releasedJob->run();
 
         $this->assertEquals('failed', $task->fresh()->status);
     }
@@ -400,12 +401,15 @@ class TaskHandlerTest extends TestCase
         // Assert
         $this->assertStringContainsString(
             'O:26:"Tests\Support\EncryptedJob"',
-            decrypt($job->payloadAsArray['data']['command']),
+            decrypt($job->payloadAsArray('data.command')),
         );
 
         Log::assertLogged('EncryptedJob:success');
     }
 
+    /**
+     * @test
+     */
     public function failing_jobs_are_released()
     {
         // Arrange
@@ -413,6 +417,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
             (new RetryConfig())->setMaxAttempts(3)
         );
+        Event::fake([JobReleasedAfterException::class]);
 
         // Act
         $job = $this->dispatch(new FailingJob());
@@ -426,5 +431,35 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::assertDeletedTaskCount(1);
         CloudTasksApi::assertCreatedTaskCount(2);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
+            return $event->job->attempts() === 1;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function attempts_are_tracked_internally()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Event::fake([JobReleasedAfterException::class]);
+
+        // Act & Assert
+        $job = $this->dispatch(new FailingJob());
+        $job->run();
+        $releasedJob = null;
+
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) use (&$releasedJob) {
+            $releasedJob = $event->job->getRawBody();
+            return $event->job->attempts() === 1;
+        });
+
+        $this->runFromPayload($releasedJob);
+
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
+            return $event->job->attempts() === 2;
+        });
     }
 }

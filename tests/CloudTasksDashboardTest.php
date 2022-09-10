@@ -258,8 +258,7 @@ class CloudTasksDashboardTest extends TestCase
             'status' => 'queued',
             'name' => SimpleJob::class,
         ]);
-        $payload = \Safe\json_decode($task->getMetadata()['payload'], true);
-        $this->assertSame($payload, $job->payloadAsArray);
+        $this->assertSame($task->getMetadata()['payload'], $job->payload);
     }
 
     /**
@@ -396,9 +395,9 @@ class CloudTasksDashboardTest extends TestCase
         );
 
         $job = $this->dispatch(new FailingJob());
-        $job->run();
-        $job->run();
-        $job->run();
+        $releasedJob = $job->runAndGetReleasedJob();
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
+        $releasedJob->run();
 
         // Assert
         $task = StackkitCloudTask::firstOrFail();

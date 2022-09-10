@@ -9,10 +9,12 @@ use Google\Cloud\Tasks\V2\Queue;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\DB;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Support\Facades\Event;
 use Mockery;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksJob;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
@@ -25,6 +27,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
      */
     public $client;
 
+    public string $releasedJobPayload;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,6 +36,13 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->withFactories(__DIR__ . '/../factories');
 
         $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
+
+        Event::listen(
+            JobReleasedAfterException::class,
+            function (JobReleasedAfterException $event) {
+                $this->releasedJobPayload = $event->job->getRawBody();
+            }
+        );
     }
 
     /**
@@ -129,16 +140,16 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         dispatch($job);
 
-        return new class($payload, $payloadAsArray, $task) {
+        return new class($payload, $task, $this) {
             public string $payload;
-            public array $payloadAsArray;
             public Task $task;
+            public TestCase $testCase;
 
-            public function __construct(string $payload, array $payloadAsArray, Task $task)
+            public function __construct(string $payload, Task $task, TestCase $testCase)
             {
                 $this->payload = $payload;
-                $this->payloadAsArray = $payloadAsArray;
                 $this->task = $task;
+                $this->testCase = $testCase;
             }
 
             public function run(): void
@@ -146,39 +157,40 @@ class TestCase extends \Orchestra\Testbench\TestCase
                 rescue(function (): void {
                     app(TaskHandler::class)->handle($this->payload);
                 });
-
-                $this->payload = $this->incrementAttempts($this->payload);
             }
 
             public function runWithoutExceptionHandler(): void
             {
                 app(TaskHandler::class)->handle($this->payload);
-
-                $this->payload = $this->incrementAttempts($this->payload);
             }
 
-            private function incrementAttempts(string $payload): string
+            public function runAndGetReleasedJob(): self
             {
-                $decoded = \Safe\json_decode($payload, true);
+                rescue(function (): void {
+                    app(TaskHandler::class)->handle($this->payload);
+                });
 
-                $decoded['internal']['attempts'] ??= 0;
-                $decoded['internal']['attempts']++;
+                return new self(
+                    $this->testCase->releasedJobPayload,
+                    $this->task,
+                    $this->testCase
+                );
+            }
 
-                return json_encode($decoded);
+            public function payloadAsArray(string $key = '')
+            {
+                $decoded = json_decode($this->payload, true);
+
+                return data_get($decoded, $key ?: null);
             }
         };
     }
 
-    public function runFromPayload(array $payload): void
+    public function runFromPayload(string $payload): void
     {
         rescue(function () use ($payload) {
             app(TaskHandler::class)->handle($payload);
         });
-    }
-
-    public function dispatchAndRun($job): void
-    {
-        $this->runFromPayload($this->dispatch($job));
     }
 
     public function assertTaskDeleted(string $taskId): void

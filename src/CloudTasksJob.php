@@ -9,8 +9,13 @@ use function Safe\json_encode;
 
 class CloudTasksJob extends LaravelJob implements JobContract
 {
+    /**
+     * The Cloud Tasks raw job payload (request payload).
+     *
+     * @var array
+     */
     private array $job;
-    private ?int $attempts;
+
     private ?int $maxTries;
     public ?int $retryUntil = null;
 
@@ -27,6 +32,11 @@ class CloudTasksJob extends LaravelJob implements JobContract
         
         $command = TaskHandler::getCommandProperties($job['data']['command']);
         $this->queue = $command['queue'] ?? config('queue.connections.' .config('queue.default') . '.queue');
+    }
+
+    public function job()
+    {
+        return $this->job;
     }
 
     public function getJobId(): string
@@ -46,12 +56,12 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
     public function attempts(): ?int
     {
-        return $this->attempts;
+        return $this->job['internal']['attempts'];
     }
 
     public function setAttempts(int $attempts): void
     {
-        $this->attempts = $attempts;
+        $this->job['internal']['attempts'] = $attempts;
     }
 
     public function setMaxTries(int $maxTries): void
