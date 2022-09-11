@@ -56,6 +56,7 @@ Please check the table below for supported Laravel and PHP versions:
       // does not respond by this deadline then the request is cancelled and the attempt
       // is marked as a DEADLINE_EXCEEDED failure.
       'dispatch_deadline' => null,
+      'backoff' => 0,
   ],
   ```
 

@@ -147,7 +147,7 @@ class TaskHandler
 
         $job->setAttempts($job->attempts() + 1);
 
-        app('queue.worker')->process($this->config['connection'], $job, new WorkerOptions());
+        app('queue.worker')->process($this->config['connection'], $job, $this->getWorkerOptions());
     }
 
     private function loadQueueRetryConfig(CloudTasksJob $job): void
@@ -170,5 +170,14 @@ class TaskHandler
         }
 
         return [];
+    }
+
+    public function getWorkerOptions(): WorkerOptions
+    {
+        $options = new WorkerOptions();
+
+        $options->backoff = $this->config['backoff'] ?? 0;
+
+        return $options;
     }
 }

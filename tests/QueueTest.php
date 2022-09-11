@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\HttpMethod;
+use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\FailingJob;
+use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 
@@ -285,5 +292,159 @@ class QueueTest extends TestCase
                 && $decoded['internal']['attempts'] === 1
                 && $scheduleTime === now()->getTimestamp() + 15;
         });
+    }
+
+    /** @test */
+    public function test_default_backoff()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Event::fake($this->getJobReleasedAfterExceptionEvent());
+
+        // Act
+        $this->dispatch(new FailingJob())->run();
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return is_null($task->getScheduleTime());
+        });
+    }
+
+    /** @test */
+    public function test_backoff_from_queue_config()
+    {
+        // Arrange
+        Carbon::setTestNow(now()->addDay());
+        $this->setConfigValue('backoff', 123);
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Event::fake($this->getJobReleasedAfterExceptionEvent());
+
+        // Act
+        $this->dispatch(new FailingJob())->run();
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getScheduleTime()
+                && $task->getScheduleTime()->getSeconds() === now()->getTimestamp() + 123;
+        });
+    }
+
+    /** @test */
+    public function test_backoff_from_job()
+    {
+        // Arrange
+        Carbon::setTestNow(now()->addDay());
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Event::fake($this->getJobReleasedAfterExceptionEvent());
+
+        // Act
+        $failingJob = new FailingJob();
+        $failingJob->backoff = 123;
+        $this->dispatch($failingJob)->run();
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getScheduleTime()
+                && $task->getScheduleTime()->getSeconds() === now()->getTimestamp() + 123;
+        });
+    }
+
+    /** @test */
+    public function test_exponential_backoff_from_job_method()
+    {
+        // Arrange
+        Carbon::setTestNow(now()->addDay());
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+
+        // Act
+        $releasedJob = $this->dispatch(new FailingJobWithExponentialBackoff())
+            ->runAndGetReleasedJob();
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
+        $releasedJob->run();
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getScheduleTime()
+                && $task->getScheduleTime()->getSeconds() === now()->getTimestamp() + 50;
+        });
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getScheduleTime()
+                && $task->getScheduleTime()->getSeconds() === now()->getTimestamp() + 60;
+        });
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getScheduleTime()
+                && $task->getScheduleTime()->getSeconds() === now()->getTimestamp() + 70;
+        });
+    }
+
+    /** @test */
+    public function test_failing_method_on_job()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+        // -1 is a valid option in Cloud Tasks to indicate there is no max.
+            (new RetryConfig())->setMaxAttempts(1)
+        );
+
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+
+        // Act
+        $this->dispatch(new FailingJob())->run();
+
+        // Assert
+        Log::assertLogged('FailingJob:failed');
+    }
+
+    /** @test */
+    public function test_queue_before_and_after_hooks()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+
+        // Act
+        Queue::before(function (JobProcessing $event) {
+            logger('Queue::before:' . $event->job->payload()['data']['commandName']);
+        });
+        Queue::after(function (JobProcessed $event) {
+            logger('Queue::after:' . $event->job->payload()['data']['commandName']);
+        });
+        $this->dispatch(new SimpleJob())->run();
+
+        // Assert
+        Log::assertLogged('Queue::before:Tests\Support\SimpleJob');
+        Log::assertLogged('Queue::after:Tests\Support\SimpleJob');
+    }
+
+    /** @test */
+    public function test_queue_looping_hook_not_supported_with_this_package()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+
+        // Act
+        Queue::looping(function () {
+            logger('Queue::looping');
+        });
+        $this->dispatch(new SimpleJob())->run();
+
+        // Assert
+        Log::assertNotLogged('Queue::looping');
+    }
+
+    /** @test */
+    public function test_ignoring_jobs_with_deleted_models()
+    {
+        // todo
+        $this->assertTrue(true);
     }
 }
