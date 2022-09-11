@@ -12,8 +12,9 @@ use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\Str;
-use function Safe\json_encode;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use function Safe\json_decode;
+use function Safe\json_encode;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
@@ -197,8 +198,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         if (!isset($decoded['internal']['attempts'])) {
             $decoded['internal']['attempts'] = 0;
-        } else {
-            $decoded['internal']['attempts']++;
         }
 
         return json_encode($decoded);

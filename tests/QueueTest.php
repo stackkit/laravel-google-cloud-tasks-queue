@@ -7,11 +7,15 @@ namespace Tests;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\Events\JobQueued;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\FailingJob;
+use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 
 class QueueTest extends TestCase
@@ -208,6 +212,78 @@ class QueueTest extends TestCase
         }
         Event::assertDispatched(JobQueued::class, function (JobQueued $event) {
             return $event->job instanceof SimpleJob;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function jobs_can_be_released()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Event::fake([
+            $this->getJobReleasedAfterExceptionEvent(),
+            JobReleased::class,
+        ]);
+
+        // Act
+        $this->dispatch(new JobThatWillBeReleased())->run();
+
+        // Assert
+        Event::assertNotDispatched($this->getJobReleasedAfterExceptionEvent());
+        CloudTasksApi::assertDeletedTaskCount(1);
+        $releasedJob = null;
+        Event::assertDispatched(JobReleased::class, function (JobReleased $event) use (&$releasedJob) {
+            $releasedJob = $event->job;
+            return true;
+        });
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            $body = $task->getHttpRequest()->getBody();
+            $decoded = json_decode($body, true);
+            return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
+                && $decoded['internal']['attempts'] === 1;
+        });
+
+        $this->runFromPayload($releasedJob->getRawBody());
+
+        CloudTasksApi::assertDeletedTaskCount(2);
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            $body = $task->getHttpRequest()->getBody();
+            $decoded = json_decode($body, true);
+            return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
+                && $decoded['internal']['attempts'] === 2;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function jobs_can_be_released_with_a_delay()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Event::fake([
+            $this->getJobReleasedAfterExceptionEvent(),
+            JobReleased::class,
+        ]);
+        Carbon::setTestNow(now()->addDay());
+
+        // Act
+        $this->dispatch(new JobThatWillBeReleased(15))->run();
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            $body = $task->getHttpRequest()->getBody();
+            $decoded = json_decode($body, true);
+
+            $scheduleTime = $task->getScheduleTime() ? $task->getScheduleTime()->getSeconds() : null;
+
+            return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
+                && $decoded['internal']['attempts'] === 1
+                && $scheduleTime === now()->getTimestamp() + 15;
         });
     }
 }

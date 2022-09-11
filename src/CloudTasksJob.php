@@ -3,8 +3,10 @@
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Illuminate\Container\Container;
-use Illuminate\Queue\Jobs\Job as LaravelJob;
 use Illuminate\Contracts\Queue\Job as JobContract;
+use Illuminate\Queue\Jobs\Job as LaravelJob;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleasedAfterException;
 use function Safe\json_encode;
 
 class CloudTasksJob extends LaravelJob implements JobContract
@@ -14,7 +16,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
      *
      * @var array
      */
-    private array $job;
+    public array $job;
 
     private ?int $maxTries;
     public ?int $retryUntil = null;
@@ -112,16 +114,21 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
         $this->cloudTasksQueue->release($this, $delay);
 
+        $properties = TaskHandler::getCommandProperties($this->job['data']['command']);
+        $connection = $properties['connection'] ?? config('queue.default');
+
         // The package uses the JobReleasedAfterException provided by Laravel to grab
         // the payload of the released job in tests to easily run and test a released
         // job. Because the event is only accessible in Laravel 9.x, we create an
         // identical event to hook into for Laravel versions older than 9.x
         if (version_compare(app()->version(), '9.0.0', '<')) {
-            $properties = TaskHandler::getCommandProperties($this->job['data']['command']);
+            if (data_get($this->job, 'internal.errored')) {
+                app('events')->dispatch(new JobReleasedAfterException($connection, $this));
+            }
+        }
 
-            $connection = $properties['connection'] ?? config('queue.default');
-
-            app('events')->dispatch(new JobReleasedAfterException($connection, $this));
+        if (! data_get($this->job, 'internal.errored')) {
+            app('events')->dispatch(new JobReleased($connection, $this));
         }
     }
 }

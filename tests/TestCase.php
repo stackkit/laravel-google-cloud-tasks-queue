@@ -5,14 +5,14 @@ namespace Tests;
 use Closure;
 use Firebase\JWT\JWT;
 use Google\ApiCore\ApiException;
+use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\DB;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Support\Facades\Event;
-use Stackkit\LaravelGoogleCloudTasksQueue\JobReleasedAfterException as PackageJobReleasedAfterException;
-use Stackkit\LaravelGoogleCloudTasksQueue\TaskCreated;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleasedAfterException as PackageJobReleasedAfterException;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
 class TestCase extends \Orchestra\Testbench\TestCase
