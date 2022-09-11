@@ -433,7 +433,7 @@ class CloudTasksDashboardTest extends TestCase
         $task = StackkitCloudTask::firstOrFail();
         $events = $task->getEvents();
 
-        $this->assertCount(4, $events);
+        $this->assertCount(3, $events);
         $this->assertEquals(
             [
                 'status' => 'released',
