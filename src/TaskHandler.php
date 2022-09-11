@@ -166,7 +166,7 @@ class TaskHandler
         }
 
         if (app()->bound(Encrypter::class)) {
-            return (array) unserialize(app(Encrypter::class)->decrypt($command), ['allowed_classes' => false]);
+            return (array) unserialize(app(Encrypter::class)->decrypt($command), ['allowed_classes' => ['Illuminate\Support\Carbon']]);
         }
 
         return [];

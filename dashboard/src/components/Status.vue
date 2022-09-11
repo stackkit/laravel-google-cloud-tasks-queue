@@ -31,7 +31,7 @@ function ucfirst(input) {
 .task-queued, .task-scheduled {
   @apply bg-gray-100 text-gray-500
 }
-.task-running {
+.task-running, .task-released {
   @apply bg-blue-100 text-blue-800
 }
 </style>

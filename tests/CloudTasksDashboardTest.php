@@ -10,6 +10,7 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Tests\Support\FailingJob;
+use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 
 class CloudTasksDashboardTest extends TestCase
@@ -410,6 +411,36 @@ class CloudTasksDashboardTest extends TestCase
                 'diff' => '1 second ago',
             ],
             $events[6]
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function when_a_job_is_released_it_will_be_updated_in_the_dashboard()
+    {
+        // Arrange
+        \Illuminate\Support\Carbon::setTestNow(now());
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
+
+        $this->dispatch(new JobThatWillBeReleased())->run();
+
+        // Assert
+        $task = StackkitCloudTask::firstOrFail();
+        $events = $task->getEvents();
+
+        $this->assertCount(4, $events);
+        $this->assertEquals(
+            [
+                'status' => 'released',
+                'datetime' => now()->toDateTimeString(),
+                'diff' => '1 second ago',
+            ],
+            $events[2]
         );
     }
 

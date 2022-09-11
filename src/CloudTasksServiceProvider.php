@@ -8,6 +8,7 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use function Safe\file_get_contents;
 use function Safe\json_decode;
@@ -186,6 +187,14 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             }
 
             DashboardService::make()->markAsFailed($event);
+        });
+
+        app('events')->listen(JobReleased::class, function (JobReleased $event) {
+            if (!CloudTasks::dashboardEnabled()) {
+                return;
+            }
+
+            DashboardService::make()->markAsReleased($event);
         });
     }
 }

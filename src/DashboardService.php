@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use function Safe\json_decode;
 
 class DashboardService
@@ -85,6 +86,10 @@ class DashboardService
     {
         $task = StackkitCloudTask::findByUuid($uuid);
 
+        if ($task->status === 'released') {
+            return;
+        }
+
         $task->status = 'successful';
         $task->addMetadataEvent([
             'status' => $task->status,
@@ -130,6 +135,23 @@ class DashboardService
         $task->addMetadataEvent([
             'status' => $task->status,
             'datetime' => now()->utc()->toDateTimeString(),
+        ]);
+
+        $task->save();
+    }
+
+    public function markAsReleased(JobReleased $event): void
+    {
+        /** @var CloudTasksJob $job */
+        $job = $event->job;
+
+        $task = StackkitCloudTask::findByUuid($job->uuid());
+
+        $task->status = 'released';
+        $task->addMetadataEvent([
+            'status' => $task->status,
+            'datetime' => now()->utc()->toDateTimeString(),
+            'delay' => $event->delay,
         ]);
 
         $task->save();

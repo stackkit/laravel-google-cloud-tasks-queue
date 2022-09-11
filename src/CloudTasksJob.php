@@ -128,7 +128,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
         }
 
         if (! data_get($this->job, 'internal.errored')) {
-            app('events')->dispatch(new JobReleased($connection, $this));
+            app('events')->dispatch(new JobReleased($connection, $this, $delay));
         }
     }
 }
