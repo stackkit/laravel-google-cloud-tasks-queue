@@ -176,7 +176,9 @@ class QueueTest extends TestCase
         DB::beginTransaction();
         SimpleJob::dispatch()->afterCommit();
         Event::assertNotDispatched(JobQueued::class);
-        DB::commit();
+        while (DB::transactionLevel() !== 0) {
+            DB::commit();
+        }
         Event::assertDispatched(JobQueued::class, function (JobQueued $event) {
             return $event->job instanceof SimpleJob;
         });
@@ -201,7 +203,9 @@ class QueueTest extends TestCase
         DB::beginTransaction();
         SimpleJob::dispatch();
         Event::assertNotDispatched(JobQueued::class);
-        DB::commit();
+        while (DB::transactionLevel() !== 0) {
+            DB::commit();
+        }
         Event::assertDispatched(JobQueued::class, function (JobQueued $event) {
             return $event->job instanceof SimpleJob;
         });

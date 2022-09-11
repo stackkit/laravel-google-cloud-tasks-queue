@@ -7,17 +7,14 @@ use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Protobuf\Duration;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\SimpleJob;
@@ -417,7 +414,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
             (new RetryConfig())->setMaxAttempts(3)
         );
-        Event::fake([JobReleasedAfterException::class]);
+        Event::fake($this->getJobReleasedAfterExceptionEvent());
 
         // Act
         $job = $this->dispatch(new FailingJob());
@@ -431,7 +428,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::assertDeletedTaskCount(1);
         CloudTasksApi::assertCreatedTaskCount(2);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
-        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
+        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
             return $event->job->attempts() === 1;
         });
     }
@@ -444,21 +441,21 @@ class TaskHandlerTest extends TestCase
         // Arrange
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        Event::fake([JobReleasedAfterException::class]);
+        Event::fake($this->getJobReleasedAfterExceptionEvent());
 
         // Act & Assert
         $job = $this->dispatch(new FailingJob());
         $job->run();
         $releasedJob = null;
 
-        Event::assertDispatched(JobReleasedAfterException::class, function ($event) use (&$releasedJob) {
+        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) use (&$releasedJob) {
             $releasedJob = $event->job->getRawBody();
             return $event->job->attempts() === 1;
         });
 
         $this->runFromPayload($releasedJob);
 
-        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
+        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
             return $event->job->attempts() === 2;
         });
     }

@@ -36,5 +36,23 @@
                 "Stackkit\\LaravelGoogleCloudTasksQueue\\CloudTasksServiceProvider"
             ]
         }
+    },
+    "scripts": {
+        "l9": [
+            "composer require laravel/framework:9.* orchestra/testbench:7.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction --no-suggest"
+        ],
+        "l8": [
+            "composer require laravel/framework:8.* orchestra/testbench:6.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction --no-suggest"
+        ],
+        "l7": [
+            "composer require laravel/framework:7.* orchestra/testbench:5.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction --no-suggest"
+        ],
+        "l6": [
+            "composer require laravel/framework:6.* orchestra/testbench:4.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction --no-suggest"
+        ]
     }
 }

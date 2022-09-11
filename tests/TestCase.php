@@ -5,16 +5,13 @@ namespace Tests;
 use Closure;
 use Firebase\JWT\JWT;
 use Google\ApiCore\ApiException;
-use Google\Cloud\Tasks\V2\Queue;
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\DB;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Illuminate\Support\Facades\Event;
-use Mockery;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksJob;
+use Stackkit\LaravelGoogleCloudTasksQueue\JobReleasedAfterException as PackageJobReleasedAfterException;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
@@ -38,8 +35,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
 
         Event::listen(
-            JobReleasedAfterException::class,
-            function (JobReleasedAfterException $event) {
+            $this->getJobReleasedAfterExceptionEvent(),
+            function ($event) {
                 $this->releasedJobPayload = $event->job->getRawBody();
             }
         );
@@ -237,5 +234,15 @@ class TestCase extends \Orchestra\Testbench\TestCase
     protected function assertDatabaseCount($table, int $count, $connection = null)
     {
         $this->assertEquals($count, DB::connection($connection)->table($table)->count());
+    }
+
+    public function getJobReleasedAfterExceptionEvent(): string
+    {
+        // The JobReleasedAfterException event is not available in Laravel versions
+        // below 9.x so instead for those versions we throw our own event which
+        // is identical to the Laravel one.
+        return version_compare(app()->version(), '9.0.0', '<')
+            ? PackageJobReleasedAfterException::class
+            : JobReleasedAfterException::class;
     }
 }

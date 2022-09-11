@@ -111,5 +111,17 @@ class CloudTasksJob extends LaravelJob implements JobContract
         parent::release();
 
         $this->cloudTasksQueue->release($this, $delay);
+
+        // The package uses the JobReleasedAfterException provided by Laravel to grab
+        // the payload of the released job in tests to easily run and test a released
+        // job. Because the event is only accessible in Laravel 9.x, we create an
+        // identical event to hook into for Laravel versions older than 9.x
+        if (version_compare(app()->version(), '9.0.0', '<')) {
+            $properties = TaskHandler::getCommandProperties($this->job['data']['command']);
+
+            $connection = $properties['connection'] ?? config('queue.default');
+
+            app('events')->dispatch(new JobReleasedAfterException($connection, $this));
+        }
     }
 }
