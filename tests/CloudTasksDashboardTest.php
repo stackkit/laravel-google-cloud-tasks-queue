@@ -439,6 +439,38 @@ class CloudTasksDashboardTest extends TestCase
                 'status' => 'released',
                 'datetime' => now()->toDateTimeString(),
                 'diff' => '1 second ago',
+                'delay' => 0,
+            ],
+            $events[2]
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function job_release_delay_is_added_to_the_metadata()
+    {
+        // Arrange
+        \Illuminate\Support\Carbon::setTestNow(now());
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
+
+        $this->dispatch(new JobThatWillBeReleased(15))->run();
+
+        // Assert
+        $task = StackkitCloudTask::firstOrFail();
+        $events = $task->getEvents();
+
+        $this->assertCount(3, $events);
+        $this->assertEquals(
+            [
+                'status' => 'released',
+                'datetime' => now()->toDateTimeString(),
+                'diff' => '1 second ago',
+                'delay' => 15,
             ],
             $events[2]
         );
