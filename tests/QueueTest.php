@@ -344,7 +344,8 @@ class QueueTest extends TestCase
 
         // Act
         $failingJob = new FailingJob();
-        $failingJob->backoff = 123;
+        $prop = version_compare(app()->version(), '8.0.0', '<') ? 'delay' : 'backoff';
+        $failingJob->$prop = 123;
         $this->dispatch($failingJob)->run();
 
         // Assert
@@ -357,6 +358,10 @@ class QueueTest extends TestCase
     /** @test */
     public function test_exponential_backoff_from_job_method()
     {
+        if (version_compare(app()->version(), '8.0.0', '<')) {
+            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
+        }
+
         // Arrange
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();
