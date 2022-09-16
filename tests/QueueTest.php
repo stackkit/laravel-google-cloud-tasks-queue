@@ -24,6 +24,8 @@ use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
+use Tests\Support\User;
+use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
@@ -444,7 +446,32 @@ class QueueTest extends TestCase
     /** @test */
     public function test_ignoring_jobs_with_deleted_models()
     {
-        // todo
-        $this->assertTrue(true);
+        // Arrange
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+
+        $user1 = User::create([
+            'name' => 'John',
+            'email' => 'johndoe@example.com',
+            'password' => bcrypt('test'),
+        ]);
+
+        $user2 = User::create([
+            'name' => 'Jane',
+            'email' => 'janedoe@example.com',
+            'password' => bcrypt('test'),
+        ]);
+
+        // Act
+        $this->dispatch(new UserJob($user1))->runWithoutExceptionHandler();
+
+        $job = $this->dispatch(new UserJob($user2));
+        $user2->delete();
+        $job->runWithoutExceptionHandler();
+
+        // Act
+        Log::assertLogged('UserJob:John');
+        CloudTasksApi::assertTaskDeleted($job->task->getName());
     }
 }
