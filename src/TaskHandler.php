@@ -185,7 +185,9 @@ class TaskHandler
     {
         $options = new WorkerOptions();
 
-        $options->backoff = $this->config['backoff'] ?? 0;
+        $prop = version_compare(app()->version(), '8.0.0', '<') ? 'delay' : 'backoff';
+
+        $options->$prop = $this->config['backoff'] ?? 0;
 
         return $options;
     }
