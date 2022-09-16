@@ -466,14 +466,14 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        Event::fake([JobProcessing::class]);
+        Event::fake($this->getJobReleasedAfterExceptionEvent());
 
         // Act & Assert
-        $job = $this->dispatch(new SimpleJob());
+        $job = $this->dispatch(new FailingJob());
         request()->headers->set('X-CloudTasks-TaskRetryCount', 6);
         $job->run();
 
-        Event::assertDispatched(JobProcessing::class, function (JobProcessing $event) {
+        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
             return $event->job->attempts() === 7;
         });
     }
