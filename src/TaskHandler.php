@@ -122,7 +122,16 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
-        $job->setAttempts($task['internal']['attempts']);
+        // If the task has a [X-CloudTasks-TaskRetryCount] header higher than 0, then
+        // we know the job was created using an earlier version of the package. This
+        // job does not have the attempts tracked internally yet.
+        $taskRetryCountHeader = request()->header('X-CloudTasks-TaskRetryCount');
+        if ($taskRetryCountHeader && (int) $taskRetryCountHeader > 0) {
+            $job->setAttempts((int) $taskRetryCountHeader);
+        } else {
+            $job->setAttempts($task['internal']['attempts']);
+        }
+
         $job->setMaxTries($this->retryConfig->getMaxAttempts());
 
         // If the job is being attempted again we also check if a

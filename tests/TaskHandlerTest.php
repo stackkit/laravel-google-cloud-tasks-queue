@@ -439,7 +439,6 @@ class TaskHandlerTest extends TestCase
     public function attempts_are_tracked_internally()
     {
         // Arrange
-        CloudTasksApi::fake();
         OpenIdVerificator::fake();
         Event::fake($this->getJobReleasedAfterExceptionEvent());
 
@@ -457,6 +456,25 @@ class TaskHandlerTest extends TestCase
 
         Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
             return $event->job->attempts() === 2;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function attempts_are_copied_from_x_header()
+    {
+        // Arrange
+        OpenIdVerificator::fake();
+        Event::fake([JobProcessing::class]);
+
+        // Act & Assert
+        $job = $this->dispatch(new SimpleJob());
+        request()->headers->set('X-CloudTasks-TaskRetryCount', 6);
+        $job->run();
+
+        Event::assertDispatched(JobProcessing::class, function (JobProcessing $event) {
+            return $event->job->attempts() === 7;
         });
     }
 }

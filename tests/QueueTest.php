@@ -389,7 +389,6 @@ class QueueTest extends TestCase
         // Arrange
         CloudTasksApi::fake();
         CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-        // -1 is a valid option in Cloud Tasks to indicate there is no max.
             (new RetryConfig())->setMaxAttempts(1)
         );
 
