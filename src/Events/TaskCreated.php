@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Stackkit\LaravelGoogleCloudTasksQueue;
+namespace Stackkit\LaravelGoogleCloudTasksQueue\Events;
 
 use Google\Cloud\Tasks\V2\Task;
 

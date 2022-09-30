@@ -56,6 +56,7 @@ Please check the table below for supported Laravel and PHP versions:
       // does not respond by this deadline then the request is cancelled and the attempt
       // is marked as a DEADLINE_EXCEEDED failure.
       'dispatch_deadline' => null,
+      'backoff' => 0,
   ],
   ```
 
@@ -79,13 +80,19 @@ Please check the table below on what the values mean and what their value should
 </details>
 <details>
 <summary>
-  How it works
+  How it works & Differences
 </summary>
   <br>
   Using Cloud Tasks as a Laravel queue driver is fundamentally different than other Laravel queue drivers, like Redis.
 
 Typically a Laravel queue has a worker that listens to incoming jobs using the `queue:work` / `queue:listen` command.
 With Cloud Tasks, this is not the case. Instead, Cloud Tasks will schedule the job for you and make an HTTP request to your application with the job payload. There is no need to run a `queue:work/listen` command.
+
+#### Good to know
+
+- The "Min backoff" and "Max backoff" options in Cloud Tasks are ignored. This is intentional: Laravel has its own backoff feature (which is more powerful than what Cloud Tasks offers) and therefore I have chosen that over the Cloud Tasks one.
+- Similarly to the backoff feature, I have also chosen to let the package do job retries the 'Laravel way'. In Cloud Tasks, when a task throws an exception, Cloud Tasks will decide for itself when to retry the task (based on the backoff values). It will also manage its own state and knows how many times a task has been retried. This is different from Laravel. In typical Laravel queues, when a job throws an exception, the job is deleted and released back onto the queue. In order to support Laravel's backoff feature, this package must behave the same way about job retries.
+
 </details>
 <details>
   <summary>Dashboard (beta)</summary>

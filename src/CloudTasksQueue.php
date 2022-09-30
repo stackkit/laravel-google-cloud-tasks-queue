@@ -12,8 +12,9 @@ use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\Str;
-use function Safe\json_encode;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use function Safe\json_decode;
+use function Safe\json_encode;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
@@ -93,7 +94,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        return $this->pushToCloudTasks($queue, $payload);
+        $delay = ! empty($options['delay']) ? $options['delay'] : 0;
+
+        $this->pushToCloudTasks($queue, $payload, $delay);
     }
 
     /**
@@ -141,11 +144,19 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // we will add it manually here if it's not present yet.
         [$payload, $uuid] = $this->withUuid($payload);
 
+        // Since 3.x tasks are released back onto the queue after an exception has
+        // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
+        // value and need to manually set and update the number of times a task has been attempted.
+        $payload = $this->withAttempts($payload);
+
         $httpRequest->setBody($payload);
 
         $task = $this->createTask();
         $task->setHttpRequest($httpRequest);
 
+        // The deadline for requests sent to the app. If the app does not respond by
+        // this deadline then the request is cancelled and the attempt is marked as
+        // a failure. Cloud Tasks will retry the task according to the RetryConfig.
         if (!empty($this->config['dispatch_deadline'])) {
             $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
         }
@@ -178,6 +189,18 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             json_encode($decoded),
             $decoded['uuid'],
         ];
+    }
+
+    private function withAttempts(string $payload): string
+    {
+        /** @var array $decoded */
+        $decoded = json_decode($payload, true);
+
+        if (!isset($decoded['internal']['attempts'])) {
+            $decoded['internal']['attempts'] = 0;
+        }
+
+        return json_encode($decoded);
     }
 
     /**
@@ -215,6 +238,17 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         );
 
         CloudTasksApi::deleteTask($taskName);
+    }
+
+    public function release(CloudTasksJob $job, int $delay = 0): void
+    {
+        $job->delete();
+
+        $payload = $job->getRawBody();
+
+        $options = ['delay' => $delay];
+
+        $this->pushRaw($payload, $job->getQueue(), $options);
     }
 
     private function createTask(): Task

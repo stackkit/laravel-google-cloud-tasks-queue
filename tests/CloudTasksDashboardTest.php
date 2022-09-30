@@ -10,6 +10,7 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Tests\Support\FailingJob;
+use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 
 class CloudTasksDashboardTest extends TestCase
@@ -258,8 +259,7 @@ class CloudTasksDashboardTest extends TestCase
             'status' => 'queued',
             'name' => SimpleJob::class,
         ]);
-        $payload = \Safe\json_decode($task->getMetadata()['payload'], true);
-        $this->assertSame($payload, $job->payloadAsArray);
+        $this->assertSame($task->getMetadata()['payload'], $job->payload);
     }
 
     /**
@@ -396,9 +396,9 @@ class CloudTasksDashboardTest extends TestCase
         );
 
         $job = $this->dispatch(new FailingJob());
-        $job->run();
-        $job->run();
-        $job->run();
+        $releasedJob = $job->runAndGetReleasedJob();
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
+        $releasedJob->run();
 
         // Assert
         $task = StackkitCloudTask::firstOrFail();
@@ -411,6 +411,68 @@ class CloudTasksDashboardTest extends TestCase
                 'diff' => '1 second ago',
             ],
             $events[6]
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function when_a_job_is_released_it_will_be_updated_in_the_dashboard()
+    {
+        // Arrange
+        \Illuminate\Support\Carbon::setTestNow(now());
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
+
+        $this->dispatch(new JobThatWillBeReleased())->run();
+
+        // Assert
+        $task = StackkitCloudTask::firstOrFail();
+        $events = $task->getEvents();
+
+        $this->assertCount(3, $events);
+        $this->assertEquals(
+            [
+                'status' => 'released',
+                'datetime' => now()->toDateTimeString(),
+                'diff' => '1 second ago',
+                'delay' => 0,
+            ],
+            $events[2]
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function job_release_delay_is_added_to_the_metadata()
+    {
+        // Arrange
+        \Illuminate\Support\Carbon::setTestNow(now());
+        CloudTasksApi::fake();
+        OpenIdVerificator::fake();
+        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
+            (new RetryConfig())->setMaxAttempts(3)
+        );
+
+        $this->dispatch(new JobThatWillBeReleased(15))->run();
+
+        // Assert
+        $task = StackkitCloudTask::firstOrFail();
+        $events = $task->getEvents();
+
+        $this->assertCount(3, $events);
+        $this->assertEquals(
+            [
+                'status' => 'released',
+                'datetime' => now()->toDateTimeString(),
+                'diff' => '1 second ago',
+                'delay' => 15,
+            ],
+            $events[2]
         );
     }
 

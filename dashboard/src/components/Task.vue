@@ -27,6 +27,7 @@ const titles = {
   successful: 'Successful',
   error: 'An error occurred',
   failed: 'Failed permanently',
+  released: 'Released',
 }
 </script>
 
@@ -58,6 +59,13 @@ const titles = {
                   class="bg-gray-200 text-gray-800 text-xs font-medium mr-2 inline-block mb-1 px-1.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800"
                 >
                   Scheduled: {{ event['scheduled_at'] }} (UTC)
+                </span>
+              </div>
+              <div v-if="event['delay']">
+                <span
+                  class="bg-gray-200 text-gray-800 text-xs font-medium mr-2 inline-block mb-1 px-1.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800"
+                >
+                  Delay: {{ event['delay'] }} seconds
                 </span>
               </div>
             </h3>
