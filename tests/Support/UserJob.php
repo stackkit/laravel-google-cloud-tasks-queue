@@ -15,7 +15,7 @@ class UserJob implements ShouldQueue
 
     public $deleteWhenMissingModels = true;
 
-    protected User $user;
+    protected $user;
 
     public function __construct(User $user)
     {

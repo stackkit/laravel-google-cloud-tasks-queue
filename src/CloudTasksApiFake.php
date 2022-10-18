@@ -14,8 +14,8 @@ use PHPUnit\Framework\Assert;
 
 class CloudTasksApiFake implements CloudTasksApiContract
 {
-    public array $createdTasks = [];
-    public array $deletedTasks = [];
+    public $createdTasks = [];
+    public $deletedTasks = [];
 
     public function getRetryConfig(string $queueName): RetryConfig
     {

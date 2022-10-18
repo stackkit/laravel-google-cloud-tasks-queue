@@ -16,10 +16,10 @@ class CloudTasksJob extends LaravelJob implements JobContract
      *
      * @var array
      */
-    public array $job;
+    public $job;
 
-    private ?int $maxTries;
-    public ?int $retryUntil = null;
+    private $maxTries;
+    public $retryUntil = null;
 
     /**
      * @var CloudTasksQueue

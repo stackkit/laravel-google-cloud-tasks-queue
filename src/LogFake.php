@@ -9,7 +9,7 @@ use Psr\Log\LoggerInterface;
 
 class LogFake
 {
-    private array $loggedMessages = [];
+    private $loggedMessages = [];
 
     public function emergency(string $message, array $context = []): void
     {

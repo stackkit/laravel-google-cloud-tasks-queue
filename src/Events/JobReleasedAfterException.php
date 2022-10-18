@@ -13,14 +13,14 @@ class JobReleasedAfterException
      *
      * @var string
      */
-    public string $connectionName;
+    public $connectionName;
 
     /**
      * The job instance.
      *
      * @var Job
      */
-    public Job $job;
+    public $job;
 
     /**
      * Create a new event instance.

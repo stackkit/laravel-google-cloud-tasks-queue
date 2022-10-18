@@ -12,7 +12,7 @@ class JobThatWillBeReleased implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private int $releaseDelay;
+    private $releaseDelay;
 
     /**
      * Create a new job instance.

@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Stackkit\LaravelGoogleCloudTasksQueue\Entities\StatRow;
+
 use const STR_PAD_LEFT;
 
 class CloudTasksApiController
@@ -22,6 +23,8 @@ class CloudTasksApiController
 
         $validPassword = hash_equals($password, request('password'));
 
+        app('debugbar')->disable();
+
         if (!$validPassword) {
             return null;
         }
@@ -32,6 +35,8 @@ class CloudTasksApiController
     public function dashboard(): array
     {
         $dbDriver = config('database.connections.' . config('database.default') . '.driver');
+
+        app('debugbar')->disable();
 
         if (!in_array($dbDriver, ['mysql', 'pgsql'])) {
             throw new Exception('Unsupported database driver for Cloud Tasks dashboard.');
@@ -57,14 +62,16 @@ class CloudTasksApiController
                 [
                     DB::raw('COUNT(id) as count'),
                     DB::raw('CASE WHEN status = \'failed\' THEN 1 ELSE 0 END AS failed'),
-                    DB::raw('
+                    DB::raw(
+                        '
                         CASE
                             WHEN ' . $groupBy['this_minute'] . ' = \'' . now()->utc()->format('H:i') . '\' THEN \'this_minute\'
                             WHEN ' . $groupBy['this_hour'] . ' = \'' . now()->utc()->format('H') . '\' THEN \'this_hour\'
                             
                             ELSE \'today\'
                         END AS time_preset                            
-                    ')
+                    '
+                    )
                 ]
             )
             ->groupBy(
@@ -74,7 +81,9 @@ class CloudTasksApiController
                 ]
             )
             ->get()
-            ->map(fn($row) => StatRow::createFromObject($row))
+            ->map(function ($row) {
+                return StatRow::createFromObject($row);
+            })
             ->toArray();
 
         $response = [
@@ -138,12 +147,12 @@ class CloudTasksApiController
                 [$hour, $minute] = explode(':', request('time'));
 
                 return $builder
-                    ->where('created_at', '>=', now()->setTime((int) $hour, (int) $minute, 0))
-                    ->where('created_at', '<=', now()->setTime((int) $hour, (int) $minute, 59));
+                    ->where('created_at', '>=', now()->setTime((int)$hour, (int)$minute, 0))
+                    ->where('created_at', '<=', now()->setTime((int)$hour, (int)$minute, 59));
             })
             ->when(request('hour'), function (Builder $builder, $hour) {
-                return $builder->where('created_at', '>=', now()->setTime((int) $hour, 0, 0))
-                    ->where('created_at', '<=', now()->setTime((int) $hour, 59, 59));
+                return $builder->where('created_at', '>=', now()->setTime((int)$hour, 0, 0))
+                    ->where('created_at', '<=', now()->setTime((int)$hour, 59, 59));
             })
             ->when(request('queue'), function (Builder $builder, $queue) {
                 return $builder->where('queue', $queue);
@@ -156,11 +165,10 @@ class CloudTasksApiController
 
         $maxId = $tasks->max('id');
 
-        return $tasks->map(function (StackkitCloudTask $task) use ($maxId)
-        {
+        return $tasks->map(function (StackkitCloudTask $task) use ($maxId) {
             return [
                 'uuid' => $task->task_uuid,
-                'id' => str_pad((string) $task->id, strlen($maxId), '0', STR_PAD_LEFT),
+                'id' => str_pad((string)$task->id, strlen($maxId), '0', STR_PAD_LEFT),
                 'name' => $task->name,
                 'status' => $task->status,
                 'attempts' => $task->getNumberOfAttempts(),

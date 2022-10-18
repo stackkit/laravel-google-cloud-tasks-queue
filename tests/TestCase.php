@@ -24,7 +24,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
      */
     public $client;
 
-    public string $releasedJobPayload;
+    public $releasedJobPayload;
 
     protected function setUp(): void
     {

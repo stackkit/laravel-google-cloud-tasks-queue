@@ -4,9 +4,9 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue\Entities;
 
 class StatRow
 {
-    public int $count;
-    public int $failed;
-    public string $time_preset;
+    public $count;
+    public $failed;
+    public $time_preset;
 
     public static function createFromObject(object $row): StatRow
     {

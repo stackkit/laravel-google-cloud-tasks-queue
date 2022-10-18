@@ -10,17 +10,6 @@ use const JSON_PRETTY_PRINT;
 use function Safe\json_encode;
 use function Safe\json_decode;
 
-/**
- * @property int $id
- * @property string $queue
- * @property string $task_uuid
- * @property string $name
- * @property string $status
- * @property string|null $metadata
- * @property string|null $payload
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- */
 class StackkitCloudTask extends Model
 {
     protected $guarded = [];
@@ -84,7 +73,9 @@ class StackkitCloudTask extends Model
     {
         $metadata = $this->getMetadata();
 
-        $metadata['events'] ??= [];
+        if (!isset($metadata['events'])) {
+            $metadata['events'] = [];
+        }
 
         $metadata['events'][] = $event;
 
@@ -94,7 +85,6 @@ class StackkitCloudTask extends Model
     public function getEvents(): array
     {
         Carbon::setTestNowAndTimezone(now()->utc());
-
         /** @var array $events */
         $events = Arr::get($this->getMetadata(), 'events', []);
 

@@ -13,21 +13,21 @@ class JobReleased
      *
      * @var string
      */
-    public string $connectionName;
+    public $connectionName;
 
     /**
      * The job instance.
      *
      * @var Job
      */
-    public Job $job;
+    public $job;
 
     /**
      * The job delay in seconds.
      *
      * @var int
      */
-    public int $delay;
+    public $delay;
 
     /**
      * Create a new event instance.
