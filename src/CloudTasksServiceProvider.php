@@ -150,51 +150,57 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
-            if (!CloudTasks::dashboardEnabled()) {
+            if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
 
-            if ($event->job instanceof CloudTasksJob) {
+            if (CloudTasks::dashboardEnabled()) {
                 DashboardService::make()->markAsRunning($event->job->uuid());
             }
         });
 
         app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            data_set($event->job->job, 'internal.processed', true);
-
-            if (!CloudTasks::dashboardEnabled()) {
+            if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
 
-            if ($event->job instanceof CloudTasksJob) {
+            data_set($event->job->job, 'internal.processed', true);
+
+            if (CloudTasks::dashboardEnabled()) {
                 DashboardService::make()->markAsSuccessful($event->job->uuid());
             }
         });
 
         app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
-            data_set($event->job->job, 'internal.errored', true);
-
-            if (!CloudTasks::dashboardEnabled()) {
+            if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
 
-            DashboardService::make()->markAsError($event);
+            data_set($event->job->job, 'internal.errored', true);
+
+            if (CloudTasks::dashboardEnabled()) {
+                DashboardService::make()->markAsError($event);
+            }
         });
 
         app('events')->listen(JobFailed::class, function ($event) {
-            if (!CloudTasks::dashboardEnabled()) {
+            if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
 
-            DashboardService::make()->markAsFailed($event);
+            if (CloudTasks::dashboardEnabled()) {
+                DashboardService::make()->markAsFailed($event);
+            }
         });
 
         app('events')->listen(JobReleased::class, function (JobReleased $event) {
-            if (!CloudTasks::dashboardEnabled()) {
+            if ($event->job instanceof CloudTasksJob) {
                 return;
             }
 
-            DashboardService::make()->markAsReleased($event);
+            if (CloudTasks::dashboardEnabled()) {
+                DashboardService::make()->markAsReleased($event);
+            }
         });
     }
 }
