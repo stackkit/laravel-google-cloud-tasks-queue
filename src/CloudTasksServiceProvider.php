@@ -128,7 +128,9 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerDashboard(): void
     {
-        app('events')->listen(TaskCreated::class, function (TaskCreated $event) {
+        $events = $this->app['events'];
+
+        $events->listen(TaskCreated::class, function (TaskCreated $event) {
             if (CloudTasks::dashboardDisabled()) {
                 return;
             }
@@ -136,7 +138,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             DashboardService::make()->add($event->queue, $event->task);
         });
 
-        app('events')->listen(JobFailed::class, function (JobFailed $event) {
+        $events->listen(JobFailed::class, function (JobFailed $event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
@@ -149,7 +151,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             );
         });
 
-        app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
+        $events->listen(JobProcessing::class, function (JobProcessing $event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
@@ -159,7 +161,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             }
         });
 
-        app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
+        $events->listen(JobProcessed::class, function (JobProcessed $event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
@@ -171,7 +173,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             }
         });
 
-        app('events')->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
+        $events->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
@@ -183,7 +185,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             }
         });
 
-        app('events')->listen(JobFailed::class, function ($event) {
+        $events->listen(JobFailed::class, function ($event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
@@ -193,7 +195,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             }
         });
 
-        app('events')->listen(JobReleased::class, function (JobReleased $event) {
+        $events->listen(JobReleased::class, function (JobReleased $event) {
             if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
