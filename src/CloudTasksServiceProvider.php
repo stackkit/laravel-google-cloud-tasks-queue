@@ -194,7 +194,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         app('events')->listen(JobReleased::class, function (JobReleased $event) {
-            if ($event->job instanceof CloudTasksJob) {
+            if (!$event->job instanceof CloudTasksJob) {
                 return;
             }
 
