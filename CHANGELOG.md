@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 3.3.1 - 2022-10-22
+
+**Fixed**
+
+- Fixes [#73](https://github.com/stackkit/laravel-google-cloud-tasks-queue/issues/73) Cannot access protected property Illuminate\Queue\Jobs\SyncJob::$job
+
 ## 3.3.0 - 2022-10-15
 
 **Added**
