@@ -68,4 +68,12 @@ class LogFake
     {
         PHPUnit::assertTrue(in_array($message, $this->loggedMessages), 'The message [' . $message . '] was not logged.');
     }
+
+    public function assertNotLogged(string $message): void
+    {
+        PHPUnit::assertTrue(
+            ! in_array($message, $this->loggedMessages),
+            'The message [' . $message . '] was logged.'
+        );
+    }
 }

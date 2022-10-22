@@ -8,18 +8,20 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class FailingJob implements ShouldQueue
+class JobThatWillBeReleased implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    private int $releaseDelay;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(int $releaseDelay = 0)
     {
-        //
+        $this->releaseDelay = $releaseDelay;
     }
 
     /**
@@ -29,11 +31,8 @@ class FailingJob implements ShouldQueue
      */
     public function handle()
     {
-        throw new \Error('simulating a failing job');
-    }
-
-    public function failed(\Throwable $throwable)
-    {
-        logger('FailingJob:failed');
+        logger('JobThatWillBeReleased:beforeRelease');
+        $this->release($this->releaseDelay);
+        logger('JobThatWillBeReleased:afterRelease');
     }
 }

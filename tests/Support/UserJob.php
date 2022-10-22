@@ -7,19 +7,19 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Mail;
 
-class FailingJob implements ShouldQueue
+class UserJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    public $deleteWhenMissingModels = true;
+
+    protected User $user;
+
+    public function __construct(User $user)
     {
-        //
+        $this->user = $user;
     }
 
     /**
@@ -29,11 +29,6 @@ class FailingJob implements ShouldQueue
      */
     public function handle()
     {
-        throw new \Error('simulating a failing job');
-    }
-
-    public function failed(\Throwable $throwable)
-    {
-        logger('FailingJob:failed');
+        logger('UserJob:' . $this->user->name);
     }
 }

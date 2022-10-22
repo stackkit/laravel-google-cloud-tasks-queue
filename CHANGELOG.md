@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 3.3.1 - 2022-10-22
+
+**Fixed**
+
+- Fixes [#73](https://github.com/stackkit/laravel-google-cloud-tasks-queue/issues/73) Cannot access protected property Illuminate\Queue\Jobs\SyncJob::$job
+
+## 3.3.0 - 2022-10-15
+
+**Added**
+
+- Jobs can now be released back onto the queue.
+
+## 3.2.1 - 2022-09-02
+
+**Fixed**
+
+- Jobs were dispatched before a DB commit if `after_commit` or `afterCommit()` was used. This has now been corrected.
+
+**Added**
+
+- Request validation for the TaskHandler endpoint.
+
+## 3.2.0 - 2022-08-13
+
+**Added**
+
+- Added support for jobs that use the `Illuminate\Contracts\Queue\ShouldBeEncrypted` contract
+
+## 3.1.4 - 2022-06-24
+
+**Fixed**
+
+- Fixed usage of incorrect header to set count retries ([#55](https://github.com/stackkit/laravel-google-cloud-tasks-queue/discussions/55))
+- Fix getRetryUntilTimestamp not working due to incomplete task name ([#56](https://github.com/stackkit/laravel-google-cloud-tasks-queue/discussions/56))
+
 ## 3.1.3 - 2022-06-19
 
 **Fixed**
