@@ -101,7 +101,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'queue' => 'barbequeue',
             'project' => 'my-test-project',
             'location' => 'europe-west6',
-            'handler' => env('CLOUD_TASKS_HANDLER', 'http://docker.for.mac.localhost:8080'),
+            'handler' => env('CLOUD_TASKS_HANDLER', 'https://docker.for.mac.localhost:8080'),
             'service_account_email' => 'info@stackkit.io',
         ]);
         $app['config']->set('queue.failed.driver', 'database-uuids');
@@ -216,7 +216,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
     {
         $base = [
             'iss' => 'https://accounts.google.com',
-            'aud' => 'http://docker.for.mac.localhost:8080',
+            'aud' => 'https://docker.for.mac.localhost:8080',
             'exp' => time() + 10,
         ];
 

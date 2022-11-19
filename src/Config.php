@@ -51,6 +51,18 @@ class Config
                 ));
             }
 
+            // When the application is running behind a proxy and the TrustedProxy middleware has not been set up yet,
+            // an error like [HttpRequest.url must start with 'https'] could be thrown. Since the handler URL must
+            // always be https, we will provide a little extra information on how to fix this.
+            if ($parse['scheme'] !== 'https') {
+                throw new Exception(sprintf(
+                    'Unable to push task to Cloud Tasks because the hander URL is not https. Google Cloud Tasks ' .
+                    'will only call safe (https) URLs. If you are running Laravel behind a proxy (e.g. Ngrok, Expose), make sure it is ' .
+                    'as a trusted proxy. To quickly fix this, add the following to the [app/Http/Middleware/TrustProxies] middleware: ' .
+                    'protected $proxies = \'*\';'
+                ));
+            }
+
             // Versions 1.x and 2.x required the full path (e.g. my-app.com/handle-task). In 3.x and beyond
             // it is no longer necessary to also include the path and simply setting the handler
             // URL is enough. If someone upgrades and forgets we will warn them here.
