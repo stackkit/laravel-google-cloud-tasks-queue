@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 3.3.2 - 2022-11-19
+
+**Changed**
+
+- Added helpful message if application generates unsafe http handler URL due to potentially TrustedProxies not being configured.
+
 ## 3.3.1 - 2022-10-22
 
 **Fixed**
