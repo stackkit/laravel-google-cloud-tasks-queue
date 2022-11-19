@@ -42,7 +42,7 @@ class QueueTest extends TestCase
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return $task->getHttpRequest()->getUrl() === 'http://docker.for.mac.localhost:8080/handle-task';
+            return $task->getHttpRequest()->getUrl() === 'https://docker.for.mac.localhost:8080/handle-task';
         });
     }
 
@@ -69,7 +69,7 @@ class QueueTest extends TestCase
     public function it_posts_to_the_correct_handler_url()
     {
         // Arrange
-        $this->setConfigValue('handler', 'http://docker.for.mac.localhost:8081');
+        $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
         CloudTasksApi::fake();
 
         // Act
@@ -77,7 +77,7 @@ class QueueTest extends TestCase
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return $task->getHttpRequest()->getUrl() === 'http://docker.for.mac.localhost:8081/handle-task';
+            return $task->getHttpRequest()->getUrl() === 'https://docker.for.mac.localhost:8081/handle-task';
         });
     }
 
