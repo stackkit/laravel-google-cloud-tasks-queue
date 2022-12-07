@@ -18,7 +18,7 @@ class OpenIdVerificatorConcrete extends Facade
         (new AccessToken())->verify(
             $token,
             [
-                'audience' => app('queue')->getHandler(),
+                'audience' => hash_hmac('sha256', app('queue')->getHandler(), config('app.key')),
                 'throwException' => true,
             ]
         );
