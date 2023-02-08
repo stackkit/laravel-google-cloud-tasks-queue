@@ -11,10 +11,11 @@
         "ext-json": "*",
         "phpseclib/phpseclib": "~2.0",
         "google/cloud-tasks": "^1.10",
+        "illuminate/support": "^8.0|^9.0|^10.0",
         "thecodingmachine/safe": "^1.0|^2.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^4.0 || ^5.0 || ^6.0 || ^7.0",
+        "orchestra/testbench": "^6.0 || ^7.0 || ^8.0",
         "nunomaduro/larastan": "^1.0 || ^2.0",
         "thecodingmachine/phpstan-safe-rule": "^1.2",
         "laravel/legacy-factories": "^1.3"
@@ -37,7 +38,13 @@
             ]
         }
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "scripts": {
+        "l10": [
+            "composer require laravel/framework:10.* orchestra/testbench:8.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction --no-suggest"
+        ],
         "l9": [
             "composer require laravel/framework:9.* orchestra/testbench:7.* --no-interaction --no-update",
             "composer update --prefer-stable --prefer-dist --no-interaction --no-suggest"

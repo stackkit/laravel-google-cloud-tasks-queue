@@ -1,27 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit backupGlobals="false"
-         backupStaticAttributes="false"
-         bootstrap="vendor/autoload.php"
-         colors="true"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
-         processIsolation="false"
-         stopOnFailure="false">
-    <testsuites>
-        <testsuite name="Testsuite">
-            <directory suffix="Test.php">./tests</directory>
-        </testsuite>
-    </testsuites>
-    <php>
-        <env name="APP_DEBUG" value="1"/>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_KEY" value="AckfSECXIvnK5r28GVIWUAxmbBSjTsmF"/>
-        <env name="CACHE_DRIVER" value="array"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <env name="MAIL_DRIVER" value="log"/>
-        <env name="GOOGLE_APPLICATION_CREDENTIALS" value="./tests/Support/gcloud-key-valid.json" />
-        <env name="QUEUE_DRIVER" value="cloudtasks"/>
-        <env name="DB_DRIVER" value="mysql" />
-    </php>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" backupGlobals="false" bootstrap="vendor/autoload.php" colors="true" processIsolation="false" stopOnFailure="false" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd" cacheDirectory=".phpunit.cache" backupStaticProperties="false">
+  <testsuites>
+    <testsuite name="Testsuite">
+      <directory suffix="Test.php">./tests</directory>
+    </testsuite>
+  </testsuites>
+  <php>
+    <env name="APP_DEBUG" value="1"/>
+    <env name="APP_ENV" value="testing"/>
+    <env name="APP_KEY" value="AckfSECXIvnK5r28GVIWUAxmbBSjTsmF"/>
+    <env name="CACHE_DRIVER" value="array"/>
+    <env name="SESSION_DRIVER" value="array"/>
+    <env name="MAIL_DRIVER" value="log"/>
+    <env name="GOOGLE_APPLICATION_CREDENTIALS" value="./tests/Support/gcloud-key-valid.json"/>
+    <env name="QUEUE_DRIVER" value="cloudtasks"/>
+    <env name="DB_DRIVER" value="mysql"/>
+  </php>
 </phpunit>

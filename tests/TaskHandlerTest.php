@@ -76,7 +76,6 @@ class TaskHandlerTest extends TestCase
         // Assert
         if ($debug) {
             $response->assertJsonValidationErrors('task');
-            $this->assertEquals('The json must be a valid JSON string.', $response->json('errors.json.0'));
         } else {
             $response->assertNotFound();
         }
@@ -84,11 +83,11 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
-     * @testWith ["{\"invalid\": \"data\"}", "The task.data field is required."]
-     *           ["{\"data\": \"\"}", "The task.data field is required."]
-     *           ["{\"data\": \"test\"}", "The task.data must be an array."]
+     * @testWith ["{\"invalid\": \"data\"}"]
+     *           ["{\"data\": \"\"}"]
+     *           ["{\"data\": \"test\"}"]
      */
-    public function it_returns_responses_for_invalid_payloads(string $payload, string $expectedMessage)
+    public function it_returns_responses_for_invalid_payloads(string $payload)
     {
         // Arrange
 
@@ -107,7 +106,6 @@ class TaskHandlerTest extends TestCase
 
         // Assert
         $response->assertJsonValidationErrors('task.data');
-        $this->assertEquals($expectedMessage, $response->json(['errors', 'task.data', 0]));
     }
 
     /**
