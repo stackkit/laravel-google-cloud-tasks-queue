@@ -21,6 +21,10 @@ jobs:
           - { queue: 'github-actions-laravel8-php81', laravel: '8.*', php: '8.1', 'testbench': '6.*'}
           - { queue: 'github-actions-laravel8-php80', laravel: '8.*', php: '8.0', 'testbench': '6.*'}
           - { queue: 'github-actions-laravel8-php74', laravel: '8.*', php: '7.4', 'testbench': '6.*'}
+          - { queue: 'github-actions-laravel7-php80', laravel: '7.*', php: '8.0', 'testbench': '5.*' }
+          - { queue: 'github-actions-laravel7-php74', laravel: '7.*', php: '7.4', 'testbench': '5.*' }
+          - { queue: 'github-actions-laravel6-php80', laravel: '6.*', php: '8.0', 'testbench': '4.*' }
+          - { queue: 'github-actions-laravel6-php74', laravel: '6.*', php: '7.4', 'testbench': '4.*' }
 
     name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db }}
 
@@ -41,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.payload.laravel }}" "orchestra/testbench:${{ matrix.payload.testbench }}" --no-interaction --no-update
-          composer update --prefer-stable --prefer-dist --no-interaction --no-suggest
+          composer update --prefer-stable --prefer-dist --no-interaction
           if [ "${{ matrix.db }}" = "mysql" ]; then
             while ! mysqladmin ping --host=127.0.0.1 --user=cloudtasks --port=3307 --password=cloudtasks --silent; do
               echo "Waiting for MySQL..."
