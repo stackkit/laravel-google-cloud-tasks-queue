@@ -21,16 +21,9 @@ This package allows Google Cloud Tasks to be used as the queue driver.
   </summary>
 
   <br>
-  This package requires Laravel 6 or higher and supports MySQL 8 and PostgreSQL 14. Might support older database versions too, but package hasn't been tested for it.
+  This package requires Laravel 8 or higher and supports MySQL 8 and PostgreSQL 14. Might support older database versions too, but package hasn't been tested for it.
 
-Please check the table below for supported Laravel and PHP versions:
-
-|Laravel Version| PHP Version |
-  |---|---|
-| 6.x | 7.4 or 8.0
-| 7.x | 7.4 or 8.0
-| 8.x | 7.4 or 8.0 or 8.1
-| 9.x | 8.0 or 8.1
+Please check the [Laravel support policy](https://laravel.com/docs/master/releases#support-policy) table for supported Laravel and PHP versions.
 </details>
 <details>
   <summary>Installation</summary>
