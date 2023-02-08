@@ -109,7 +109,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         $disableDashboardPrefix = 'when_dashboard_is_disabled';
 
-        if (substr($this->getName(), 0, strlen($disableDashboardPrefix)) === $disableDashboardPrefix) {
+        $testName = method_exists($this, 'name') ? $this->name() : $this->getName();
+        if (substr($testName, 0, strlen($disableDashboardPrefix)) === $disableDashboardPrefix) {
             $app['config']->set('cloud-tasks.dashboard.enabled', false);
         } else {
             $app['config']->set('cloud-tasks.dashboard.enabled', true);
