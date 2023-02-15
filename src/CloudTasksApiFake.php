@@ -49,7 +49,7 @@ class CloudTasksApiFake implements CloudTasksApiContract
     }
 
 
-    public function getRetryUntilTimestamp(string $taskName): ?int
+    public function getRetryUntilTimestamp(Task $task): ?int
     {
         return null;
     }

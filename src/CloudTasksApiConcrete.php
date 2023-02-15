@@ -50,10 +50,8 @@ class CloudTasksApiConcrete implements CloudTasksApiContract
         return $this->client->getTask($taskName);
     }
 
-    public function getRetryUntilTimestamp(string $taskName): ?int
+    public function getRetryUntilTimestamp(Task $task): ?int
     {
-        $task = $this->getTask($taskName);
-
         $attempt = $task->getFirstAttempt();
 
         if (!$attempt instanceof Attempt) {

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static Task createTask(string $queueName, Task $task)
  * @method static void deleteTask(string $taskName)
  * @method static Task getTask(string $taskName)
- * @method static int|null getRetryUntilTimestamp(string $taskName)
+ * @method static int|null getRetryUntilTimestamp(Task $task)
  */
 class CloudTasksApi extends Facade
 {

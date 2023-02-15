@@ -2,6 +2,7 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Bus\Queueable;
@@ -122,6 +123,24 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
+        $taskName = request()->header('X-Cloudtasks-Taskname');
+        $fullTaskName = $this->client->taskName(
+            $this->config['project'],
+            $this->config['location'],
+            $job->getQueue() ?: $this->config['queue'],
+            $taskName,
+        );
+
+        try {
+            $apiTask = CloudTasksApi::getTask($fullTaskName);
+        } catch (ApiException $e) {
+            if (in_array($e->getStatus(), ['NOT_FOUND', 'PRECONDITION_FAILED'])) {
+                abort(404);
+            }
+
+            throw $e;
+        }
+
         // If the task has a [X-CloudTasks-TaskRetryCount] header higher than 0, then
         // we know the job was created using an earlier version of the package. This
         // job does not have the attempts tracked internally yet.
@@ -138,20 +157,7 @@ class TaskHandler
         // max retry duration has been set. If that duration
         // has passed, it should stop trying altogether.
         if ($job->attempts() > 0) {
-            $taskName = request()->header('X-Cloudtasks-Taskname');
-
-            if (!is_string($taskName)) {
-                throw new UnexpectedValueException('Expected task name to be a string.');
-            }
-
-            $fullTaskName = $this->client->taskName(
-                $this->config['project'],
-                $this->config['location'],
-                $job->getQueue() ?: $this->config['queue'],
-                $taskName,
-            );
-
-            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($fullTaskName));
+            $job->setRetryUntil(CloudTasksApi::getRetryUntilTimestamp($apiTask));
         }
 
         $job->setAttempts($job->attempts() + 1);
