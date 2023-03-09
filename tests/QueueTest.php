@@ -242,7 +242,7 @@ class QueueTest extends TestCase
 
         // Assert
         Event::assertNotDispatched($this->getJobReleasedAfterExceptionEvent());
-        CloudTasksApi::assertDeletedTaskCount(1);
+        CloudTasksApi::assertDeletedTaskCount(0); // it returned 200 OK so we dont delete it, but Google does
         $releasedJob = null;
         Event::assertDispatched(JobReleased::class, function (JobReleased $event) use (&$releasedJob) {
             $releasedJob = $event->job;
@@ -257,7 +257,7 @@ class QueueTest extends TestCase
 
         $this->runFromPayload($releasedJob->getRawBody());
 
-        CloudTasksApi::assertDeletedTaskCount(2);
+        CloudTasksApi::assertDeletedTaskCount(0);
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
@@ -476,6 +476,6 @@ class QueueTest extends TestCase
 
         // Act
         Log::assertLogged('UserJob:John');
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        CloudTasksApi::assertTaskNotDeleted($job->task->getName());
     }
 }

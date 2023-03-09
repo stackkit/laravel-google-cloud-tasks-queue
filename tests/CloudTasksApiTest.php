@@ -184,7 +184,7 @@ class CloudTasksApiTest extends TestCase
         // The queue max retry duration is 5 seconds. The max retry until timestamp is calculated from the
         // first attempt, so we expect it to be [timestamp first attempt] + 5 seconds.
         $expected = $createdTask->getFirstAttempt()->getDispatchTime()->getSeconds() + 5;
-        $actual = CloudTasksApi::getRetryUntilTimestamp($createdTask->getName());
+        $actual = CloudTasksApi::getRetryUntilTimestamp($createdTask);
         $this->assertSame($expected, $actual);
     }
 }

@@ -13,5 +13,5 @@ interface CloudTasksApiContract
     public function createTask(string $queueName, Task $task): Task;
     public function deleteTask(string $taskName): void;
     public function getTask(string $taskName): Task;
-    public function getRetryUntilTimestamp(string $taskName): ?int;
+    public function getRetryUntilTimestamp(Task $task): ?int;
 }

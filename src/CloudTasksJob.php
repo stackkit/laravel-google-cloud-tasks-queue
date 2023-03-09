@@ -103,9 +103,29 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
     public function delete(): void
     {
+        // Laravel automatically calls delete() after a job is processed successfully. However, this is
+        // not what we want to happen in Cloud Tasks because Cloud Tasks will also delete the task upon
+        // a 200 OK status, which means a task is deleted twice, possibly resulting in errors. So if the
+        // task was processed successfully (no errors or failures) then we will not delete the task
+        // manually and will let Cloud Tasks do it.
+        $successful =
+            // If the task has failed, we should be able to delete it permanently
+            $this->hasFailed() === false
+            // If the task has errored, it should be released, which in process deletes the errored task
+            && $this->hasError() === false;
+
+        if ($successful) {
+            return;
+        }
+
         parent::delete();
 
         $this->cloudTasksQueue->delete($this);
+    }
+
+    public function hasError(): bool
+    {
+        return data_get($this->job, 'internal.errored') === true;
     }
 
     public function release($delay = 0)
