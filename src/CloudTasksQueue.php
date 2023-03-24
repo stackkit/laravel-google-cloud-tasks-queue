@@ -153,7 +153,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest->setBody($payload);
 
         $task = $this->createTask();
-        $task->setName($this->taskName($queueName, $uuid, $displayName));
+        $task->setName($this->taskName($queue, $uuid, $displayName));
         $task->setHttpRequest($httpRequest);
 
         // The deadline for requests sent to the app. If the app does not respond by
@@ -184,6 +184,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $projectId = $config['project'];
         $location = $config['location'];
         $queueId = $queueName;
+        // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
         // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
         $displayName = str_replace("\\", "-", $displayName);
         $taskName = sprintf('projects/%s/locations/%s/queues/%s/tasks/%s-%s', $projectId, $location, $queueId, $uuid, $displayName);
