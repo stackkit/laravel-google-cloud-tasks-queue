@@ -152,7 +152,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest->setBody($payload);
 
         $task = $this->createTask();
-        $task->setName($this->taskName($uuid, $displayName));
+        $task->setName($this->taskName($queueName, $uuid, $displayName));
         $task->setHttpRequest($httpRequest);
 
         // The deadline for requests sent to the app. If the app does not respond by
@@ -178,9 +178,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $uuid;
     }
 
-    private function taskName(string $uuid, string $displayName) {
+    private function taskName(string $queueName, string $uuid, string $displayName) {
+        $config = $this->config;
+        $projectId = $config['project'];
+        $location = $config['location'];
+        $queueId = $queueName;
+        // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
         $displayName = str_replace("\\", "-", $displayName);
-        return sprintf('%s-%s', $uuid, $displayName);
+        return sprintf('projects/%s/locations/%s/queues/%s/tasks/%s-%s', $projectId, $location, $queueId, $uuid, $displayName);
     }
 
     private function extractPayload(string $payload): array
