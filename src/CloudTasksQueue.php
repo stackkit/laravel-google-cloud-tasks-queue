@@ -11,6 +11,7 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use function Safe\json_decode;
@@ -185,7 +186,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $queueId = $queueName;
         // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
         $displayName = str_replace("\\", "-", $displayName);
-        return sprintf('projects/%s/locations/%s/queues/%s/tasks/%s-%s', $projectId, $location, $queueId, $uuid, $displayName);
+        $taskName = sprintf('projects/%s/locations/%s/queues/%s/tasks/%s-%s', $projectId, $location, $queueId, $uuid, $displayName);
+        Log::info('Task name '. $taskName);
+        return $taskName;
     }
 
     private function extractPayload(string $payload): array
