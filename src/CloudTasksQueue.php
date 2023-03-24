@@ -188,7 +188,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
         $displayName = str_replace("\\", "-", $displayName);
         $taskName = sprintf('projects/%s/locations/%s/queues/%s/tasks/%s-%s', $projectId, $location, $queueId, $uuid, $displayName);
-        Log::info('Task name '. $taskName);
+        print ($taskName);
+        print ($taskName);
         return $taskName;
     }
 
