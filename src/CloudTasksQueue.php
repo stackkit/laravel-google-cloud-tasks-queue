@@ -142,7 +142,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
         // Since we are using and expecting the uuid in some places
         // we will add it manually here if it's not present yet.
-        [$payload, $uuid] = $this->withUuid($payload);
+        [$payload, $uuid, $displayName] = $this->extractPayload($payload);
 
         // Since 3.x tasks are released back onto the queue after an exception has
         // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
@@ -152,6 +152,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest->setBody($payload);
 
         $task = $this->createTask();
+        $task->setName($this->taskName($uuid, $displayName));
         $task->setHttpRequest($httpRequest);
 
         // The deadline for requests sent to the app. If the app does not respond by
@@ -172,12 +173,17 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $createdTask = CloudTasksApi::createTask($queueName, $task);
 
-        event((new TaskCreated)->queue($queue)->task($task));
+        event((new TaskCreated)->queue($queue)->task($createdTask));
 
         return $uuid;
     }
 
-    private function withUuid(string $payload): array
+    private function taskName(string $uuid, string $displayName) {
+        $displayName = str_replace("\\", "-", $displayName);
+        return sprintf('%s-%s', $uuid, $displayName);
+    }
+
+    private function extractPayload(string $payload): array
     {
         /** @var array $decoded */
         $decoded = json_decode($payload, true);
@@ -189,6 +195,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return [
             json_encode($decoded),
             $decoded['uuid'],
+            $decoded['displayName']
         ];
     }
 
