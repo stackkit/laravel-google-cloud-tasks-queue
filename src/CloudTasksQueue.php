@@ -11,7 +11,6 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use function Safe\json_decode;
@@ -140,20 +139,22 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $httpRequest->setUrl($this->getHandler());
         $httpRequest->setHttpMethod(HttpMethod::POST);
 
+        $payload = json_decode($payload, true);
+
         // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
         // Since we are using and expecting the uuid in some places
         // we will add it manually here if it's not present yet.
-        [$payload, $uuid, $displayName] = $this->extractPayload($payload);
+        $payload = $this->withUuid($payload);
 
         // Since 3.x tasks are released back onto the queue after an exception has
         // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
         // value and need to manually set and update the number of times a task has been attempted.
         $payload = $this->withAttempts($payload);
 
-        $httpRequest->setBody($payload);
+        $httpRequest->setBody(json_encode($payload));
 
         $task = $this->createTask();
-        $task->setName($this->taskName($queue, $uuid, $displayName));
+        $task->setName($this->taskName($queue, $payload));
         $task->setHttpRequest($httpRequest);
 
         // The deadline for requests sent to the app. If the app does not respond by
@@ -174,51 +175,39 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $createdTask = CloudTasksApi::createTask($queueName, $task);
 
-        event((new TaskCreated)->queue($queue)->task($createdTask));
+        event((new TaskCreated)->queue($queue)->task($task));
 
-        return $uuid;
+        return $payload['uuid'];
     }
 
-    private function taskName(string $queueName, string $uuid, string $displayName) {
-        $config = $this->config;
-        $projectId = $config['project'];
-        $location = $config['location'];
-        $queueId = $queueName;
-        // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
-        // projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID
-        $displayName = str_replace("\\", "-", $displayName);
-        $taskName = sprintf('projects/%s/locations/%s/queues/%s/tasks/%s-%s', $projectId, $location, $queueId, $uuid, $displayName);
-        print ($taskName);
-        print ($taskName);
-        return $taskName;
-    }
-
-    private function extractPayload(string $payload): array
+    private function withUuid(array $payload): array
     {
-        /** @var array $decoded */
-        $decoded = json_decode($payload, true);
-
-        if (!isset($decoded['uuid'])) {
-            $decoded['uuid'] = (string) Str::uuid();
+        if (!isset($payload['uuid'])) {
+            $payload['uuid'] = (string) Str::uuid();
         }
 
-        return [
-            json_encode($decoded),
-            $decoded['uuid'],
-            $decoded['displayName']
-        ];
+        return $payload;
     }
 
-    private function withAttempts(string $payload): string
+    private function taskName(string $queueName, array $payload): string
     {
-        /** @var array $decoded */
-        $decoded = json_decode($payload, true);
+        $displayName = str_replace("\\", '-', $payload['displayName']);
 
-        if (!isset($decoded['internal']['attempts'])) {
-            $decoded['internal']['attempts'] = 0;
+        return CloudTasksClient::taskName(
+            $this->config['project'],
+            $this->config['location'],
+            $queueName,
+            $displayName . '-' . $payload['uuid']
+        );
+    }
+
+    private function withAttempts(array $payload): array
+    {
+        if (!isset($payload['internal']['attempts'])) {
+            $payload['internal']['attempts'] = 0;
         }
 
-        return json_encode($decoded);
+        return $payload;
     }
 
     /**
