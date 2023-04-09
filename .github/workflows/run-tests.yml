@@ -1,7 +1,7 @@
 name: Run tests
 
 on:
-  pull_request:
+  pull_request_target:
   schedule:
     - cron: '0 0 * * *'
 
