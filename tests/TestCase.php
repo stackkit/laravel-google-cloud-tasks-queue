@@ -133,7 +133,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
             $payloadAsArray = json_decode($payload, true);
             $task = $event->task;
 
-            request()->headers->set('X-Cloudtasks-Taskname', $task->getName());
+            [,,,,,,,$taskName] = explode('/', $task->getName());
+            request()->headers->set('X-Cloudtasks-Taskname', $taskName);
         });
 
         dispatch($job);

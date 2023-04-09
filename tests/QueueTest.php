@@ -478,4 +478,23 @@ class QueueTest extends TestCase
         Log::assertLogged('UserJob:John');
         CloudTasksApi::assertTaskNotDeleted($job->task->getName());
     }
+
+    /**
+     * @test
+     */
+    public function it_adds_a_task_name_based_on_the_display_name()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        $this->dispatch((new SimpleJob()));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
+            $uuid = \Safe\json_decode($task->getHttpRequest()->getBody(), true)['uuid'];
+
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid;
+        });
+    }
 }

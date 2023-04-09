@@ -30,8 +30,6 @@ class CloudTasksApiFake implements CloudTasksApiContract
 
     public function createTask(string $queueName, Task $task): Task
     {
-        $task->setName(Str::uuid()->toString());
-
         $this->createdTasks[] = compact('queueName', 'task');
 
         return $task;
@@ -56,24 +54,16 @@ class CloudTasksApiFake implements CloudTasksApiContract
 
     public function assertTaskDeleted(string $taskName): void
     {
-        $taskUuids = array_map(function ($fullTaskName) {
-            return Arr::last(explode('/', $fullTaskName));
-        }, $this->deletedTasks);
-
         Assert::assertTrue(
-            in_array($taskName, $taskUuids),
+            in_array($taskName, $this->deletedTasks),
             'The task [' . $taskName . '] should have been deleted but it is not.'
         );
     }
 
     public function assertTaskNotDeleted(string $taskName): void
     {
-        $taskUuids = array_map(function ($fullTaskName) {
-            return Arr::last(explode('/', $fullTaskName));
-        }, $this->deletedTasks);
-
         Assert::assertTrue(
-            ! in_array($taskName, $taskUuids),
+            ! in_array($taskName, $this->deletedTasks),
             'The task [' . $taskName . '] should not have been deleted but it was.'
         );
     }
