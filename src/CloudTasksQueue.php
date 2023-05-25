@@ -11,6 +11,7 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use function Safe\json_decode;
@@ -197,7 +198,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName . '-' . $payload['uuid']
+            $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimestamp(),
         );
     }
 
