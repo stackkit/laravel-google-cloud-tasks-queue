@@ -486,6 +486,7 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
+        Carbon::setTestNow(Carbon::create(2023, 6, 1, 20, 2, 37));
 
         // Act
         $this->dispatch((new SimpleJob()));
@@ -494,7 +495,7 @@ class QueueTest extends TestCase
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $uuid = \Safe\json_decode($task->getHttpRequest()->getBody(), true)['uuid'];
 
-            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid;
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid . '-1685649757';
         });
     }
 }
