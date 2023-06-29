@@ -84,7 +84,8 @@ class Config
     }
 
     /**
-     * @param string $handler
+     * @param array $config
+     * @return string|null The audience as an hash or null if not needed
      */
     public static function getAudience(array $config): ?string
     {
