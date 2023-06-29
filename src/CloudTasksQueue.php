@@ -95,7 +95,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $delay = ! empty($options['delay']) ? $options['delay'] : 0;
+        $delay = !empty($options['delay']) ? $options['delay'] : 0;
 
         $this->pushToCloudTasks($queue, $payload, $delay);
     }
@@ -270,7 +270,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return Config::getHandler($this->config['handler']);
     }
 
-    public function getAudience(): string
+    public function getAudience(): ?string
     {
         return Config::getAudience($this->config);
     }
