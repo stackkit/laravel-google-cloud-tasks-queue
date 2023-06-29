@@ -17,7 +17,7 @@ class OpenIdVerificatorFake
         (new AccessToken())->verify(
             $token,
             [
-                'audience' => hash_hmac('sha256', app('queue')->getHandler(), config('app.key')),
+                'audience' => Config::getAudience($config),
                 'throwException' => true,
                 'certsLocation' => __DIR__ . '/../tests/Support/self-signed-public-key-as-jwk.json',
             ]

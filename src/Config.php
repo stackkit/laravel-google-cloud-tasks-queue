@@ -82,4 +82,16 @@ class Config
             );
         }
     }
+
+    /**
+     * @param string $handler
+     */
+    public static function getAudience(array $config): string
+    {
+        $handler = self::getHandler($config['handler']);
+
+        return $config['signed_audience'] ?? false
+            ? hash_hmac('sha256', $handler, config('app.key'))
+            : $handler;
+    }
 }
