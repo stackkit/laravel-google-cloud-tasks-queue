@@ -86,7 +86,7 @@ class Config
     /**
      * @param string $handler
      */
-    public static function getAudience(array $config): string
+    public static function getAudience(array $config): ?string
     {
         return $config['signed_audience'] ?? false
             ? hash_hmac('sha256', self::getHandler($config['handler']), config('app.key'))
