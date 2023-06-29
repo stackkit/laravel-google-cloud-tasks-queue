@@ -132,13 +132,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     protected function pushToCloudTasks($queue, $payload, $delay = 0)
     {
-        $handleTargetUrl = $this->getHandler();
         $queue = $this->getQueue($queue);
         $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
         $availableAt = $this->availableAt($delay);
 
         $httpRequest = $this->createHttpRequest();
-        $httpRequest->setUrl($handleTargetUrl);
+        $httpRequest->setUrl($this->getHandler());
         $httpRequest->setHttpMethod(HttpMethod::POST);
 
         $payload = json_decode($payload, true);
