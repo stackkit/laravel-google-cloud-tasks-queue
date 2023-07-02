@@ -45,7 +45,7 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
       'handler' => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
       'queue' => env('STACKKIT_CLOUD_TASKS_QUEUE', 'default'),
       'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
-      'signed_audience' => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', false),
+      'signed_audience' => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', true),
       // Optional: The deadline in seconds for requests sent to the worker. If the worker
       // does not respond by this deadline then the request is cancelled and the attempt
       // is marked as a DEADLINE_EXCEEDED failure.
