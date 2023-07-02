@@ -45,6 +45,7 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
       'handler' => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
       'queue' => env('STACKKIT_CLOUD_TASKS_QUEUE', 'default'),
       'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
+      'signed_audience' => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', true),
       // Optional: The deadline in seconds for requests sent to the worker. If the worker
       // does not respond by this deadline then the request is cancelled and the attempt
       // is marked as a DEADLINE_EXCEEDED failure.
@@ -70,6 +71,7 @@ Please check the table below on what the values mean and what their value should
 | `STACKKIT_CLOUD_TASKS_QUEUE`         | The default queue a job will be added to                                                                                                                                                  |`emails`
 | `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL` | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                                        |`my-service-account@appspot.gserviceaccount.com`
 | `STACKKIT_CLOUD_TASKS_HANDLER` (optional) | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. |`https://<your website>.com`
+| `STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE` (optional) | True or false depending if you want extra security by signing the audience of your tasks. May misbehave in certain Cloud Run setups. Defaults to true.   | `true`
 </details>
 <details>
 <summary>

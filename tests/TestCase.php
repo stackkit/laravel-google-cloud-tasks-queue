@@ -103,6 +103,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'location' => 'europe-west6',
             'handler' => env('CLOUD_TASKS_HANDLER', 'https://docker.for.mac.localhost:8080'),
             'service_account_email' => 'info@stackkit.io',
+            'signed_audience' => true,
         ]);
         $app['config']->set('queue.failed.driver', 'database-uuids');
         $app['config']->set('queue.failed.database', 'testbench');

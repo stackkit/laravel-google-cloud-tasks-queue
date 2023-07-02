@@ -167,14 +167,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $token = new OidcToken;
         $token->setServiceAccountEmail($this->config['service_account_email']);
-        $token->setAudience(hash_hmac('sha256', $this->getHandler(), config('app.key')));
+        if ($audience = $this->getAudience()) {
+            $token->setAudience($audience);
+        }
         $httpRequest->setOidcToken($token);
 
         if ($availableAt > time()) {
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
         }
 
-        $createdTask = CloudTasksApi::createTask($queueName, $task);
+        CloudTasksApi::createTask($queueName, $task);
 
         event((new TaskCreated)->queue($queue)->task($task));
 
@@ -192,7 +194,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     private function taskName(string $queueName, array $payload): string
     {
-        $displayName = str_replace("\\", '-', $payload['displayName']);
+        $displayName = $this->sanitizeTaskName($payload['displayName']);
 
         return CloudTasksClient::taskName(
             $this->config['project'],
@@ -200,6 +202,17 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $queueName,
             $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimestamp(),
         );
+    }
+
+    private function sanitizeTaskName(string $taskName)
+    {
+        // Remove all characters that are not -, letters, numbers, or whitespace
+        $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
+
+        // Replace all separator characters and whitespace by a -
+        $sanitizedName = preg_replace('![-\s]+!u', '-', $sanitizedName);
+
+        return trim($sanitizedName, '-');
     }
 
     private function withAttempts(array $payload): array
@@ -267,5 +280,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public function getHandler(): string
     {
         return Config::getHandler($this->config['handler']);
+    }
+
+    public function getAudience(): ?string
+    {
+        return Config::getAudience($this->config);
     }
 }
