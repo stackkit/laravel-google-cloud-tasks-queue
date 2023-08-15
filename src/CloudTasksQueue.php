@@ -10,6 +10,7 @@ use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -194,13 +195,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     private function taskName(string $queueName, array $payload): string
     {
-        $displayName = $this->sanitizeTaskName($payload['displayName']);
+        $displayName = $this->sanitizeTaskName($payload['uniqueId']);
+        unset($payload['uniqueId']);
 
         return CloudTasksClient::taskName(
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimestamp(),
+            $displayName,
         );
     }
 
@@ -285,5 +287,18 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public function getAudience(): ?string
     {
         return Config::getAudience($this->config);
+    }
+
+    protected function createPayloadArray($job, $queue, $data = '')
+    {
+        $payloadArray = parent::createPayloadArray($job, $queue, $data);
+        $displayName = $payloadArray['displayName'];
+        if ($job instanceof ShouldBeUnique && method_exists($job, 'uniqueId')) {
+            $uniqueId = $displayName . '-' . $job->uniqueId();
+        } else {
+            $uniqueId = $displayName . '-' . $payloadArray['uuid'] . '-' . Carbon::now()->getTimestamp();
+        }
+        $payload["uniqueId"] = $uniqueId;
+        return $payload;
     }
 }
