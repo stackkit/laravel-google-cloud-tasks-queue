@@ -298,7 +298,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         } else {
             $uniqueId = $displayName . '-' . $payloadArray['uuid'] . '-' . Carbon::now()->getTimestamp();
         }
-        $payload["uniqueId"] = $uniqueId;
-        return $payload;
+        $payloadArray["uniqueId"] = $uniqueId;
+        return $payloadArray;
     }
 }
