@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 **Changed**
 
-- Updated PHPSeclib from 2.x to 3.x
+- Updated PHPSeclib from 2.x to 3.x. Ensure 3.6.1 can be downloaded by adding phpseclib in the update command: `composer update "stackkit/laravel-google-cloud-tasks-queue" "phpseclib/phpseclib"`
 
 ## 3.6.0 - 2023-07-02
 
