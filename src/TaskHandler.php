@@ -37,6 +37,10 @@ class TaskHandler
      * @var RetryConfig
      */
     private $retryConfig = null;
+    /**
+     * @var string
+     */
+    private $taskName;
 
     public function __construct(CloudTasksClient $client)
     {
@@ -83,10 +87,11 @@ class TaskHandler
 //        $nameHeader = config('queue.connections.cloudtasks.app_engine')
 //            ? 'X-AppEngine-TaskName'
 //            : 'X-CloudTasks-TaskName';
+        $taskName = request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName');
         $validator = validator([
             'json'        => $task,
             'task'        => $array,
-            'name_header' => request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
+            'name_header' => $taskName,
         ], [
             'json'        => 'required|json',
             'task'        => 'required|array',
@@ -96,6 +101,7 @@ class TaskHandler
 
         try {
             $validator->validate();
+            $this->taskName = $taskName;
         } catch (ValidationException $e) {
             if (config('app.debug')) {
                 throw $e;
@@ -131,12 +137,11 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
-        $taskName = request()->header('X-Cloudtasks-Taskname');
         $fullTaskName = $this->client->taskName(
             $this->config['project'],
             $this->config['location'],
             $job->getQueue() ?: $this->config['queue'],
-            $taskName,
+            $this->taskName,
         );
 
         try {
