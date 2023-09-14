@@ -2,6 +2,8 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
+use Google\Cloud\Tasks\V2\AppEngineRouting;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
@@ -136,10 +138,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
         $availableAt = $this->availableAt($delay);
 
-        $httpRequest = $this->createHttpRequest();
-        $httpRequest->setUrl($this->getHandler());
-        $httpRequest->setHttpMethod(HttpMethod::POST);
-
         $payload = json_decode($payload, true);
 
         // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
@@ -152,11 +150,38 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // value and need to manually set and update the number of times a task has been attempted.
         $payload = $this->withAttempts($payload);
 
-        $httpRequest->setBody(json_encode($payload));
-
         $task = $this->createTask();
         $task->setName($this->taskName($queue, $payload));
-        $task->setHttpRequest($httpRequest);
+
+        if ($this->config['app_engine']) {
+            $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
+
+            $appEngineRequest = new AppEngineHttpRequest();
+            $appEngineRequest->setRelativeUri($path);
+            $appEngineRequest->setHttpMethod(HttpMethod::POST);
+            $appEngineRequest->setBody(json_encode($payload));
+            if (!empty($service = $this->config['app_engine_service'])) {
+                $routing = new AppEngineRouting();
+                $routing->setService($service);
+                $appEngineRequest->setAppEngineRouting($routing);
+            }
+            $task->setAppEngineHttpRequest($appEngineRequest);
+        } else {
+            $httpRequest = $this->createHttpRequest();
+            $httpRequest->setUrl($this->getHandler());
+            $httpRequest->setHttpMethod(HttpMethod::POST);
+
+            $httpRequest->setBody(json_encode($payload));
+
+            $token = new OidcToken;
+            $token->setServiceAccountEmail($this->config['service_account_email']);
+            if ($audience = $this->getAudience()) {
+                $token->setAudience($audience);
+            }
+            $httpRequest->setOidcToken($token);
+            $task->setHttpRequest($httpRequest);
+        }
+
 
         // The deadline for requests sent to the app. If the app does not respond by
         // this deadline then the request is cancelled and the attempt is marked as
@@ -164,13 +189,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         if (!empty($this->config['dispatch_deadline'])) {
             $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
         }
-
-        $token = new OidcToken;
-        $token->setServiceAccountEmail($this->config['service_account_email']);
-        if ($audience = $this->getAudience()) {
-            $token->setAudience($audience);
-        }
-        $httpRequest->setOidcToken($token);
 
         if ($availableAt > time()) {
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));

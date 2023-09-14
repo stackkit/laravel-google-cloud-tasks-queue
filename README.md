@@ -85,7 +85,9 @@ Please check the table below on what the values mean and what their value should
 | `STACKKIT_CLOUD_TASKS_LOCATION`                   | The region where the project is hosted.                                                                                                                  |`europe-west6`
 | `STACKKIT_CLOUD_TASKS_QUEUE`                      | The default queue a job will be added to.                                                                                                                |`emails`
 | `STACKKIT_CLOUD_TASKS_CREDENTIAL_FILE` (optional) | A json credential file to authenticate the connection (from outside AppEngine)                                                                           |`project-123.json`
-| `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`              | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                |`my-service-account@appspot.gserviceaccount.com`
+| `STACKKIT_APP_ENGINE_TASK` (optional)             | Set to true to use App Engine task (else a Http task will be used). Defaults to false.                                                                   |`true`
+| `STACKKIT_APP_ENGINE_SERVICE` (optional)          | The App Engine service to handle the task (only if using App Engine task).                                                                               |`api`
+| `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`   (optional) | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                |`my-service-account@appspot.gserviceaccount.com`
 | `STACKKIT_CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. |`https://<your website>.com`
 | `STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE` (optional) | True or false depending if you want extra security by signing the audience of your tasks. May misbehave in certain Cloud Run setups. Defaults to true.   | `true`
 </details>
@@ -101,6 +103,7 @@ With Cloud Tasks, this is not the case. Instead, Cloud Tasks will schedule the j
 
 #### Good to know
 
+- If `STACKKIT_APP_ENGINE_TASK` is true, `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL` and `STACKKIT_CLOUD_TASKS_HANDLER` will be ignored.
 - The "Min backoff" and "Max backoff" options in Cloud Tasks are ignored. This is intentional: Laravel has its own backoff feature (which is more powerful than what Cloud Tasks offers) and therefore I have chosen that over the Cloud Tasks one.
 - Similarly to the backoff feature, I have also chosen to let the package do job retries the 'Laravel way'. In Cloud Tasks, when a task throws an exception, Cloud Tasks will decide for itself when to retry the task (based on the backoff values). It will also manage its own state and knows how many times a task has been retried. This is different from Laravel. In typical Laravel queues, when a job throws an exception, the job is deleted and released back onto the queue. In order to support Laravel's backoff feature, this package must behave the same way about job retries.
 
