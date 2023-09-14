@@ -7,7 +7,6 @@ use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Queue\WorkerOptions;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Safe\Exceptions\JsonException;
@@ -49,18 +48,11 @@ class TaskHandler
 
     public function handle(?string $task = null): void
     {
-        Log::debug(json_encode(request()->headers->all()));
-        Log::debug(json_encode(request()->bearerToken()));
-        Log::debug(json_encode(request()->getContent()));
-
         $task = $this->captureTask($task);
-        Log::debug(json_encode($task));
 
         $this->loadQueueConnectionConfiguration($task);
-        Log::debug(json_encode($this->config));
 
         $this->setQueue();
-        Log::debug(json_encode($this->queue));
 
         if (!$this->config['app_engine']) {
             OpenIdVerificator::verify(request()->bearerToken(), $this->config);
@@ -84,9 +76,6 @@ class TaskHandler
             $array = [];
         }
 
-//        $nameHeader = config('queue.connections.cloudtasks.app_engine')
-//            ? 'X-AppEngine-TaskName'
-//            : 'X-CloudTasks-TaskName';
         $taskName = request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName');
         $validator = validator([
             'json'        => $task,
