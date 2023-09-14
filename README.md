@@ -51,6 +51,21 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
       // is marked as a DEADLINE_EXCEEDED failure.
       'dispatch_deadline' => null,
       'backoff' => 0,
+
+            'queue'                 => env('STACKKIT_CLOUD_TASKS_QUEUE', 'default'),
+            'credential_file'       => env('STACKKIT_CLOUD_TASKS_CREDENTIAL_FILE', ''),
+            // Either you have an AppEngine task, and use these
+            'app_engine'            => env('STACKKIT_APP_ENGINE_TASK', false),
+            'app_engine_service'    => env('STACKKIT_APP_ENGINE_SERVICE', ''),
+            // Else you get a HttpTask, and use these
+            'handler'               => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
+            'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
+            'signed_audience'       => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', true),
+            // Optional: The deadline in seconds for requests sent to the worker. If the worker
+            // does not respond by this deadline then the request is cancelled and the attempt
+            // is marked as a DEADLINE_EXCEEDED failure.
+            'dispatch_deadline'     => null,
+            'backoff'               => 0,
   ],
   ```
 
@@ -64,13 +79,14 @@ Now that the package is installed, the final step is to set the correct environm
 
 Please check the table below on what the values mean and what their value should be.
 
-| Environment variable                 | Description                                                                                                                                                                               |Example
---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---
-| `STACKKIT_CLOUD_TASKS_PROJECT`       | The project your queue belongs to.                                                                                                                                                        |`my-project`
-| `STACKKIT_CLOUD_TASKS_LOCATION`      | The region where the project is hosted                                                                                                                                                    |`europe-west6`
-| `STACKKIT_CLOUD_TASKS_QUEUE`         | The default queue a job will be added to                                                                                                                                                  |`emails`
-| `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL` | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                                        |`my-service-account@appspot.gserviceaccount.com`
-| `STACKKIT_CLOUD_TASKS_HANDLER` (optional) | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. |`https://<your website>.com`
+| Environment variable                              | Description                                                                                                                                              |Example
+---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---
+| `STACKKIT_CLOUD_TASKS_PROJECT`                    | The project your queue belongs to.                                                                                                                       |`my-project`
+| `STACKKIT_CLOUD_TASKS_LOCATION`                   | The region where the project is hosted.                                                                                                                  |`europe-west6`
+| `STACKKIT_CLOUD_TASKS_QUEUE`                      | The default queue a job will be added to.                                                                                                                |`emails`
+| `STACKKIT_CLOUD_TASKS_CREDENTIAL_FILE` (optional) | A json credential file to authenticate the connection (from outside AppEngine)                                                                           |`project-123.json`
+| `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`              | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                |`my-service-account@appspot.gserviceaccount.com`
+| `STACKKIT_CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. |`https://<your website>.com`
 | `STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE` (optional) | True or false depending if you want extra security by signing the audience of your tasks. May misbehave in certain Cloud Run setups. Defaults to true.   | `true`
 </details>
 <details>
