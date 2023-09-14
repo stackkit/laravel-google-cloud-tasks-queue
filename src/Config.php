@@ -19,7 +19,7 @@ class Config
             throw new Error(Errors::invalidLocation());
         }
 
-        if (empty($config['service_account_email']) && empty($config['app-engine'])) {
+        if (empty($config['service_account_email']) && empty($config['app_engine'])) {
             throw new Error(Errors::serviceAccountOrAppEngine());
         }
     }
