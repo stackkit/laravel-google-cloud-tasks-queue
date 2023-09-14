@@ -5,16 +5,14 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Encryption\Encrypter;
-use Illuminate\Queue\Jobs\Job;
-use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Safe\Exceptions\JsonException;
 use UnexpectedValueException;
+use stdClass;
 
 use function Safe\json_decode;
 
@@ -69,6 +67,7 @@ class TaskHandler
      * @param string|array|null $task
      * @return array
      * @throws JsonException
+     * @throws ValidationException
      */
     private function captureTask($task): array
     {
@@ -80,10 +79,14 @@ class TaskHandler
             $array = [];
         }
 
+        $nameHeader = config('queue.connections.cloudtasks.app_engine')
+            ? 'X-AppEngine-TaskName'
+            : 'X-CloudTasks-TaskName';
+        Log::debug($nameHeader);
         $validator = validator([
             'json'        => $task,
             'task'        => $array,
-            'name_header' => request()->header('X-CloudTasks-Taskname'),
+            'name_header' => request()->header($nameHeader),
         ], [
             'json'        => 'required|json',
             'task'        => 'required|array',
@@ -91,15 +94,16 @@ class TaskHandler
             'name_header' => 'required|string',
         ]);
 
-        try {
-            $validator->validate();
-        } catch (ValidationException $e) {
-            if (config('app.debug')) {
-                throw $e;
-            } else {
-                abort(404);
-            }
-        }
+        $validator->validate();
+//        try {
+//            $validator->validate();
+//        } catch (ValidationException $e) {
+//            if (config('app.debug')) {
+//                throw $e;
+//            } else {
+//                abort(404);
+//            }
+//        }
 
         return json_decode($task, true);
     }
