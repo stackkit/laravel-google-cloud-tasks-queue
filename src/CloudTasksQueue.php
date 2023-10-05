@@ -97,7 +97,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     {
         $delay = ! empty($options['delay']) ? $options['delay'] : 0;
 
-        $this->pushToCloudTasks($queue, $payload, $delay);
+        return $this->pushToCloudTasks($queue, $payload, $delay);
     }
 
     /**
