@@ -13,9 +13,11 @@ jobs:
       matrix:
         db: ['mysql', 'pgsql']
         payload:
-          - { queue: 'github-actions-laravel9-php81', laravel: '10.*', php: '8.2', 'testbench': '8.*'}
-          - { queue: 'github-actions-laravel9-php81', laravel: '10.*', php: '8.1', 'testbench': '8.*'}
-          - { queue: 'github-actions-laravel9-php81', laravel: '9.*', php: '8.2', 'testbench': '7.*'}
+          - { queue: 'github-actions-laravel10-php83', laravel: '10.*', php: '8.3', 'testbench': '8.*'}
+          - { queue: 'github-actions-laravel10-php82', laravel: '10.*', php: '8.2', 'testbench': '8.*'}
+          - { queue: 'github-actions-laravel10-php81', laravel: '10.*', php: '8.1', 'testbench': '8.*'}
+          - { queue: 'github-actions-laravel9-php83', laravel: '9.*', php: '8.3', 'testbench': '7.*'}
+          - { queue: 'github-actions-laravel9-php82', laravel: '9.*', php: '8.2', 'testbench': '7.*'}
           - { queue: 'github-actions-laravel9-php81', laravel: '9.*', php: '8.1', 'testbench': '7.*'}
           - { queue: 'github-actions-laravel9-php80', laravel: '9.*', php: '8.0', 'testbench': '7.*'}
           - { queue: 'github-actions-laravel8-php81', laravel: '8.*', php: '8.1', 'testbench': '6.*'}
