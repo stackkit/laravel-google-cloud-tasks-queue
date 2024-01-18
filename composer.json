@@ -44,6 +44,6 @@
         "l10": [
             "composer require laravel/framework:10.* orchestra/testbench:8.* --no-interaction --no-update",
             "composer update --prefer-stable --prefer-dist --no-interaction"
-        ],
+        ]
     }
 }
