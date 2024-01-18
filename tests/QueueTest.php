@@ -10,6 +10,7 @@ use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
+use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -176,10 +177,6 @@ class QueueTest extends TestCase
      */
     public function it_can_dispatch_after_commit_inline()
     {
-        if (version_compare(app()->version(), '8.0.0', '<')) {
-            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
-        }
-
         // Arrange
         CloudTasksApi::fake();
         Event::fake();
@@ -202,10 +199,6 @@ class QueueTest extends TestCase
      */
     public function it_can_dispatch_after_commit_through_config()
     {
-        if (version_compare(app()->version(), '8.0.0', '<')) {
-            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
-        }
-
         // Arrange
         CloudTasksApi::fake();
         Event::fake();
@@ -233,7 +226,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
         Event::fake([
-            $this->getJobReleasedAfterExceptionEvent(),
+            JobReleasedAfterException::class,
             JobReleased::class,
         ]);
 
@@ -241,7 +234,7 @@ class QueueTest extends TestCase
         $this->dispatch(new JobThatWillBeReleased())->run();
 
         // Assert
-        Event::assertNotDispatched($this->getJobReleasedAfterExceptionEvent());
+        Event::assertNotDispatched(JobReleasedAfterException::class);
         CloudTasksApi::assertDeletedTaskCount(0); // it returned 200 OK so we dont delete it, but Google does
         $releasedJob = null;
         Event::assertDispatched(JobReleased::class, function (JobReleased $event) use (&$releasedJob) {
@@ -275,7 +268,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
         Event::fake([
-            $this->getJobReleasedAfterExceptionEvent(),
+            JobReleasedAfterException::class,
             JobReleased::class,
         ]);
         Carbon::setTestNow(now()->addDay());
@@ -302,7 +295,7 @@ class QueueTest extends TestCase
         // Arrange
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
 
         // Act
         $this->dispatch(new FailingJob())->run();
@@ -321,7 +314,7 @@ class QueueTest extends TestCase
         $this->setConfigValue('backoff', 123);
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
 
         // Act
         $this->dispatch(new FailingJob())->run();
@@ -340,12 +333,11 @@ class QueueTest extends TestCase
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
 
         // Act
         $failingJob = new FailingJob();
-        $prop = version_compare(app()->version(), '8.0.0', '<') ? 'delay' : 'backoff';
-        $failingJob->$prop = 123;
+        $failingJob->backoff = 123;
         $this->dispatch($failingJob)->run();
 
         // Assert
@@ -358,10 +350,6 @@ class QueueTest extends TestCase
     /** @test */
     public function test_exponential_backoff_from_job_method()
     {
-        if (version_compare(app()->version(), '8.0.0', '<')) {
-            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
-        }
-
         // Arrange
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();

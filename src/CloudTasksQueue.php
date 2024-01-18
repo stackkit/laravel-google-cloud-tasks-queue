@@ -46,25 +46,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     }
 
     /**
-     * Fallback method for Laravel 6x and 7x
-     *
-     * @param  \Closure|string|object  $job
-     * @param  string  $payload
-     * @param  string  $queue
-     * @param  \DateTimeInterface|\DateInterval|int|null  $delay
-     * @param  callable  $callback
-     * @return mixed
-     */
-    protected function enqueueUsing($job, $payload, $queue, $delay, $callback)
-    {
-        if (method_exists(parent::class, 'enqueueUsing')) {
-            return parent::enqueueUsing($job, $payload, $queue, $delay, $callback);
-        }
-
-        return $callback($payload, $queue, $delay);
-    }
-
-    /**
      * Push a new job onto the queue.
      *
      * @param string|object  $job
@@ -142,11 +123,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = json_decode($payload, true);
 
-        // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
-        // Since we are using and expecting the uuid in some places
-        // we will add it manually here if it's not present yet.
-        $payload = $this->withUuid($payload);
-
         // Since 3.x tasks are released back onto the queue after an exception has
         // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
         // value and need to manually set and update the number of times a task has been attempted.
@@ -181,15 +157,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         event((new TaskCreated)->queue($queue)->task($task));
 
         return $payload['uuid'];
-    }
-
-    private function withUuid(array $payload): array
-    {
-        if (!isset($payload['uuid'])) {
-            $payload['uuid'] = (string) Str::uuid();
-        }
-
-        return $payload;
     }
 
     private function taskName(string $queueName, array $payload): string

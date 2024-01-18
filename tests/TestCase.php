@@ -11,7 +11,6 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleasedAfterException as PackageJobReleasedAfterException;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
@@ -35,7 +34,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
 
         Event::listen(
-            $this->getJobReleasedAfterExceptionEvent(),
+            JobReleasedAfterException::class,
             function ($event) {
                 $this->releasedJobPayload = $event->job->getRawBody();
             }
@@ -239,13 +238,4 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->assertEquals($count, DB::connection($connection)->table($table)->count());
     }
 
-    public function getJobReleasedAfterExceptionEvent(): string
-    {
-        // The JobReleasedAfterException event is not available in Laravel versions
-        // below 9.x so instead for those versions we throw our own event which
-        // is identical to the Laravel one.
-        return version_compare(app()->version(), '9.0.0', '<')
-            ? PackageJobReleasedAfterException::class
-            : JobReleasedAfterException::class;
-    }
 }

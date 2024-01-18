@@ -8,6 +8,7 @@ use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Duration;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -356,9 +357,6 @@ class TaskHandlerTest extends TestCase
      */
     public function test_max_attempts_in_combination_with_retry_until()
     {
-        // Laravel 5, 6, 7: check both max_attempts and retry_until before failing a job.
-        // Laravel 8+: if retry_until, only check that
-
         // Arrange
         OpenIdVerificator::fake();
         CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
@@ -382,15 +380,7 @@ class TaskHandlerTest extends TestCase
         $releasedJob->run();
 
         # Max attempts was reached
-        # Laravel 5, 6, 7: fail because max attempts was reached
-        # Laravel 8+: don't fail because retryUntil has not yet passed.
-
-        if (version_compare(app()->version(), '8.0.0', '<')) {
-            $this->assertEquals('failed', $task->fresh()->status);
-            return;
-        } else {
-            $this->assertEquals('error', $task->fresh()->status);
-        }
+        $this->assertEquals('error', $task->fresh()->status);
 
         CloudTasksApi::shouldReceive('getRetryUntilTimestamp')->andReturn(time() - 1);
         $releasedJob->run();
@@ -403,10 +393,6 @@ class TaskHandlerTest extends TestCase
      */
     public function it_can_handle_encrypted_jobs()
     {
-        if (version_compare(app()->version(), '8.0.0', '<')) {
-            $this->markTestSkipped('Not supported by Laravel 7.x and below.');
-        }
-
         // Arrange
         OpenIdVerificator::fake();
         Log::swap(new LogFake());
@@ -434,7 +420,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
             (new RetryConfig())->setMaxAttempts(3)
         );
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
 
         // Act
         $job = $this->dispatch(new FailingJob());
@@ -448,7 +434,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::assertDeletedTaskCount(1);
         CloudTasksApi::assertCreatedTaskCount(2);
         CloudTasksApi::assertTaskDeleted($job->task->getName());
-        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
             return $event->job->attempts() === 1;
         });
     }
@@ -460,21 +446,21 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
 
         // Act & Assert
         $job = $this->dispatch(new FailingJob());
         $job->run();
         $releasedJob = null;
 
-        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) use (&$releasedJob) {
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) use (&$releasedJob) {
             $releasedJob = $event->job->getRawBody();
             return $event->job->attempts() === 1;
         });
 
         $this->runFromPayload($releasedJob);
 
-        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
             return $event->job->attempts() === 2;
         });
     }
@@ -486,14 +472,14 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
 
         // Act & Assert
         $job = $this->dispatch(new FailingJob());
         request()->headers->set('X-CloudTasks-TaskRetryCount', 6);
         $job->run();
 
-        Event::assertDispatched($this->getJobReleasedAfterExceptionEvent(), function ($event) {
+        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
             return $event->job->attempts() === 7;
         });
     }
@@ -505,7 +491,7 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        Event::fake($this->getJobReleasedAfterExceptionEvent());
+        Event::fake(JobReleasedAfterException::class);
         CloudTasksApi::fake();
 
         // Act & Assert
