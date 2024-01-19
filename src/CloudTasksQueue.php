@@ -154,7 +154,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $task = $this->createTask();
         $task->setName($this->taskName($queue, $payload));
 
-        if ($this->config['app_engine']) {
+        if (!empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
 
             $appEngineRequest = new AppEngineHttpRequest();

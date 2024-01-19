@@ -32,9 +32,8 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->app->singleton(CloudTasksClient::class, function ($app) {
             $config = config('queue.connections.cloudtasks');
             $options = [];
-            $x = $config['credential_file'];
-            if (!empty($x)) {
-                $options['credentials'] = $x;
+            if (!empty($config['credential_file'])) {
+                $options['credentials'] = $config['credential_file'];
             }
             return new CloudTasksClient($options);
         });

@@ -36,10 +36,6 @@ class TaskHandler
      * @var RetryConfig
      */
     private $retryConfig = null;
-    /**
-     * @var string
-     */
-    private $taskName;
 
     public function __construct(CloudTasksClient $client)
     {
@@ -54,7 +50,7 @@ class TaskHandler
 
         $this->setQueue();
 
-        if (!$this->config['app_engine']) {
+        if (!empty($this->config['app_engine'])) {
             OpenIdVerificator::verify(request()->bearerToken(), $this->config);
         }
 
@@ -76,11 +72,10 @@ class TaskHandler
             $array = [];
         }
 
-        $taskName = request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName');
         $validator = validator([
             'json'        => $task,
             'task'        => $array,
-            'name_header' => $taskName,
+            'name_header' => request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
         ], [
             'json'        => 'required|json',
             'task'        => 'required|array',
@@ -90,7 +85,6 @@ class TaskHandler
 
         try {
             $validator->validate();
-            $this->taskName = $taskName;
         } catch (ValidationException $e) {
             if (config('app.debug')) {
                 throw $e;
@@ -130,7 +124,7 @@ class TaskHandler
             $this->config['project'],
             $this->config['location'],
             $job->getQueue() ?: $this->config['queue'],
-            $this->taskName,
+            request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
         );
 
         try {
@@ -146,7 +140,7 @@ class TaskHandler
         // If the task has a [X-CloudTasks-TaskRetryCount] header higher than 0, then
         // we know the job was created using an earlier version of the package. This
         // job does not have the attempts tracked internally yet.
-        $taskRetryCountHeader = request()->header('X-CloudTasks-TaskRetryCount');
+        $taskRetryCountHeader = request()->header('X-CloudTasks-TaskRetryCount') ?? request()->header('X-AppEngine-TaskRetryCount');
         if ($taskRetryCountHeader && (int)$taskRetryCountHeader > 0) {
             $job->setAttempts((int)$taskRetryCountHeader);
         } else {
