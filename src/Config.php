@@ -66,7 +66,7 @@ class Config
             $trimmedHandlerUrl = rtrim($handler, '/');
 
             if (!str_ends_with($trimmedHandlerUrl, '/handle-task')) {
-                return $trimmedHandlerUrl . '/handle-task';
+                return "$trimmedHandlerUrl/handle-task";
             }
 
             return $trimmedHandlerUrl;

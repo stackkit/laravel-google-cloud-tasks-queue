@@ -4,7 +4,7 @@ namespace Tests;
 
 use Stackkit\LaravelGoogleCloudTasksQueue\Config;
 
-class ConfigHandlerTest extends TestCase
+class ConfigHandlerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider handlerDataProvider
