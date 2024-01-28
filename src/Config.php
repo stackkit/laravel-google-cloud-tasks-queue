@@ -63,18 +63,13 @@ class Config
                 ));
             }
 
-            // Versions 1.x and 2.x required the full path (e.g. my-app.com/handle-task). In 3.x and beyond
-            // it is no longer necessary to also include the path and simply setting the handler
-            // URL is enough. If someone upgrades and forgets we will warn them here.
-            if (!empty($parse['path'])) {
-                throw new Exception(
-                    'Unable to push task to Cloud Tasks because the task handler URL (' . $handler . ') is not ' .
-                    'compatible. To fix this, please remove \'' . $parse['path'] . '\' from the URL, ' .
-                    'or copy from here: STACKKIT_CLOUD_TASKS_HANDLER=' . $parse['scheme'] . '://' . $parse['host']
-                );
+            $trimmedHandlerUrl = rtrim($handler, '/');
+
+            if (!str_ends_with($trimmedHandlerUrl, '/handle-task')) {
+                return "$trimmedHandlerUrl/handle-task";
             }
 
-            return $handler . '/handle-task';
+            return $trimmedHandlerUrl;
         } catch (UrlException $e) {
             throw new Exception(
                 'Unable to push task to Cloud Tasks because the task handler URL (' . $handler . ') is ' .
