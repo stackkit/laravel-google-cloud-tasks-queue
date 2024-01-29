@@ -47,7 +47,7 @@ class TaskHandler
     public function handle(?string $task = null): void
     {
         // test
-        $task = $this->captureTask($task);
+        $task = $this->captureTask2($task);
 
         $this->loadQueueConnectionConfiguration($task);
 
