@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check user permissions
-        if: ! contains(github.event.pull_request.labels.*.name, 'safe-to-test')
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'safe-to-test') }}
         run: |
           echo "Action was not authorized. Exiting now."
           exit 1
