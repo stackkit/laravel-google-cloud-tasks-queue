@@ -7,10 +7,11 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
-  remove_label:
+  access_check:
     runs-on: ubuntu-latest
+    name: Access check
     steps:
-      - name: Remove safe-to-test label
+      - name: Ensure pull-request is safe to run
         uses: actions/github-script@v5
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
@@ -18,30 +19,28 @@ jobs:
             const issue_number = context.issue.number;
             const repository = context.repo.repo;
             const owner = context.repo.owner;
+            
             const response = await github.rest.issues.listLabelsOnIssue({
               owner,
               repo: repository,
               issue_number
             });
             const labels = response.data.map(label => label.name);
-            if (labels.includes('safe-to-test')) {
-              await github.rest.issues.removeLabel({
-                owner,
-                repo: repository,
-                issue_number,
-                name: 'safe-to-test'
-              });
+            let hasLabel = labels.includes('safe-to-test')
+            
+            if (context.eventName === 'synchronize' && hasLabel) {
+                hasLabel = false
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo: repository,
+                  issue_number,
+                  name: 'safe-to-test'
+                });
             }
-
-  access_check:
-    runs-on: ubuntu-latest
-    needs: remove_label
-    steps:
-      - name: Check user permissions
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'safe-to-test') }}
-        run: |
-          echo "Action was not authorized. Exiting now."
-          exit 1
+            
+            if (!hasLabel) {
+              throw "Action was not authorized. Exiting now."
+            }
 
   php-tests:
     runs-on: ubuntu-latest
