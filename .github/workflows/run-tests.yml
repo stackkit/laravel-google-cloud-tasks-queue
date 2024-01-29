@@ -28,7 +28,6 @@ jobs:
             const labels = response.data.map(label => label.name);
             let hasLabel = labels.includes('safe-to-test')
             
-            console.log(context.payload)
             if (context.payload.action === 'synchronize' && hasLabel) {
                 hasLabel = false
                 await github.rest.issues.removeLabel({
