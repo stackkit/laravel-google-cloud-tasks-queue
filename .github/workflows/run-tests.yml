@@ -2,7 +2,7 @@ name: Run tests
 
 on:
   pull_request_target:
-    types: [opened, synchronize, labeled, unlabeled]
+    types: [opened, synchronize, labeled]
   schedule:
     - cron: '0 0 * * *'
 
@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check user permissions
-        if: ${{ startsWith(github.event_name, 'pull_request') && github.event.pull_request.author_association != 'MEMBER' }}
+        if: contains(github.event.pull_request.labels.*.name, 'safe-to-test')
         run: |
-          echo "Action was not triggered by an organization member. Exiting now."
+          echo "Action was not authorized. Exiting now."
           exit 1
 
   php-tests:
