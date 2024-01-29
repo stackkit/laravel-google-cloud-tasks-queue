@@ -1,0 +1,24 @@
+name: Remove Safe-to-Test Label on PR Update
+
+on:
+  pull_request_target:
+    types: [synchronize]
+
+jobs:
+  remove-label:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Remove safe-to-test label
+      uses: actions/github-script@v5
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const issue_number = context.issue.number;
+          const repository = context.repo.repo;
+          const owner = context.repo.owner;
+          await github.rest.issues.removeLabel({
+            owner,
+            repo: repository,
+            issue_number,
+            name: 'safe-to-test'
+          });
