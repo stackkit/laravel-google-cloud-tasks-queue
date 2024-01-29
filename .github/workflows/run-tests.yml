@@ -12,7 +12,7 @@ jobs:
     name: Access check
     steps:
       - name: Ensure pull-request is safe to run
-        uses: actions/github-script@v5
+        uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -28,7 +28,8 @@ jobs:
             const labels = response.data.map(label => label.name);
             let hasLabel = labels.includes('safe-to-test')
             
-            if (context.eventName === 'synchronize' && hasLabel) {
+            console.log(context.payload)
+            if (context.payload.action === 'synchronize' && hasLabel) {
                 hasLabel = false
                 await github.rest.issues.removeLabel({
                   owner,
