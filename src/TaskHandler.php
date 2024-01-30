@@ -50,7 +50,7 @@ class TaskHandler
 
         $this->setQueue();
 
-        if (!empty($this->config['app_engine'])) {
+        if (empty($this->config['app_engine'])) {
             OpenIdVerificator::verify(request()->bearerToken(), $this->config);
         }
 
