@@ -29,13 +29,8 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerClient(): void
     {
-        $this->app->singleton(CloudTasksClient::class, function ($app) {
-            $config = config('queue.connections.cloudtasks');
-            $options = [];
-            if (!empty($config['credential_file'])) {
-                $options['credentials'] = $config['credential_file'];
-            }
-            return new CloudTasksClient($options);
+        $this->app->singleton(CloudTasksClient::class, function () {
+            return new CloudTasksClient();
         });
 
         $this->app->bind('open-id-verificator', OpenIdVerificatorConcrete::class);

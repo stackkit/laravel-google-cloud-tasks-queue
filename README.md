@@ -47,9 +47,6 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
       'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
       'signed_audience' => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', true),
       
-      // Optional
-      'credential_file' => env('STACKKIT_CLOUD_TASKS_CREDENTIAL_FILE', ''),
-      
       // Required when using AppEngine
       'app_engine'            => env('STACKKIT_APP_ENGINE_TASK', false),
       'app_engine_service'    => env('STACKKIT_APP_ENGINE_SERVICE', ''),
@@ -82,7 +79,6 @@ Please check the table below on what the values mean and what their value should
 | `STACKKIT_CLOUD_TASKS_PROJECT`                    | The project your queue belongs to.                                                                                                                       |`my-project`
 | `STACKKIT_CLOUD_TASKS_LOCATION`                   | The region where the project is hosted.                                                                                                                  |`europe-west6`
 | `STACKKIT_CLOUD_TASKS_QUEUE`                      | The default queue a job will be added to.                                                                                                                |`emails`
-| `STACKKIT_CLOUD_TASKS_CREDENTIAL_FILE` (optional) | A json credential file to authenticate the connection (from outside AppEngine)                                                                           |`project-123.json`
 | **App Engine**
 | `STACKKIT_APP_ENGINE_TASK` (optional)             | Set to true to use App Engine task (else a Http task will be used). Defaults to false.                                                                   |`true`
 | `STACKKIT_APP_ENGINE_SERVICE` (optional)          | The App Engine service to handle the task (only if using App Engine task).                                                                               |`api`
@@ -150,7 +146,7 @@ The dashboard is accessible at the URI: /cloud-tasks
   <summary>Authentication</summary>
   <br>
 
-Set the `STACKKIT_CLOUD_TASKS_CREDENTIAL_FILE` environment variable with a path to the credentials file.
+Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the credentials file.
 
 More info: https://cloud.google.com/docs/authentication/production
 
