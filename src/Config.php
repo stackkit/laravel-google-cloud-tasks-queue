@@ -9,21 +9,6 @@ use Safe\Exceptions\UrlException;
 
 class Config
 {
-    public static function validate(array $config): void
-    {
-        if (empty($config['project'])) {
-            throw new Error(Errors::invalidProject());
-        }
-
-        if (empty($config['location'])) {
-            throw new Error(Errors::invalidLocation());
-        }
-
-        if (empty($config['service_account_email']) && empty($config['app_engine'])) {
-            throw new Error(Errors::serviceAccountOrAppEngine());
-        }
-    }
-
     /**
      * @param Closure|string $handler
      */
