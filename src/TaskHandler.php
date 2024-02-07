@@ -13,7 +13,6 @@ use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Safe\Exceptions\JsonException;
-use stdClass;
 use UnexpectedValueException;
 use function Safe\json_decode;
 
@@ -98,11 +97,8 @@ class TaskHandler
 
     private function loadQueueConnectionConfiguration(array $task): void
     {
-        /**
-         * @var stdClass $command
-         */
         $command = self::getCommandProperties($task['data']['command']);
-        $connection = $command->connection ?? config('queue.default');
+        $connection = $command['connection'] ?? config('queue.default');
         $baseConfig = config('queue.connections.' . $connection);
         $config = (new CloudTasksConnector())->connect($baseConfig)->config;
 
