@@ -225,6 +225,26 @@ class TaskHandlerTest extends TestCase
     /**
      * @test
      */
+    public function it_can_run_a_task_using_the_task_connection()
+    {
+        // Arrange
+        OpenIdVerificator::fake();
+        Log::swap(new LogFake());
+        Event::fake([JobProcessing::class, JobProcessed::class]);
+        $this->app['config']->set('queue.default', 'non-existing-connection');
+
+        // Act
+        $job = new SimpleJob();
+        $job->connection = 'my-cloudtasks-connection';
+        $this->dispatch($job)->runWithoutExceptionHandler();
+
+        // Assert
+        Log::assertLogged('SimpleJob:success');
+    }
+
+    /**
+     * @test
+     */
     public function after_max_attempts_it_will_log_to_failed_table()
     {
         // Arrange
