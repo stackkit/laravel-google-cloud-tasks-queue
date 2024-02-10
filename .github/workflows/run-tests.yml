@@ -16,6 +16,10 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
+            if (context.eventName === 'schedule') {
+              return
+            }
+            
             const issue_number = context.issue.number;
             const repository = context.repo.repo;
             const owner = context.repo.owner;
