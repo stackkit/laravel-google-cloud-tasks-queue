@@ -16,6 +16,17 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
+            // If the user that pushed the commit is a maintainer, skip the check
+            const response = await github.rest.repos.listCollaborators({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            if (response.data.some(c => c.login === context.actor)) {
+              console.log(`User ${context.actor} is allowed to run tests because they are a collaborator.`);
+              return
+            }
+            
             if (context.eventName === 'schedule') {
               return
             }
