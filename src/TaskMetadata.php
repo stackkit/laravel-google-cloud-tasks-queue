@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use function Safe\json_encode;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use const STR_PAD_LEFT;
@@ -160,7 +162,7 @@ class CloudTasksApiController
         return $tasks->map(function (StackkitCloudTask $task) use ($maxId) {
             return [
                 'uuid' => $task->task_uuid,
-                'id' => str_pad((string) $task->id, strlen($maxId), '0', STR_PAD_LEFT),
+                'id' => str_pad((string) $task->id, strlen((string) $maxId), '0', STR_PAD_LEFT),
                 'name' => $task->name,
                 'status' => $task->status,
                 'attempts' => $task->getNumberOfAttempts(),

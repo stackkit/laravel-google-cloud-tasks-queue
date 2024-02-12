@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests;
 
 use Illuminate\Routing\Route;
@@ -324,7 +326,7 @@ class CloudTasksDashboardTest extends TestCase
         // Arrange
         $this->withTaskType($test['task_type']);
 
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -355,7 +357,7 @@ class CloudTasksDashboardTest extends TestCase
         // Arrange
         $this->withTaskType($test['task_type']);
 
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -386,7 +388,7 @@ class CloudTasksDashboardTest extends TestCase
         // Arrange
         $this->withTaskType($test['task_type']);
 
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -418,7 +420,7 @@ class CloudTasksDashboardTest extends TestCase
         // Arrange
         $this->withTaskType($test['task_type']);
 
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -452,7 +454,7 @@ class CloudTasksDashboardTest extends TestCase
         // Arrange
         $this->withTaskType($test['task_type']);
 
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -485,7 +487,7 @@ class CloudTasksDashboardTest extends TestCase
         // Arrange
         $this->withTaskType($test['task_type']);
 
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
