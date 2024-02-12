@@ -96,8 +96,7 @@ With Cloud Tasks, this is not the case. Instead, Cloud Tasks will schedule the j
 
 #### Good to know
 
-- The "Min backoff" and "Max backoff" options in Cloud Tasks are ignored. This is intentional: Laravel has its own backoff feature (which is more powerful than what Cloud Tasks offers) and therefore I have chosen that over the Cloud Tasks one.
-- Similarly to the backoff feature, I have also chosen to let the package do job retries the 'Laravel way'. In Cloud Tasks, when a task throws an exception, Cloud Tasks will decide for itself when to retry the task (based on the backoff values). It will also manage its own state and knows how many times a task has been retried. This is different from Laravel. In typical Laravel queues, when a job throws an exception, the job is deleted and released back onto the queue. In order to support Laravel's backoff feature, this package must behave the same way about job retries.
+- Backoff, retries, max tries, retryUntil are all handled by Laravel. All these options are ignored in the Cloud Tasks configuration.
 
 </details>
 <details>
