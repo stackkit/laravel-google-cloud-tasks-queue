@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\CloudTasksClient;

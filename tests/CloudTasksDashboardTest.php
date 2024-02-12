@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests;
 
 use Illuminate\Routing\Route;
@@ -309,7 +311,7 @@ class CloudTasksDashboardTest extends TestCase
     public function when_a_job_is_running_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -335,7 +337,7 @@ class CloudTasksDashboardTest extends TestCase
     public function when_a_job_is_successful_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -361,7 +363,7 @@ class CloudTasksDashboardTest extends TestCase
     public function when_a_job_errors_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -388,7 +390,7 @@ class CloudTasksDashboardTest extends TestCase
     public function when_a_job_fails_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -417,7 +419,7 @@ class CloudTasksDashboardTest extends TestCase
     public function when_a_job_is_released_it_will_be_updated_in_the_dashboard()
     {
         // Arrange
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
@@ -445,7 +447,7 @@ class CloudTasksDashboardTest extends TestCase
     public function job_release_delay_is_added_to_the_metadata()
     {
         // Arrange
-        \Illuminate\Support\Carbon::setTestNow(now());
+        Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
 
