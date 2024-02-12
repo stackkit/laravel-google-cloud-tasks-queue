@@ -19,7 +19,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
     use DatabaseTransactions;
 
     /**
-     * @var \Mockery\Mock|CloudTasksClient $client
+     * @var CloudTasksClient $client
      */
     public $client;
 

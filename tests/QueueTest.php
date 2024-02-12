@@ -381,15 +381,14 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(1)
-        );
-
         OpenIdVerificator::fake();
         Log::swap(new LogFake());
 
         // Act
-        $this->dispatch(new FailingJob())->run();
+        $this->dispatch(new FailingJob())
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob();
 
         // Assert
         Log::assertLogged('FailingJob:failed');

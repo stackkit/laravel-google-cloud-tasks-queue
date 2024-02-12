@@ -17,9 +17,6 @@ class CloudTasksJob extends LaravelJob implements JobContract
      */
     public array $job;
 
-    private ?int $maxTries;
-    public ?int $retryUntil = null;
-
     /**
      * @var CloudTasksQueue
      */
@@ -65,39 +62,9 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->job['internal']['attempts'] = $attempts;
     }
 
-    public function setMaxTries(int $maxTries): void
-    {
-        if ($maxTries === -1) {
-            $maxTries = 0;
-        }
-
-        $this->maxTries = $maxTries;
-    }
-
-    public function maxTries(): ?int
-    {
-        return $this->maxTries;
-    }
-
     public function setQueue(string $queue): void
     {
         $this->queue = $queue;
-    }
-
-    public function setRetryUntil(?int $retryUntil): void
-    {
-        $this->retryUntil = $retryUntil;
-    }
-
-    public function retryUntil(): ?int
-    {
-        return $this->retryUntil;
-    }
-
-    // timeoutAt was renamed to retryUntil in 8.x but we still support this.
-    public function timeoutAt(): ?int
-    {
-        return $this->retryUntil;
     }
 
     public function delete(): void

@@ -12,6 +12,8 @@ class FailingJobWithExponentialBackoff implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 5;
+
     public function handle()
     {
         throw new \Error('simulating a failing job');

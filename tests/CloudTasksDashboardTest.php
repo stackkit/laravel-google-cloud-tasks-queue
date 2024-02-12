@@ -10,6 +10,7 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Tests\Support\FailingJob;
+use Tests\Support\FailingJobWithMaxTries;
 use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 
@@ -421,11 +422,8 @@ class CloudTasksDashboardTest extends TestCase
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(3)
-        );
 
-        $job = $this->dispatch(new FailingJob());
+        $job = $this->dispatch(new FailingJobWithMaxTries());
         $releasedJob = $job->runAndGetReleasedJob();
         $releasedJob = $releasedJob->runAndGetReleasedJob();
         $releasedJob->run();
@@ -458,9 +456,6 @@ class CloudTasksDashboardTest extends TestCase
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(3)
-        );
 
         $this->dispatch(new JobThatWillBeReleased())->run();
 
@@ -494,9 +489,6 @@ class CloudTasksDashboardTest extends TestCase
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(3)
-        );
 
         $this->dispatch(new JobThatWillBeReleased(15))->run();
 
