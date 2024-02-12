@@ -2,13 +2,14 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use const STR_PAD_LEFT;
+
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Stackkit\LaravelGoogleCloudTasksQueue\Entities\StatRow;
-use const STR_PAD_LEFT;
 
 class CloudTasksApiController
 {
@@ -16,13 +17,13 @@ class CloudTasksApiController
     {
         $password = config('cloud-tasks.dashboard.password');
 
-        if (!is_string($password)) {
+        if (! is_string($password)) {
             return null;
         }
 
         $validPassword = hash_equals($password, request('password'));
 
-        if (!$validPassword) {
+        if (! $validPassword) {
             return null;
         }
 
@@ -31,9 +32,9 @@ class CloudTasksApiController
 
     public function dashboard(): array
     {
-        $dbDriver = config('database.connections.' . config('database.default') . '.driver');
+        $dbDriver = config('database.connections.'.config('database.default').'.driver');
 
-        if (!in_array($dbDriver, ['mysql', 'pgsql'])) {
+        if (! in_array($dbDriver, ['mysql', 'pgsql'])) {
             throw new Exception('Unsupported database driver for Cloud Tasks dashboard.');
         }
 
@@ -59,12 +60,12 @@ class CloudTasksApiController
                     DB::raw('CASE WHEN status = \'failed\' THEN 1 ELSE 0 END AS failed'),
                     DB::raw('
                         CASE
-                            WHEN ' . $groupBy['this_minute'] . ' = \'' . now()->utc()->format('H:i') . '\' THEN \'this_minute\'
-                            WHEN ' . $groupBy['this_hour'] . ' = \'' . now()->utc()->format('H') . '\' THEN \'this_hour\'
+                            WHEN '.$groupBy['this_minute'].' = \''.now()->utc()->format('H:i').'\' THEN \'this_minute\'
+                            WHEN '.$groupBy['this_hour'].' = \''.now()->utc()->format('H').'\' THEN \'this_hour\'
                             
                             ELSE \'today\'
                         END AS time_preset                            
-                    ')
+                    '),
                 ]
             )
             ->groupBy(
@@ -74,7 +75,7 @@ class CloudTasksApiController
                 ]
             )
             ->get()
-            ->map(fn($row) => StatRow::createFromObject($row))
+            ->map(fn ($row) => StatRow::createFromObject($row))
             ->toArray();
 
         $response = [
@@ -156,8 +157,7 @@ class CloudTasksApiController
 
         $maxId = $tasks->max('id');
 
-        return $tasks->map(function (StackkitCloudTask $task) use ($maxId)
-        {
+        return $tasks->map(function (StackkitCloudTask $task) use ($maxId) {
             return [
                 'uuid' => $task->task_uuid,
                 'id' => str_pad((string) $task->id, strlen($maxId), '0', STR_PAD_LEFT),

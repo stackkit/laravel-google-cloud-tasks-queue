@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Closure;
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Duration;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use PHPUnit\Framework\Assert;
 
 class CloudTasksApiFake implements CloudTasksApiContract
 {
     public array $createdTasks = [];
+
     public array $deletedTasks = [];
 
     public function createTask(string $queueName, Task $task): Task
@@ -39,7 +36,7 @@ class CloudTasksApiFake implements CloudTasksApiContract
     {
         Assert::assertTrue(
             in_array($taskName, $this->deletedTasks),
-            'The task [' . $taskName . '] should have been deleted but it is not.'
+            'The task ['.$taskName.'] should have been deleted but it is not.'
         );
     }
 
@@ -47,7 +44,7 @@ class CloudTasksApiFake implements CloudTasksApiContract
     {
         Assert::assertTrue(
             ! in_array($taskName, $this->deletedTasks),
-            'The task [' . $taskName . '] should not have been deleted but it was.'
+            'The task ['.$taskName.'] should not have been deleted but it was.'
         );
     }
 

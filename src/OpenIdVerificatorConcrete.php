@@ -11,7 +11,7 @@ class OpenIdVerificatorConcrete extends Facade
 {
     public function verify(?string $token, array $config): void
     {
-        if (!$token) {
+        if (! $token) {
             throw new CloudTasksException('Missing [Authorization] header');
         }
 

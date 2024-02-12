@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Support\Facades\Facade;
 

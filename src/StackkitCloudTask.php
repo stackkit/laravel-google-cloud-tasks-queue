@@ -2,13 +2,15 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use const JSON_PRETTY_PRINT;
+
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
-use const JSON_PRETTY_PRINT;
-use function Safe\json_encode;
+
 use function Safe\json_decode;
+use function Safe\json_encode;
 
 /**
  * @property int $id
@@ -31,7 +33,7 @@ class StackkitCloudTask extends Model
     }
 
     /**
-     * @param Builder<StackkitCloudTask> $builder
+     * @param  Builder<StackkitCloudTask>  $builder
      * @return Builder<StackkitCloudTask>
      */
     public function scopeNewestFirst(Builder $builder): Builder
@@ -40,7 +42,7 @@ class StackkitCloudTask extends Model
     }
 
     /**
-     * @param Builder<StackkitCloudTask> $builder
+     * @param  Builder<StackkitCloudTask>  $builder
      * @return Builder<StackkitCloudTask>
      */
     public function scopeFailed(Builder $builder): Builder
@@ -69,7 +71,7 @@ class StackkitCloudTask extends Model
     }
 
     /**
-     * @param mixed $value
+     * @param  mixed  $value
      */
     public function setMetadata(string $key, $value): void
     {
@@ -101,6 +103,7 @@ class StackkitCloudTask extends Model
         return collect($events)->map(function ($event) {
             /** @var array $event */
             $event['diff'] = Carbon::parse($event['datetime'])->diffForHumans();
+
             return $event;
         })->toArray();
     }

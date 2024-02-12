@@ -10,6 +10,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
+
 use function Safe\file_get_contents;
 use function Safe\json_decode;
 
@@ -52,10 +53,10 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     private function registerConfig(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/cloud-tasks.php' => config_path('cloud-tasks.php'),
+            __DIR__.'/../config/cloud-tasks.php' => config_path('cloud-tasks.php'),
         ], ['cloud-tasks']);
 
-        $this->mergeConfigFrom(__DIR__ . '/../config/cloud-tasks.php', 'cloud-tasks');
+        $this->mergeConfigFrom(__DIR__.'/../config/cloud-tasks.php', 'cloud-tasks');
     }
 
     private function registerViews(): void
@@ -65,7 +66,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             // return;
         }
 
-        $this->loadViewsFrom(__DIR__ . '/../views', 'cloud-tasks');
+        $this->loadViewsFrom(__DIR__.'/../views', 'cloud-tasks');
     }
 
     private function registerAssets(): void
@@ -75,7 +76,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         }
 
         $this->publishes([
-            __DIR__ . '/../dashboard/dist' => public_path('vendor/cloud-tasks'),
+            __DIR__.'/../dashboard/dist' => public_path('vendor/cloud-tasks'),
         ], ['cloud-tasks']);
     }
 
@@ -86,7 +87,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         }
 
         $this->loadMigrationsFrom([
-            __DIR__ . '/../migrations',
+            __DIR__.'/../migrations',
         ]);
     }
 
@@ -139,7 +140,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         $events->listen(JobFailed::class, function (JobFailed $event) {
-            if (!$event->job instanceof CloudTasksJob) {
+            if (! $event->job instanceof CloudTasksJob) {
                 return;
             }
 
@@ -152,7 +153,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         $events->listen(JobProcessing::class, function (JobProcessing $event) {
-            if (!$event->job instanceof CloudTasksJob) {
+            if (! $event->job instanceof CloudTasksJob) {
                 return;
             }
 
@@ -162,7 +163,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         $events->listen(JobProcessed::class, function (JobProcessed $event) {
-            if (!$event->job instanceof CloudTasksJob) {
+            if (! $event->job instanceof CloudTasksJob) {
                 return;
             }
 
@@ -174,7 +175,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         $events->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
-            if (!$event->job instanceof CloudTasksJob) {
+            if (! $event->job instanceof CloudTasksJob) {
                 return;
             }
 
@@ -186,7 +187,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         $events->listen(JobFailed::class, function ($event) {
-            if (!$event->job instanceof CloudTasksJob) {
+            if (! $event->job instanceof CloudTasksJob) {
                 return;
             }
 
@@ -196,7 +197,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         });
 
         $events->listen(JobReleased::class, function (JobReleased $event) {
-            if (!$event->job instanceof CloudTasksJob) {
+            if (! $event->job instanceof CloudTasksJob) {
                 return;
             }
 

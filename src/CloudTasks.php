@@ -3,7 +3,6 @@
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Carbon\Carbon;
-use Closure;
 use Throwable;
 
 final class CloudTasks
@@ -18,7 +17,7 @@ final class CloudTasks
     {
         $token = $request->bearerToken();
 
-        if (!$token) {
+        if (! $token) {
             return false;
         }
 
@@ -27,14 +26,12 @@ final class CloudTasks
 
             return $expireTimestamp > Carbon::now()->timestamp;
         } catch (Throwable $e) {
-            return  false;
+            return false;
         }
     }
 
     /**
      * Determine if the dashboard is enabled.
-     *
-     * @return bool
      */
     public static function dashboardEnabled(): bool
     {
@@ -43,8 +40,6 @@ final class CloudTasks
 
     /**
      * Determine if the dashboard is disabled.
-     *
-     * @return bool
      */
     public static function dashboardDisabled(): bool
     {

@@ -10,6 +10,7 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+
 use function Safe\json_decode;
 
 class DashboardService
@@ -61,7 +62,7 @@ class DashboardService
                 'task_uuid' => $uuid,
                 'name' => $this->getTaskName($task),
                 'queue' => $queue,
-                'payload' =>  $this->getTaskBody($task),
+                'payload' => $this->getTaskBody($task),
                 'status' => $status,
                 'metadata' => $metadata->toJson(),
                 'created_at' => now()->utc(),

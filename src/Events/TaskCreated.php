@@ -9,6 +9,7 @@ use Google\Cloud\Tasks\V2\Task;
 class TaskCreated
 {
     public string $queue;
+
     public Task $task;
 
     public function task(Task $task): self
