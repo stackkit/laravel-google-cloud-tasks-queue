@@ -20,6 +20,9 @@ use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
+use Tests\Support\FailingJobWithMaxTries;
+use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
+use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\SimpleJob;
 use UnexpectedValueException;
 
@@ -250,10 +253,7 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(3)
-        );
-        $job = $this->dispatch(new FailingJob());
+        $job = $this->dispatch(new FailingJobWithMaxTries());
 
         // Act & Assert
         $this->assertDatabaseCount('failed_jobs', 0);
@@ -276,10 +276,6 @@ class TaskHandlerTest extends TestCase
         // Arrange
         OpenIdVerificator::fake();
 
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(3)
-        );
-
         $job = $this->dispatch(new FailingJob());
 
         // Act & Assert
@@ -301,16 +297,18 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
+     *
+     * @testWith [{"now": "2020-01-01 00:00:00", "try_at": "2020-01-01 00:00:00", "should_fail": false}]
+     *           [{"now": "2020-01-01 00:00:00", "try_at": "2020-01-01 00:04:59", "should_fail": false}]
+     *           [{"now": "2020-01-01 00:00:00", "try_at": "2020-01-01 00:05:00", "should_fail": true}]
      */
-    public function after_max_retry_until_it_will_log_to_failed_table_and_delete_the_task()
+    public function after_max_retry_until_it_will_log_to_failed_table_and_delete_the_task(array $args)
     {
         // Arrange
+        $this->travelTo($args['now']);
+
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxRetryDuration(new Duration(['seconds' => 30]))
-        );
-        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(1);
-        $job = $this->dispatch(new FailingJob());
+        $job = $this->dispatch(new FailingJobWithRetryUntil());
 
         // Act
         $releasedJob = $job->runAndGetReleasedJob();
@@ -321,13 +319,11 @@ class TaskHandlerTest extends TestCase
         $this->assertDatabaseCount('failed_jobs', 0);
 
         // Act
-        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(1);
+        $this->travelTo($args['try_at']);
         $releasedJob->run();
 
         // Assert
-        CloudTasksApi::assertDeletedTaskCount(2);
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
-        $this->assertDatabaseCount('failed_jobs', 1);
+        $this->assertDatabaseCount('failed_jobs', $args['should_fail'] ? 1 : 0);
     }
 
     /**
@@ -337,10 +333,6 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            // -1 is a valid option in Cloud Tasks to indicate there is no max.
-            (new RetryConfig())->setMaxAttempts(-1)
-        );
 
         // Act
         $job = $this->dispatch(new FailingJob());
@@ -359,33 +351,28 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())
-                ->setMaxAttempts(3)
-                ->setMaxRetryDuration(new Duration(['seconds' => 3]))
-        );
-        CloudTasksApi::partialMock()->shouldReceive('getRetryUntilTimestamp')->andReturn(time() + 10)->byDefault();
 
-        $job = $this->dispatch(new FailingJob());
+        $this->travelTo('2020-01-01 00:00:00');
+
+        $job = $this->dispatch(new FailingJobWithMaxTriesAndRetryUntil());
+
+        // When retryUntil is specified, the maxAttempts is ignored.
 
         // Act & Assert
-        $releasedJob = $job->runAndGetReleasedJob();
-        $releasedJob = $releasedJob->runAndGetReleasedJob();
 
-        # After 2 attempts both Laravel versions should report the same: 2 errors and 0 failures.
-        $task = StackkitCloudTask::whereTaskUuid($job->payloadAsArray('uuid'))->firstOrFail();
-        $this->assertEquals(2, $task->getNumberOfAttempts());
-        $this->assertEquals('error', $task->status);
+        // The max attempts is 3, but the retryUntil is set to 5 minutes from now.
+        // So when we attempt the job 10 times, it should still not fail.
+        foreach (range(1, 10) as $attempt) {
+            $job = $job->runAndGetReleasedJob();
+            CloudTasksApi::assertDeletedTaskCount($attempt);
+            CloudTasksApi::assertTaskDeleted($job->task->getName());
+            $this->assertDatabaseCount('failed_jobs', 0);
+        }
 
-        $releasedJob->run();
-
-        # Max attempts was reached
-        $this->assertEquals('error', $task->fresh()->status);
-
-        CloudTasksApi::shouldReceive('getRetryUntilTimestamp')->andReturn(time() - 1);
-        $releasedJob->run();
-
-        $this->assertEquals('failed', $task->fresh()->status);
+        // Now we travel to 5 minutes from now, and the job should fail.
+        $this->travelTo('2020-01-01 00:05:00');
+        $job->run();
+        $this->assertDatabaseCount('failed_jobs', 1);
     }
 
     /**
@@ -417,9 +404,6 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         OpenIdVerificator::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(3)
-        );
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -462,25 +446,6 @@ class TaskHandlerTest extends TestCase
 
         Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
             return $event->job->attempts() === 2;
-        });
-    }
-
-    /**
-     * @test
-     */
-    public function attempts_are_copied_from_x_header()
-    {
-        // Arrange
-        OpenIdVerificator::fake();
-        Event::fake(JobReleasedAfterException::class);
-
-        // Act & Assert
-        $job = $this->dispatch(new FailingJob());
-        request()->headers->set('X-CloudTasks-TaskRetryCount', 6);
-        $job->run();
-
-        Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
-            return $event->job->attempts() === 7;
         });
     }
 

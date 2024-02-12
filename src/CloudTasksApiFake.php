@@ -17,17 +17,6 @@ class CloudTasksApiFake implements CloudTasksApiContract
     public array $createdTasks = [];
     public array $deletedTasks = [];
 
-    public function getRetryConfig(string $queueName): RetryConfig
-    {
-        $retryConfig = new RetryConfig();
-
-        $retryConfig
-            ->setMinBackoff((new Duration(['seconds' => 0])))
-            ->setMaxBackoff((new Duration(['seconds' => 0])));
-
-        return $retryConfig;
-    }
-
     public function createTask(string $queueName, Task $task): Task
     {
         $this->createdTasks[] = compact('queueName', 'task');
@@ -44,12 +33,6 @@ class CloudTasksApiFake implements CloudTasksApiContract
     {
         return (new Task())
             ->setName($taskName);
-    }
-
-
-    public function getRetryUntilTimestamp(Task $task): ?int
-    {
-        return null;
     }
 
     public function assertTaskDeleted(string $taskName): void
