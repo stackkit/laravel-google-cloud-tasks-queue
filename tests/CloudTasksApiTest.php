@@ -27,8 +27,8 @@ class CloudTasksApiTest extends TestCase
         ];
 
         foreach ($requiredEnvs as $env) {
-            if (!env($env)) {
-                $this->fail('Missing [' . $env . '] environment variable.');
+            if (! env($env)) {
+                $this->fail('Missing ['.$env.'] environment variable.');
             }
         }
 
@@ -67,7 +67,7 @@ class CloudTasksApiTest extends TestCase
 
         // Assert
         $this->assertMatchesRegularExpression(
-            '/projects\/' . env('CI_CLOUD_TASKS_PROJECT_ID') . '\/locations\/' . env('CI_CLOUD_TASKS_LOCATION') . '\/queues\/' . env('CI_CLOUD_TASKS_QUEUE') . '\/tasks\/\d+$/',
+            '/projects\/'.env('CI_CLOUD_TASKS_PROJECT_ID').'\/locations\/'.env('CI_CLOUD_TASKS_LOCATION').'\/queues\/'.env('CI_CLOUD_TASKS_QUEUE').'\/tasks\/\d+$/',
             $taskName
         );
     }

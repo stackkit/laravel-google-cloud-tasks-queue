@@ -2,7 +2,6 @@
 
 namespace Tests;
 
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Carbon;
@@ -120,10 +119,10 @@ class CloudTasksDashboardTest extends TestCase
     public function it_can_filter_tasks_created_at_exact_time()
     {
         // Arrange
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(15,4, 59)]);
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,5, 0)]);
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,5, 59)]);
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,6, 0)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(15, 4, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16, 5, 0)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16, 5, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16, 6, 0)]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?time=16:05');
@@ -138,9 +137,9 @@ class CloudTasksDashboardTest extends TestCase
     public function it_can_filter_tasks_created_at_exact_hour()
     {
         // Arrange
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(15,59, 59)]);
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,5, 59)]);
-        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16,32, 32)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(15, 59, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16, 5, 59)]);
+        factory(StackkitCloudTask::class)->create(['created_at' => now()->setTime(16, 32, 32)]);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/tasks?hour=16');
@@ -229,7 +228,7 @@ class CloudTasksDashboardTest extends TestCase
         $task = factory(StackkitCloudTask::class)->create();
 
         // Act
-        $response = $this->getJson('/cloud-tasks-api/task/' . $task->task_uuid);
+        $response = $this->getJson('/cloud-tasks-api/task/'.$task->task_uuid);
 
         // Assert
         $this->assertEquals($task->id, $response['id']);
@@ -481,8 +480,8 @@ class CloudTasksDashboardTest extends TestCase
 
         $this->artisan('vendor:publish --tag=cloud-tasks --force')
             ->expectsOutputToContain('Publishing [cloud-tasks] assets.')
-            ->expectsOutputToContain('Copying file [' . $expectedPublishBase . '/config/cloud-tasks.php] to [config/cloud-tasks.php]')
-            ->expectsOutputToContain('Copying directory [' . $expectedPublishBase . '/dashboard/dist] to [public/vendor/cloud-tasks]');
+            ->expectsOutputToContain('Copying file ['.$expectedPublishBase.'/config/cloud-tasks.php] to [config/cloud-tasks.php]')
+            ->expectsOutputToContain('Copying directory ['.$expectedPublishBase.'/dashboard/dist] to [public/vendor/cloud-tasks]');
 
     }
 
@@ -507,7 +506,7 @@ class CloudTasksDashboardTest extends TestCase
      */
     public function when_dashboard_is_enabled_it_adds_the_necessary_migrations()
     {
-        $this->assertTrue(in_array(dirname(__DIR__) . '/src/../migrations', app('migrator')->paths()));
+        $this->assertTrue(in_array(dirname(__DIR__).'/src/../migrations', app('migrator')->paths()));
     }
 
     /**
@@ -555,7 +554,7 @@ class CloudTasksDashboardTest extends TestCase
     public function can_enter_with_token()
     {
         // Arrange
-        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
+        $this->defaultHeaders['Authorization'] = 'Bearer '.encrypt(time() + 10);
 
         // Act
         $response = $this->getJson('/cloud-tasks-api/dashboard');
@@ -570,7 +569,7 @@ class CloudTasksDashboardTest extends TestCase
     public function token_can_expire()
     {
         // Arrange
-        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(Carbon::create(2020, 5, 15, 15, 15, 15)->timestamp);
+        $this->defaultHeaders['Authorization'] = 'Bearer '.encrypt(Carbon::create(2020, 5, 15, 15, 15, 15)->timestamp);
 
         // Act & Assert
         Carbon::setTestNow(Carbon::create(2020, 5, 15, 15, 15, 14));

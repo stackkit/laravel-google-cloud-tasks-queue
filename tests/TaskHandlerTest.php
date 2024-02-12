@@ -3,9 +3,7 @@
 namespace Tests;
 
 use Firebase\JWT\ExpiredException;
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Duration;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobReleasedAfterException;
@@ -16,7 +14,6 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
-use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
@@ -37,6 +34,7 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
+     *
      * @testWith [true]
      *           [false]
      */
@@ -58,6 +56,7 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
+     *
      * @testWith [true]
      *           [false]
      */
@@ -89,6 +88,7 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
+     *
      * @testWith ["{\"invalid\": \"data\"}"]
      *           ["{\"data\": \"\"}"]
      *           ["{\"data\": \"test\"}"]
@@ -116,6 +116,7 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
+     *
      * @testWith [true]
      *           [false]
      */
@@ -439,6 +440,7 @@ class TaskHandlerTest extends TestCase
 
         Event::assertDispatched(JobReleasedAfterException::class, function ($event) use (&$releasedJob) {
             $releasedJob = $event->job->getRawBody();
+
             return $event->job->attempts() === 1;
         });
 
@@ -470,10 +472,12 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::assertCreatedTaskCount(2);
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             [$timestamp] = array_reverse(explode('-', $task->getName()));
+
             return $timestamp === '1685035628000';
         });
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             [$timestamp] = array_reverse(explode('-', $task->getName()));
+
             return $timestamp === '1685035629000';
         });
     }

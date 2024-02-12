@@ -6,14 +6,13 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\Job as JobContract;
 use Illuminate\Queue\Jobs\Job as LaravelJob;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+
 use function Safe\json_encode;
 
 class CloudTasksJob extends LaravelJob implements JobContract
 {
     /**
      * The Cloud Tasks raw job payload (request payload).
-     *
-     * @var array
      */
     public array $job;
 
@@ -27,9 +26,9 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->job = $job;
         $this->container = Container::getInstance();
         $this->cloudTasksQueue = $cloudTasksQueue;
-        
+
         $command = TaskHandler::getCommandProperties($job['data']['command']);
-        $this->queue = $command['queue'] ?? config('queue.connections.' .config('queue.default') . '.queue');
+        $this->queue = $command['queue'] ?? config('queue.connections.'.config('queue.default').'.queue');
     }
 
     public function job()

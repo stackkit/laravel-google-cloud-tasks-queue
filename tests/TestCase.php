@@ -19,7 +19,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
     use DatabaseTransactions;
 
     /**
-     * @var CloudTasksClient $client
+     * @var CloudTasksClient
      */
     public $client;
 
@@ -29,9 +29,9 @@ class TestCase extends \Orchestra\Testbench\TestCase
     {
         parent::setUp();
 
-        $this->withFactories(__DIR__ . '/../factories');
+        $this->withFactories(__DIR__.'/../factories');
 
-        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
+        $this->defaultHeaders['Authorization'] = 'Bearer '.encrypt(time() + 10);
 
         Event::listen(
             JobReleasedAfterException::class,
@@ -47,8 +47,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
      * In a normal app environment these would be added to the 'providers' array in
      * the config/app.php file.
      *
-     * @param  \Illuminate\Foundation\Application $app
-     *
+     * @param  \Illuminate\Foundation\Application  $app
      * @return array
      */
     protected function getPackageProviders($app)
@@ -65,14 +64,14 @@ class TestCase extends \Orchestra\Testbench\TestCase
      */
     protected function defineDatabaseMigrations()
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../migrations');
-        $this->loadMigrationsFrom(__DIR__ . '/../vendor/orchestra/testbench-core/laravel/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../vendor/orchestra/testbench-core/laravel/migrations');
     }
 
     /**
      * Define environment setup.
      *
-     * @param  \Illuminate\Foundation\Application $app
+     * @param  \Illuminate\Foundation\Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
@@ -84,13 +83,13 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('database.default', 'testbench');
         $port = env('DB_DRIVER') === 'mysql' ? 3307 : 5432;
         $app['config']->set('database.connections.testbench', [
-            'driver'   => env('DB_DRIVER', 'mysql'),
+            'driver' => env('DB_DRIVER', 'mysql'),
             'host' => '127.0.0.1',
             'port' => $port,
             'database' => 'cloudtasks',
             'username' => 'cloudtasks',
             'password' => 'cloudtasks',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
 
         $app['config']->set('cache.default', 'file');
@@ -119,7 +118,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function setConfigValue($key, $value)
     {
-        $this->app['config']->set('queue.connections.my-cloudtasks-connection.' . $key, $value);
+        $this->app['config']->set('queue.connections.my-cloudtasks-connection.'.$key, $value);
     }
 
     public function dispatch($job)
@@ -139,9 +138,12 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         dispatch($job);
 
-        return new class($payload, $task, $this) {
+        return new class($payload, $task, $this)
+        {
             public string $payload;
+
             public Task $task;
+
             public TestCase $testCase;
 
             public function __construct(string $payload, Task $task, TestCase $testCase)
@@ -210,7 +212,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
             $this->assertInstanceOf(Task::class, $task);
         } catch (ApiException $e) {
-            $this->fail('Task [' . $taskId . '] should exist but it does not (or something else went wrong).');
+            $this->fail('Task ['.$taskId.'] should exist but it does not (or something else went wrong).');
         }
     }
 
@@ -226,16 +228,15 @@ class TestCase extends \Orchestra\Testbench\TestCase
             $base = $closure($base);
         }
 
-        $privateKey = file_get_contents(__DIR__ . '/../tests/Support/self-signed-private-key.txt');
+        $privateKey = file_get_contents(__DIR__.'/../tests/Support/self-signed-private-key.txt');
 
         $token = JWT::encode($base, $privateKey, 'RS256', 'abc123');
 
-        request()->headers->set('Authorization', 'Bearer ' . $token);
+        request()->headers->set('Authorization', 'Bearer '.$token);
     }
 
     protected function assertDatabaseCount($table, int $count, $connection = null)
     {
         $this->assertEquals($count, DB::connection($connection)->table($table)->count());
     }
-
 }

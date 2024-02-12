@@ -9,6 +9,7 @@ use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Safe\Exceptions\JsonException;
+
 use function Safe\json_decode;
 
 class TaskHandler
@@ -47,8 +48,8 @@ class TaskHandler
     }
 
     /**
-     * @param string|array|null $task
-     * @return array
+     * @param  string|array|null  $task
+     *
      * @throws JsonException
      */
     private function captureTask($task): array
@@ -89,7 +90,7 @@ class TaskHandler
     {
         $command = self::getCommandProperties($task['data']['command']);
         $connection = $command['connection'] ?? config('queue.default');
-        $baseConfig = config('queue.connections.' . $connection);
+        $baseConfig = config('queue.connections.'.$connection);
         $config = (new CloudTasksConnector())->connect($baseConfig)->config;
 
         // The connection name from the config may not be the actual connection name

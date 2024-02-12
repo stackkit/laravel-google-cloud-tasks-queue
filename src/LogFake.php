@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use PHPUnit\Framework\Assert as PHPUnit;
-use Psr\Log\LoggerInterface;
 
 class LogFake
 {
@@ -52,7 +51,7 @@ class LogFake
     }
 
     /**
-     * @param string $level
+     * @param  string  $level
      */
     public function log($level, string $message, array $context = []): void
     {
@@ -66,14 +65,14 @@ class LogFake
 
     public function assertLogged(string $message): void
     {
-        PHPUnit::assertTrue(in_array($message, $this->loggedMessages), 'The message [' . $message . '] was not logged.');
+        PHPUnit::assertTrue(in_array($message, $this->loggedMessages), 'The message ['.$message.'] was not logged.');
     }
 
     public function assertNotLogged(string $message): void
     {
         PHPUnit::assertTrue(
             ! in_array($message, $this->loggedMessages),
-            'The message [' . $message . '] was logged.'
+            'The message ['.$message.'] was logged.'
         );
     }
 }

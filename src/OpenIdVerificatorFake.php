@@ -10,7 +10,7 @@ class OpenIdVerificatorFake
 {
     public function verify(?string $token, array $config): void
     {
-        if (!$token) {
+        if (! $token) {
             return;
         }
 
@@ -19,7 +19,7 @@ class OpenIdVerificatorFake
             [
                 'audience' => Config::getAudience($config),
                 'throwException' => true,
-                'certsLocation' => __DIR__ . '/../tests/Support/self-signed-public-key-as-jwk.json',
+                'certsLocation' => __DIR__.'/../tests/Support/self-signed-public-key-as-jwk.json',
             ]
         );
     }

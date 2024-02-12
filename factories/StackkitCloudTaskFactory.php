@@ -6,9 +6,9 @@ namespace Factories;
 
 /** @var \Illuminate\Database\Eloquent\Factory $factory */
 
+use Faker\Generator as Faker;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\StackkitCloudTask;
-use Faker\Generator as Faker;
 
 $factory->define(StackkitCloudTask::class, function (Faker $faker) {
     return [

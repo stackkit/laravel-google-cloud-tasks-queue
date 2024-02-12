@@ -12,8 +12,8 @@ use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
+
 use function Safe\json_decode;
 use function Safe\json_encode;
 
@@ -36,7 +36,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Get the size of the queue.
      *
-     * @param string|null  $queue
+     * @param  string|null  $queue
      * @return int
      */
     public function size($queue = null)
@@ -48,9 +48,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a new job onto the queue.
      *
-     * @param string|object  $job
-     * @param mixed  $data
-     * @param string|null  $queue
+     * @param  string|object  $job
+     * @param  mixed  $data
+     * @param  string|null  $queue
      * @return void
      */
     public function push($job, $data = '', $queue = null)
@@ -69,9 +69,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a raw payload onto the queue.
      *
-     * @param string  $payload
-     * @param string|null  $queue
-     * @param array  $options
+     * @param  string  $payload
+     * @param  string|null  $queue
      * @return string
      */
     public function pushRaw($payload, $queue = null, array $options = [])
@@ -84,10 +83,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a new job onto the queue after a delay.
      *
-     * @param \DateTimeInterface|\DateInterval|int  $delay
-     * @param string|object  $job
-     * @param mixed  $data
-     * @param string|null  $queue
+     * @param  \DateTimeInterface|\DateInterval|int  $delay
+     * @param  string|object  $job
+     * @param  mixed  $data
+     * @param  string|null  $queue
      * @return void
      */
     public function later($delay, $job, $data = '', $queue = null)
@@ -106,9 +105,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a job to Cloud Tasks.
      *
-     * @param string|null  $queue
-     * @param string  $payload
-     * @param \DateTimeInterface|\DateInterval|int $delay
+     * @param  string|null  $queue
+     * @param  string  $payload
+     * @param  \DateTimeInterface|\DateInterval|int  $delay
      * @return string
      */
     protected function pushToCloudTasks($queue, $payload, $delay = 0)
@@ -137,7 +136,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // The deadline for requests sent to the app. If the app does not respond by
         // this deadline then the request is cancelled and the attempt is marked as
         // a failure. Cloud Tasks will retry the task according to the RetryConfig.
-        if (!empty($this->config['dispatch_deadline'])) {
+        if (! empty($this->config['dispatch_deadline'])) {
             $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
         }
 
@@ -167,7 +166,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimeStampMs(),
+            $displayName.'-'.$payload['uuid'].'-'.Carbon::now()->getTimeStampMs(),
         );
     }
 
@@ -184,7 +183,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     private function withAttempts(array $payload): array
     {
-        if (!isset($payload['internal']['attempts'])) {
+        if (! isset($payload['internal']['attempts'])) {
             $payload['internal']['attempts'] = 0;
         }
 

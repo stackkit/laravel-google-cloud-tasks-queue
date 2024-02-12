@@ -4,16 +4,13 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\Attempt;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Duration;
-use Google\Protobuf\Timestamp;
 
 class CloudTasksApiConcrete implements CloudTasksApiContract
 {
     /**
-     * @var CloudTasksClient $client
+     * @var CloudTasksClient
      */
     private $client;
 

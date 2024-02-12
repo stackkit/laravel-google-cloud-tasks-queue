@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\HttpMethod;
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -239,11 +238,13 @@ class QueueTest extends TestCase
         $releasedJob = null;
         Event::assertDispatched(JobReleased::class, function (JobReleased $event) use (&$releasedJob) {
             $releasedJob = $event->job;
+
             return true;
         });
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
+
             return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
                 && $decoded['internal']['attempts'] === 1;
         });
@@ -254,6 +255,7 @@ class QueueTest extends TestCase
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
+
             return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
                 && $decoded['internal']['attempts'] === 2;
         });
@@ -404,10 +406,10 @@ class QueueTest extends TestCase
 
         // Act
         Queue::before(function (JobProcessing $event) {
-            logger('Queue::before:' . $event->job->payload()['data']['commandName']);
+            logger('Queue::before:'.$event->job->payload()['data']['commandName']);
         });
         Queue::after(function (JobProcessed $event) {
-            logger('Queue::after:' . $event->job->payload()['data']['commandName']);
+            logger('Queue::after:'.$event->job->payload()['data']['commandName']);
         });
         $this->dispatch(new SimpleJob())->run();
 
@@ -482,7 +484,7 @@ class QueueTest extends TestCase
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $uuid = \Safe\json_decode($task->getHttpRequest()->getBody(), true)['uuid'];
 
-            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid . '-1685649757000';
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-'.$uuid.'-1685649757000';
         });
     }
 }
