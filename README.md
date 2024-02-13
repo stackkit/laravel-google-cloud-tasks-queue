@@ -42,10 +42,7 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
       'driver' => 'cloudtasks',
       'project' => env('STACKKIT_CLOUD_TASKS_PROJECT', ''),
       'location' => env('STACKKIT_CLOUD_TASKS_LOCATION', ''),
-      'handler' => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
       'queue' => env('STACKKIT_CLOUD_TASKS_QUEUE', 'default'),
-      'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
-      'signed_audience' => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', true),
       
       // Required when using AppEngine
       'app_engine'            => env('STACKKIT_APP_ENGINE_TASK', false),
