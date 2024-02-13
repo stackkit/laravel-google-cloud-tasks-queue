@@ -241,10 +241,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     * @testWith [{"task_type": "http"}]
+     *           [{"task_type": "appengine"}]
      */
-    public function when_a_job_is_dispatched_it_will_be_added_to_the_dashboard()
+    public function when_a_job_is_dispatched_it_will_be_added_to_the_dashboard(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         CloudTasksApi::fake();
         $tasksBefore = StackkitCloudTask::count();
         $job = $this->dispatch(new SimpleJob());
@@ -280,10 +285,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     * @testWith [{"task_type": "http"}]
+     *           [{"task_type": "appengine"}]
      */
-    public function when_a_job_is_scheduled_it_will_be_added_as_such()
+    public function when_a_job_is_scheduled_it_will_be_added_as_such(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         CloudTasksApi::fake();
         Carbon::setTestNow(now());
         $tasksBefore = StackkitCloudTask::count();
@@ -305,10 +315,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     * @testWith [{"task_type": "http"}]
+     *           [{"task_type": "appengine"}]
      */
-    public function when_a_job_is_running_it_will_be_updated_in_the_dashboard()
+    public function when_a_job_is_running_it_will_be_updated_in_the_dashboard(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
@@ -331,10 +346,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     *  @testWith [{"task_type": "http"}]
+     *            [{"task_type": "appengine"}]
      */
-    public function when_a_job_is_successful_it_will_be_updated_in_the_dashboard()
+    public function when_a_job_is_successful_it_will_be_updated_in_the_dashboard(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
@@ -357,10 +377,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     *  @testWith [{"task_type": "http"}]
+     *            [{"task_type": "appengine"}]
      */
-    public function when_a_job_errors_it_will_be_updated_in_the_dashboard()
+    public function when_a_job_errors_it_will_be_updated_in_the_dashboard(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
@@ -384,10 +409,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     *  @testWith [{"task_type": "http"}]
+     *            [{"task_type": "appengine"}]
      */
-    public function when_a_job_fails_it_will_be_updated_in_the_dashboard()
+    public function when_a_job_fails_it_will_be_updated_in_the_dashboard(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
@@ -416,10 +446,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     *   @testWith [{"task_type": "http"}]
+     *             [{"task_type": "appengine"}]
      */
-    public function when_a_job_is_released_it_will_be_updated_in_the_dashboard()
+    public function when_a_job_is_released_it_will_be_updated_in_the_dashboard(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
@@ -447,10 +482,15 @@ class CloudTasksDashboardTest extends TestCase
 
     /**
      * @test
+     *
+     *   @testWith [{"task_type": "http"}]
+     *             [{"task_type": "appengine"}]
      */
-    public function job_release_delay_is_added_to_the_metadata()
+    public function job_release_delay_is_added_to_the_metadata(array $test)
     {
         // Arrange
+        $this->withTaskType($test['task_type']);
+
         \Illuminate\Support\Carbon::setTestNow(now());
         CloudTasksApi::fake();
         OpenIdVerificator::fake();
