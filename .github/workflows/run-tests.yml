@@ -20,6 +20,17 @@ jobs:
               return
             }
             
+            // If the user that pushed the commit is a maintainer, skip the check
+            const collaborators = await github.rest.repos.listCollaborators({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            if (collaborators.data.some(c => c.login === context.actor)) {
+              console.log(`User ${context.actor} is allowed to run tests because they are a collaborator.`);
+              return
+            }
+            
             const issue_number = context.issue.number;
             const repository = context.repo.repo;
             const owner = context.repo.owner;
