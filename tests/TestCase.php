@@ -130,12 +130,20 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $task = null;
 
         Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$payloadAsArray, &$task) {
-            $payload = $event->task->getHttpRequest()->getBody();
+            $request = $event->task->getHttpRequest() ?? $event->task->getAppEngineHttpRequest();
+            $payload = $request->getBody();
             $payloadAsArray = json_decode($payload, true);
             $task = $event->task;
 
             [,,,,,,,$taskName] = explode('/', $task->getName());
-            request()->headers->set('X-Cloudtasks-Taskname', $taskName);
+
+            if ($task->hasHttpRequest()) {
+                request()->headers->set('X-Cloudtasks-Taskname', $taskName);
+            }
+
+            if ($task->hasAppEngineHttpRequest()) {
+                request()->headers->set('X-AppEngine-TaskName', $taskName);
+            }
         });
 
         dispatch($job);
@@ -247,5 +255,27 @@ class TestCase extends \Orchestra\Testbench\TestCase
         return version_compare(app()->version(), '9.0.0', '<')
             ? PackageJobReleasedAfterException::class
             : JobReleasedAfterException::class;
+    }
+
+    public function withTaskType(string $taskType): void
+    {
+        switch ($taskType) {
+            case 'appengine':
+                $this->setConfigValue('handler', null);
+                $this->setConfigValue('service_account_email', null);
+                $this->setConfigValue('signed_audience', null);
+
+                $this->setConfigValue('app_engine', true);
+                $this->setConfigValue('app_engine_service', 'api');
+                break;
+            case 'http':
+                $this->setConfigValue('app_engine', false);
+                $this->setConfigValue('app_engine_service', null);
+
+                $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8080');
+                $this->setConfigValue('service_account_email', 'info@stackkit.io');
+                $this->setConfigValue('signed_audience', true);
+                break;
+        }
     }
 }

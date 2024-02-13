@@ -5,15 +5,14 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\RetryConfig;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Encryption\Encrypter;
-use Illuminate\Queue\Jobs\Job;
-use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Safe\Exceptions\JsonException;
 use UnexpectedValueException;
+use stdClass;
+
 use function Safe\json_decode;
 
 class TaskHandler
@@ -51,7 +50,9 @@ class TaskHandler
 
         $this->setQueue();
 
-        OpenIdVerificator::verify(request()->bearerToken(), $this->config);
+        if (empty($this->config['app_engine'])) {
+            OpenIdVerificator::verify(request()->bearerToken(), $this->config);
+        }
 
         $this->handleTask($task);
     }
@@ -63,7 +64,7 @@ class TaskHandler
      */
     private function captureTask($task): array
     {
-        $task = $task ?: (string) (request()->getContent());
+        $task = $task ?: (string)(request()->getContent());
 
         try {
             $array = json_decode($task, true);
@@ -72,13 +73,13 @@ class TaskHandler
         }
 
         $validator = validator([
-            'json' => $task,
-            'task' => $array,
-            'name_header' => request()->header('X-CloudTasks-Taskname'),
+            'json'        => $task,
+            'task'        => $array,
+            'name_header' => request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
         ], [
-            'json' => 'required|json',
-            'task' => 'required|array',
-            'task.data' => 'required|array',
+            'json'        => 'required|json',
+            'task'        => 'required|array',
+            'task.data'   => 'required|array',
             'name_header' => 'required|string',
         ]);
 
@@ -119,12 +120,11 @@ class TaskHandler
 
         $this->loadQueueRetryConfig($job);
 
-        $taskName = request()->header('X-Cloudtasks-Taskname');
         $fullTaskName = $this->client->taskName(
             $this->config['project'],
             $this->config['location'],
             $job->getQueue() ?: $this->config['queue'],
-            $taskName,
+            request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
         );
 
         try {
@@ -140,9 +140,9 @@ class TaskHandler
         // If the task has a [X-CloudTasks-TaskRetryCount] header higher than 0, then
         // we know the job was created using an earlier version of the package. This
         // job does not have the attempts tracked internally yet.
-        $taskRetryCountHeader = request()->header('X-CloudTasks-TaskRetryCount');
-        if ($taskRetryCountHeader && (int) $taskRetryCountHeader > 0) {
-            $job->setAttempts((int) $taskRetryCountHeader);
+        $taskRetryCountHeader = request()->header('X-CloudTasks-TaskRetryCount') ?? request()->header('X-AppEngine-TaskRetryCount');
+        if ($taskRetryCountHeader && (int)$taskRetryCountHeader > 0) {
+            $job->setAttempts((int)$taskRetryCountHeader);
         } else {
             $job->setAttempts($task['internal']['attempts']);
         }
@@ -173,11 +173,14 @@ class TaskHandler
     public static function getCommandProperties(string $command): array
     {
         if (Str::startsWith($command, 'O:')) {
-            return (array) unserialize($command, ['allowed_classes' => false]);
+            return (array)unserialize($command, ['allowed_classes' => false]);
         }
 
         if (app()->bound(Encrypter::class)) {
-            return (array) unserialize(app(Encrypter::class)->decrypt($command), ['allowed_classes' => ['Illuminate\Support\Carbon']]);
+            return (array)unserialize(
+                app(Encrypter::class)->decrypt($command),
+                ['allowed_classes' => ['Illuminate\Support\Carbon']]
+            );
         }
 
         return [];

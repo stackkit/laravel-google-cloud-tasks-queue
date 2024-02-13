@@ -21,9 +21,9 @@ class DashboardService
 
     private function getTaskBody(Task $task): string
     {
-        $httpRequest = $task->getHttpRequest();
+        $httpRequest = $task->getHttpRequest() ?: $task->getAppEngineHttpRequest();
 
-        if (! $httpRequest instanceof HttpRequest) {
+        if (! $httpRequest) {
             throw new Exception('Task does not have a HTTP request.');
         }
 

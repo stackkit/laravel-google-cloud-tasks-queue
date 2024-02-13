@@ -2,6 +2,8 @@
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
+use Google\Cloud\Tasks\V2\AppEngineRouting;
 use Google\Cloud\Tasks\V2\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
@@ -14,6 +16,7 @@ use Illuminate\Queue\Queue as LaravelQueue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
+
 use function Safe\json_decode;
 use function Safe\json_encode;
 
@@ -36,7 +39,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Get the size of the queue.
      *
-     * @param string|null  $queue
+     * @param string|null $queue
      * @return int
      */
     public function size($queue = null)
@@ -48,11 +51,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Fallback method for Laravel 6x and 7x
      *
-     * @param  \Closure|string|object  $job
-     * @param  string  $payload
-     * @param  string  $queue
-     * @param  \DateTimeInterface|\DateInterval|int|null  $delay
-     * @param  callable  $callback
+     * @param \Closure|string|object $job
+     * @param string $payload
+     * @param string $queue
+     * @param \DateTimeInterface|\DateInterval|int|null $delay
+     * @param callable $callback
      * @return mixed
      */
     protected function enqueueUsing($job, $payload, $queue, $delay, $callback)
@@ -67,9 +70,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a new job onto the queue.
      *
-     * @param string|object  $job
-     * @param mixed  $data
-     * @param string|null  $queue
+     * @param string|object $job
+     * @param mixed $data
+     * @param string|null $queue
      * @return void
      */
     public function push($job, $data = '', $queue = null)
@@ -88,14 +91,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a raw payload onto the queue.
      *
-     * @param string  $payload
-     * @param string|null  $queue
-     * @param array  $options
+     * @param string $payload
+     * @param string|null $queue
+     * @param array $options
      * @return string
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $delay = ! empty($options['delay']) ? $options['delay'] : 0;
+        $delay = !empty($options['delay']) ? $options['delay'] : 0;
 
         return $this->pushToCloudTasks($queue, $payload, $delay);
     }
@@ -103,10 +106,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a new job onto the queue after a delay.
      *
-     * @param \DateTimeInterface|\DateInterval|int  $delay
-     * @param string|object  $job
-     * @param mixed  $data
-     * @param string|null  $queue
+     * @param \DateTimeInterface|\DateInterval|int $delay
+     * @param string|object $job
+     * @param mixed $data
+     * @param string|null $queue
      * @return void
      */
     public function later($delay, $job, $data = '', $queue = null)
@@ -125,8 +128,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a job to Cloud Tasks.
      *
-     * @param string|null  $queue
-     * @param string  $payload
+     * @param string|null $queue
+     * @param string $payload
      * @param \DateTimeInterface|\DateInterval|int $delay
      * @return string
      */
@@ -135,10 +138,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $queue = $this->getQueue($queue);
         $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
         $availableAt = $this->availableAt($delay);
-
-        $httpRequest = $this->createHttpRequest();
-        $httpRequest->setUrl($this->getHandler());
-        $httpRequest->setHttpMethod(HttpMethod::POST);
 
         $payload = json_decode($payload, true);
 
@@ -152,11 +151,38 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // value and need to manually set and update the number of times a task has been attempted.
         $payload = $this->withAttempts($payload);
 
-        $httpRequest->setBody(json_encode($payload));
-
         $task = $this->createTask();
         $task->setName($this->taskName($queue, $payload));
-        $task->setHttpRequest($httpRequest);
+
+        if (!empty($this->config['app_engine'])) {
+            $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
+
+            $appEngineRequest = new AppEngineHttpRequest();
+            $appEngineRequest->setRelativeUri($path);
+            $appEngineRequest->setHttpMethod(HttpMethod::POST);
+            $appEngineRequest->setBody(json_encode($payload));
+            if (!empty($service = $this->config['app_engine_service'])) {
+                $routing = new AppEngineRouting();
+                $routing->setService($service);
+                $appEngineRequest->setAppEngineRouting($routing);
+            }
+            $task->setAppEngineHttpRequest($appEngineRequest);
+        } else {
+            $httpRequest = $this->createHttpRequest();
+            $httpRequest->setUrl($this->getHandler());
+            $httpRequest->setHttpMethod(HttpMethod::POST);
+
+            $httpRequest->setBody(json_encode($payload));
+
+            $token = new OidcToken;
+            $token->setServiceAccountEmail($this->config['service_account_email']);
+            if ($audience = $this->getAudience()) {
+                $token->setAudience($audience);
+            }
+            $httpRequest->setOidcToken($token);
+            $task->setHttpRequest($httpRequest);
+        }
+
 
         // The deadline for requests sent to the app. If the app does not respond by
         // this deadline then the request is cancelled and the attempt is marked as
@@ -164,13 +190,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         if (!empty($this->config['dispatch_deadline'])) {
             $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
         }
-
-        $token = new OidcToken;
-        $token->setServiceAccountEmail($this->config['service_account_email']);
-        if ($audience = $this->getAudience()) {
-            $token->setAudience($audience);
-        }
-        $httpRequest->setOidcToken($token);
 
         if ($availableAt > time()) {
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
@@ -186,7 +205,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     private function withUuid(array $payload): array
     {
         if (!isset($payload['uuid'])) {
-            $payload['uuid'] = (string) Str::uuid();
+            $payload['uuid'] = (string)Str::uuid();
         }
 
         return $payload;
@@ -227,7 +246,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Pop the next job off of the queue.
      *
-     * @param  string|null  $queue
+     * @param string|null $queue
      * @return \Illuminate\Contracts\Queue\Job|null
      */
     public function pop($queue = null)
@@ -251,11 +270,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $queue = $job->getQueue() ?: $this->config['queue']; // @todo: make this a helper method somewhere.
 
+        $headerTaskName = request()->headers->get('X-Cloudtasks-Taskname')
+            ?? request()->headers->get('X-AppEngine-TaskName');
         $taskName = $this->client->taskName(
             $config['project'],
             $config['location'],
             $queue,
-            (string) request()->headers->get('X-Cloudtasks-Taskname')
+            (string)$headerTaskName
         );
 
         CloudTasksApi::deleteTask($taskName);

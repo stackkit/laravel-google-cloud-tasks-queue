@@ -14,7 +14,7 @@ class ConfigHandlerTest extends \PHPUnit\Framework\TestCase
         self::assertSame($expectedHandler, Config::getHandler($handler));
     }
 
-    public function handlerDataProvider(): array
+    public static function handlerDataProvider(): array
     {
         return [
             ['https://example.com', 'https://example.com/handle-task'],

@@ -18,4 +18,9 @@ class Errors
     {
         return 'Google Service Account email address not provided. This is needed to secure the handler so it is only accessible by Google. To fix this, set the STACKKIT_CLOUD_TASKS_SERVICE_EMAIL environment variable';
     }
+
+    public static function serviceAccountOrAppEngine(): string
+    {
+        return 'A Google Service Account email or App Engine Request must be set. Set STACKKIT_CLOUD_TASKS_SERVICE_EMAIL or STACKKIT_APP_ENGINE_TASK';
+    }
 }

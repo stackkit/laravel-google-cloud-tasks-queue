@@ -9,8 +9,6 @@ class CloudTasksConnector implements ConnectorInterface
 {
     public function connect(array $config)
     {
-        Config::validate($config);
-
         // The handler is the URL which Cloud Tasks will call with the job payload. This
         // URL of the handler can be manually set through an environment variable, but
         // if it is not then we will choose a sensible default (the current app url)
