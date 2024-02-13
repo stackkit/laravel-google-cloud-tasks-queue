@@ -50,9 +50,7 @@ class TaskHandler
 
         $this->setQueue();
 
-        if (empty($this->config['app_engine'])) {
-            OpenIdVerificator::verify(request()->bearerToken(), $this->config);
-        }
+        $this->guard();
 
         $this->handleTask($task);
     }
@@ -75,12 +73,10 @@ class TaskHandler
         $validator = validator([
             'json'        => $task,
             'task'        => $array,
-            'name_header' => request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
         ], [
             'json'        => 'required|json',
             'task'        => 'required|array',
             'task.data'   => 'required|array',
-            'name_header' => 'required|string',
         ]);
 
         try {
@@ -112,6 +108,20 @@ class TaskHandler
     private function setQueue(): void
     {
         $this->queue = new CloudTasksQueue($this->config, $this->client);
+    }
+
+    private function guard(): void
+    {
+        $appEngine = ! empty($this->config['app_engine']);
+
+        if ($appEngine) {
+            // https://cloud.google.com/tasks/docs/creating-appengine-handlers#reading_task_request_headers
+            // "If your request handler finds any of the headers listed above, it can trust
+            // that the request is a Cloud Tasks request."
+            abort_if(empty(request()->header('X-AppEngine-TaskName')), 404);
+        } else {
+            OpenIdVerificator::verify(request()->bearerToken(), $this->config);
+        }
     }
 
     private function handleTask(array $task): void

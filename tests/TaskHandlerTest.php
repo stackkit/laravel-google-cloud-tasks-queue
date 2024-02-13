@@ -112,34 +112,6 @@ class TaskHandlerTest extends TestCase
 
     /**
      * @test
-     * @testWith [true]
-     *           [false]
-     */
-    public function it_validates_headers(bool $withHeaders)
-    {
-        // Arrange
-        $this->withExceptionHandling();
-
-        // Act
-        $response = $this->postJson(
-            action([TaskHandler::class, 'handle']),
-            [],
-            $withHeaders
-                ? [
-                    'X-CloudTasks-Taskname' => 'MyTask',
-                ] : []
-        );
-
-        // Assert
-        if ($withHeaders) {
-            $response->assertJsonMissingValidationErrors('name_header');
-        } else {
-            $response->assertJsonValidationErrors('name_header');
-        }
-    }
-
-    /**
-     * @test
      */
     public function the_task_handler_needs_an_open_id_token()
     {
