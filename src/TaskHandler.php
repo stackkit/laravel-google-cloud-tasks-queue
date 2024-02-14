@@ -11,8 +11,7 @@ use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Safe\Exceptions\JsonException;
-use UnexpectedValueException;
-use stdClass;
+
 use function Safe\json_decode;
 
 class TaskHandler
@@ -57,7 +56,7 @@ class TaskHandler
      */
     private function captureTask($task): array
     {
-        $task = $task ?: (string)(request()->getContent());
+        $task = $task ?: (string) (request()->getContent());
 
         try {
             $array = json_decode($task, true);
@@ -66,12 +65,12 @@ class TaskHandler
         }
 
         $validator = validator([
-            'json'        => $task,
-            'task'        => $array,
+            'json' => $task,
+            'task' => $array,
         ], [
-            'json'        => 'required|json',
-            'task'        => 'required|array',
-            'task.data'   => 'required|array',
+            'json' => 'required|json',
+            'task' => 'required|array',
+            'task.data' => 'required|array',
         ]);
 
         try {
@@ -148,11 +147,11 @@ class TaskHandler
     public static function getCommandProperties(string $command): array
     {
         if (Str::startsWith($command, 'O:')) {
-            return (array)unserialize($command, ['allowed_classes' => false]);
+            return (array) unserialize($command, ['allowed_classes' => false]);
         }
 
         if (app()->bound(Encrypter::class)) {
-            return (array)unserialize(
+            return (array) unserialize(
                 app(Encrypter::class)->decrypt($command),
                 ['allowed_classes' => ['Illuminate\Support\Carbon']]
             );

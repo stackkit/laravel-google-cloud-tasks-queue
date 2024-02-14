@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Exception;
-use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Queue\Events\JobExceptionOccurred;

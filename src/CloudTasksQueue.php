@@ -79,7 +79,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $delay = !empty($options['delay']) ? $options['delay'] : 0;
+        $delay = ! empty($options['delay']) ? $options['delay'] : 0;
 
         return $this->pushToCloudTasks($queue, $payload, $delay);
     }
@@ -130,14 +130,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $task = $this->createTask();
         $task->setName($this->taskName($queue, $payload));
 
-        if (!empty($this->config['app_engine'])) {
+        if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
 
             $appEngineRequest = new AppEngineHttpRequest();
             $appEngineRequest->setRelativeUri($path);
             $appEngineRequest->setHttpMethod(HttpMethod::POST);
             $appEngineRequest->setBody(json_encode($payload));
-            if (!empty($service = $this->config['app_engine_service'])) {
+            if (! empty($service = $this->config['app_engine_service'])) {
                 $routing = new AppEngineRouting();
                 $routing->setService($service);
                 $appEngineRequest->setAppEngineRouting($routing);
@@ -158,7 +158,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $httpRequest->setOidcToken($token);
             $task->setHttpRequest($httpRequest);
         }
-
 
         // The deadline for requests sent to the app. If the app does not respond by
         // this deadline then the request is cancelled and the attempt is marked as
@@ -213,7 +212,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Pop the next job off of the queue.
      *
-     * @param string|null $queue
+     * @param  string|null  $queue
      * @return \Illuminate\Contracts\Queue\Job|null
      */
     public function pop($queue = null)
@@ -243,7 +242,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $config['project'],
             $config['location'],
             $queue,
-            (string)$headerTaskName
+            (string) $headerTaskName
         );
 
         CloudTasksApi::deleteTask($taskName);
