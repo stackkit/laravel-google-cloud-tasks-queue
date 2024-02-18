@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Firebase\JWT\ExpiredException;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -13,16 +12,13 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
-use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithMaxTries;
 use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
 use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\SimpleJob;
-use UnexpectedValueException;
 
 class TaskHandlerTest extends TestCase
 {
@@ -36,77 +32,9 @@ class TaskHandlerTest extends TestCase
     /**
      * @test
      */
-    public function the_task_handler_needs_an_open_id_token()
-    {
-        // Assert
-        $this->expectException(CloudTasksException::class);
-        $this->expectExceptionMessage('Missing [Authorization] header');
-
-        // Act
-        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
-    }
-
-    /**
-     * @test
-     */
-    public function the_task_handler_throws_an_exception_if_the_id_token_is_invalid()
-    {
-        // Arrange
-        request()->headers->set('Authorization', 'Bearer my-invalid-token');
-
-        // Assert
-        $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('Wrong number of segments');
-
-        // Act
-        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
-    }
-
-    /**
-     * @test
-     */
-    public function it_validates_the_token_expiration()
-    {
-        // Arrange
-        OpenIdVerificator::fake();
-        $this->addIdTokenToHeader(function (array $base) {
-            return ['exp' => time() - 5] + $base;
-        });
-
-        // Assert
-        $this->expectException(ExpiredException::class);
-        $this->expectExceptionMessage('Expired token');
-
-        // Act
-        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
-    }
-
-    /**
-     * @test
-     */
-    public function it_validates_the_token_aud()
-    {
-        // Arrange
-        OpenIdVerificator::fake();
-        $this->addIdTokenToHeader(function (array $base) {
-            return ['aud' => 'invalid-aud'] + $base;
-        });
-
-        // Assert
-        $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('Audience does not match');
-
-        // Act
-        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
-    }
-
-    /**
-     * @test
-     */
     public function it_can_run_a_task()
     {
         // Arrange
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
         Event::fake([JobProcessing::class, JobProcessed::class]);
 
@@ -123,7 +51,6 @@ class TaskHandlerTest extends TestCase
     public function it_can_run_a_task_using_the_task_connection()
     {
         // Arrange
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
         Event::fake([JobProcessing::class, JobProcessed::class]);
         $this->app['config']->set('queue.default', 'non-existing-connection');
@@ -143,7 +70,6 @@ class TaskHandlerTest extends TestCase
     public function after_max_attempts_it_will_log_to_failed_table()
     {
         // Arrange
-        OpenIdVerificator::fake();
         $job = $this->dispatch(new FailingJobWithMaxTries());
 
         // Act & Assert
@@ -165,7 +91,6 @@ class TaskHandlerTest extends TestCase
     public function after_max_attempts_it_will_delete_the_task()
     {
         // Arrange
-        OpenIdVerificator::fake();
 
         $job = $this->dispatch(new FailingJob());
 
@@ -198,7 +123,6 @@ class TaskHandlerTest extends TestCase
         // Arrange
         $this->travelTo($args['now']);
 
-        OpenIdVerificator::fake();
         $job = $this->dispatch(new FailingJobWithRetryUntil());
 
         // Act
@@ -223,7 +147,6 @@ class TaskHandlerTest extends TestCase
     public function test_unlimited_max_attempts()
     {
         // Arrange
-        OpenIdVerificator::fake();
 
         // Act
         $job = $this->dispatch(new FailingJob());
@@ -241,7 +164,6 @@ class TaskHandlerTest extends TestCase
     public function test_max_attempts_in_combination_with_retry_until()
     {
         // Arrange
-        OpenIdVerificator::fake();
 
         $this->travelTo('2020-01-01 00:00:00');
 
@@ -272,7 +194,6 @@ class TaskHandlerTest extends TestCase
     public function it_can_handle_encrypted_jobs()
     {
         // Arrange
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
 
         // Act
@@ -294,7 +215,6 @@ class TaskHandlerTest extends TestCase
     public function failing_jobs_are_released()
     {
         // Arrange
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -320,7 +240,6 @@ class TaskHandlerTest extends TestCase
     public function attempts_are_tracked_internally()
     {
         // Arrange
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act & Assert
@@ -347,7 +266,6 @@ class TaskHandlerTest extends TestCase
     public function retried_jobs_get_a_new_name()
     {
         // Arrange
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
         CloudTasksApi::fake();
 

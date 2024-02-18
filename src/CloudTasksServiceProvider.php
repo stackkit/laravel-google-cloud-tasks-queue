@@ -29,7 +29,6 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             return new CloudTasksClient();
         });
 
-        $this->app->bind('open-id-verificator', OpenIdVerificatorConcrete::class);
         $this->app->bind('cloud-tasks-api', CloudTasksApiConcrete::class);
     }
 
@@ -56,6 +55,10 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerRoutes(): void
     {
+        if (config('cloud-tasks.disable_task_handler')) {
+            return;
+        }
+
         /**
          * @var \Illuminate\Routing\Router $router
          */

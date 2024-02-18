@@ -41,12 +41,12 @@ class TaskHandler
 
         $this->config = config('queue.connections.'.$task['internal']['connection']);
 
-        $this->guard();
+        $this->guard($task);
 
         $this->handleTask($task);
     }
 
-    private function guard(): void
+    private function guard(array $task): void
     {
         $appEngine = ! empty($this->config['app_engine']);
 
@@ -55,8 +55,12 @@ class TaskHandler
             // "If your request handler finds any of the headers listed above, it can trust
             // that the request is a Cloud Tasks request."
             abort_if(empty(request()->header('X-AppEngine-TaskName')), 404);
-        } else {
-            OpenIdVerificator::verify(request()->bearerToken(), $this->config);
+
+            return;
+        }
+
+        if (config('cloud-tasks.disable_security_key_verification') !== true) {
+            abort_if(decrypt($task['internal']['securityKey']) !== $task['uuid'], 404);
         }
     }
 

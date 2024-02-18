@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Closure;
-use Firebase\JWT\JWT;
 use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\Task;
@@ -34,8 +32,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
         parent::setUp();
 
         $this->withFactories(__DIR__.'/../factories');
-
-        $this->defaultHeaders['Authorization'] = 'Bearer '.encrypt(time() + 10);
 
         Event::listen(
             JobReleasedAfterException::class,
@@ -105,7 +101,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'location' => 'europe-west6',
             'handler' => env('CLOUD_TASKS_HANDLER', 'https://docker.for.mac.localhost:8080'),
             'service_account_email' => 'info@stackkit.io',
-            'signed_audience' => true,
         ]);
         $app['config']->set('queue.failed.driver', 'database-uuids');
         $app['config']->set('queue.failed.database', 'testbench');
@@ -218,25 +213,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
         }
     }
 
-    protected function addIdTokenToHeader(?Closure $closure = null): void
-    {
-        $base = [
-            'iss' => 'https://accounts.google.com',
-            'aud' => 'https://docker.for.mac.localhost:8080',
-            'exp' => time() + 10,
-        ];
-
-        if ($closure) {
-            $base = $closure($base);
-        }
-
-        $privateKey = file_get_contents(__DIR__.'/../tests/Support/self-signed-private-key.txt');
-
-        $token = JWT::encode($base, $privateKey, 'RS256', 'abc123');
-
-        request()->headers->set('Authorization', 'Bearer '.$token);
-    }
-
     protected function assertDatabaseCount($table, int $count, $connection = null)
     {
         $this->assertEquals($count, DB::connection($connection)->table($table)->count());
@@ -248,7 +224,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
             case 'appengine':
                 $this->setConfigValue('handler', null);
                 $this->setConfigValue('service_account_email', null);
-                $this->setConfigValue('signed_audience', null);
 
                 $this->setConfigValue('app_engine', true);
                 $this->setConfigValue('app_engine_service', 'api');
@@ -259,7 +234,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
                 $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8080');
                 $this->setConfigValue('service_account_email', 'info@stackkit.io');
-                $this->setConfigValue('signed_audience', true);
                 break;
         }
     }

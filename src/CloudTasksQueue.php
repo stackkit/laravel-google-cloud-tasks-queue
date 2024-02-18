@@ -120,6 +120,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $payload = $this->withQueueName($payload, $queue);
         $payload = $this->withTaskName($payload, $task->getName());
         $payload = $this->withConnectionName($payload, $this->getConnectionName());
+        $payload = $this->withSecurityKey($payload);
 
         if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -143,9 +144,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
             $token = new OidcToken;
             $token->setServiceAccountEmail($this->config['service_account_email']);
-            if ($audience = $this->getAudience()) {
-                $token->setAudience($audience);
-            }
             $httpRequest->setOidcToken($token);
             $task->setHttpRequest($httpRequest);
         }
@@ -221,6 +219,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload;
     }
 
+    private function withSecurityKey(array $payload): array
+    {
+        $payload['internal']['securityKey'] = encrypt($this->config['security_key'] ?? $payload['uuid']);
+
+        return $payload;
+    }
+
     /**
      * Pop the next job off of the queue.
      *
@@ -256,10 +261,5 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             ! str_ends_with($handler, '/handle-task') => $handler.'/handle-task',
             default => $handler,
         };
-    }
-
-    public function getAudience(): ?string
-    {
-        return Config::getAudience($this->config);
     }
 }

@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Queue;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
-use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobThatWillBeReleased;
@@ -222,7 +221,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake([
             JobReleasedAfterException::class,
             JobReleased::class,
@@ -267,7 +265,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake([
             JobReleasedAfterException::class,
             JobReleased::class,
@@ -295,7 +292,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -314,7 +310,6 @@ class QueueTest extends TestCase
         Carbon::setTestNow(now()->addDay());
         $this->setConfigValue('backoff', 123);
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -333,7 +328,6 @@ class QueueTest extends TestCase
         // Arrange
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -354,7 +348,6 @@ class QueueTest extends TestCase
         // Arrange
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
 
         // Act
         $releasedJob = $this->dispatch(new FailingJobWithExponentialBackoff())
@@ -382,7 +375,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
 
         // Act
@@ -400,7 +392,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
 
         // Act
@@ -422,7 +413,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
 
         // Act
@@ -440,7 +430,6 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Log::swap(new LogFake());
 
         $user1 = User::create([

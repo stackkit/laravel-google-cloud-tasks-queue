@@ -35,6 +35,12 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
   composer require stackkit/laravel-google-cloud-tasks-queue
   ```
 
+  Publish the service provider:
+
+   ```console
+   php artisan vendor:publish --provider=cloud-tasks
+   ```
+
   Add a new queue connection to `config/queue.php`
 
   ```php
@@ -51,7 +57,6 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
       // Required when not using AppEngine
       'handler'               => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
       'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
-      'signed_audience'       => env('STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE', true),
       
       // Optional: The deadline in seconds for requests sent to the worker. If the worker
       // does not respond by this deadline then the request is cancelled and the attempt
@@ -61,7 +66,17 @@ Please check the [Laravel support policy](https://laravel.com/docs/master/releas
   ],
   ```
 
-Update the `QUEUE_CONNECTION` environment variable
+If you are using separate services for dispatching and handling tasks, you may want to change the following settings:
+
+```php
+// config/cloud-tasks.php
+
+// If the application only dispatches jobs
+'disable_task_handler' => env('STACKKIT_CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
+
+// If the application only handles jobs and is secured by already (e.g. requires Authentication)
+'disable_security_key_verification' => env('STACKKIT_CLOUD_TASKS_DISABLE_SECURITY_KEY_VERIFICATION', false),
+```
 
   ```dotenv
   QUEUE_CONNECTION=cloudtasks
@@ -82,7 +97,6 @@ Please check the table below on what the values mean and what their value should
 | **Non- App Engine apps**
 | `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`   (optional) | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                |`my-service-account@appspot.gserviceaccount.com`
 | `STACKKIT_CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. |`https://<your website>.com`
-| `STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE` (optional) | True or false depending if you want extra security by signing the audience of your tasks. May misbehave in certain Cloud Run setups. Defaults to true.   | `true`
 </details>
 <details>
 <summary>
