@@ -4,16 +4,26 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Stackkit\LaravelGoogleCloudTasksQueue\Config;
+use Google\Cloud\Tasks\V2\Task;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Tests\Support\SimpleJob;
 
-class ConfigHandlerTest extends \PHPUnit\Framework\TestCase
+class ConfigHandlerTest extends TestCase
 {
     /**
      * @dataProvider handlerDataProvider
      */
     public function test_it_allows_a_handler_url_to_contain_path(string $handler, string $expectedHandler): void
     {
-        self::assertSame($expectedHandler, Config::getHandler($handler));
+        CloudTasksApi::fake();
+
+        $this->setConfigValue('handler', $handler);
+
+        $this->dispatch(new SimpleJob());
+
+        CloudTasksApi::assertTaskCreated(function (Task $task) use ($expectedHandler) {
+            return $task->getHttpRequest()->getUrl() === $expectedHandler;
+        });
     }
 
     public static function handlerDataProvider(): array
