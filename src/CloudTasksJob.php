@@ -23,6 +23,11 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
     protected $queue;
 
+    /**
+     * @param  array  $job
+     * @param  string  $connectionName
+     * @param  string  $queue
+     */
     public function __construct(Container $container, CloudTasksQueue $cloudTasksQueue, $job, $connectionName, $queue)
     {
         $this->container = $container;

@@ -108,13 +108,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     protected function pushToCloudTasks($queue, $payload, $delay = 0)
     {
         $queue = $queue ?: $this->config['queue'];
-        $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
-        $availableAt = $this->availableAt($delay);
 
-        $payload = json_decode($payload, true);
+        $payload = (array) json_decode($payload, true);
 
-        $task = new Task();
-        $task->setName($this->taskName($queue, $payload));
+        $task = new Task([
+            'name' => $this->taskName($queue, $payload),
+        ]);
 
         $payload = $this->withAttempts($payload);
         $payload = $this->withQueueName($payload, $queue);
@@ -155,10 +154,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
         }
 
+        $availableAt = $this->availableAt($delay);
         if ($availableAt > time()) {
             $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
         }
 
+        $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
         CloudTasksApi::createTask($queueName, $task);
 
         event((new TaskCreated)->queue($queue)->task($task));
@@ -255,11 +256,15 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     public function getHandler(): string
     {
+        if (empty($this->config['handler'])) {
+            $this->config['handler'] = request()->getSchemeAndHttpHost();
+        }
+
         $handler = rtrim($this->config['handler'], '/');
 
         return match (true) {
             ! str_ends_with($handler, '/handle-task') => $handler.'/handle-task',
-            default => $handler,
+            default => $this->config['handler'],
         };
     }
 }
