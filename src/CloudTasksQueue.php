@@ -6,7 +6,7 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
 use Google\Cloud\Tasks\V2\AppEngineRouting;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\OidcToken;

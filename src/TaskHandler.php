@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\ApiCore\ApiException;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;

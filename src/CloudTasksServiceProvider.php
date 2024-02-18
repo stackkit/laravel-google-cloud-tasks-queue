@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;

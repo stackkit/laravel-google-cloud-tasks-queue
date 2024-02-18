@@ -7,7 +7,7 @@ namespace Tests;
 use Closure;
 use Firebase\JWT\JWT;
 use Google\ApiCore\ApiException;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\Events\JobReleasedAfterException;
