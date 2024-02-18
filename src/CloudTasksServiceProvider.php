@@ -11,7 +11,6 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 class CloudTasksServiceProvider extends LaravelServiceProvider
 {
@@ -74,11 +73,11 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 return;
             }
 
-            $config = $event->job->cloudTasksQueue->config;
-
             app('queue.failer')->log(
-                $config['connection'], $event->job->getQueue() ?: $config['queue'],
-                $event->job->getRawBody(), $event->exception
+                $event->job->getConnectionName(),
+                $event->job->getQueue(),
+                $event->job->getRawBody(),
+                $event->exception,
             );
         });
 

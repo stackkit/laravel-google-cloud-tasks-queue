@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Facade;
  */
 class CloudTasksApi extends Facade
 {
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): string
     {
         return 'cloud-tasks-api';
     }

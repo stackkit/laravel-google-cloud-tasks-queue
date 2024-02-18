@@ -12,14 +12,9 @@ use Google\Cloud\Tasks\V2\Task;
 
 class CloudTasksApiConcrete implements CloudTasksApiContract
 {
-    /**
-     * @var CloudTasksClient
-     */
-    private $client;
-
-    public function __construct(CloudTasksClient $client)
+    public function __construct(private readonly CloudTasksClient $client)
     {
-        $this->client = $client;
+        //
     }
 
     public function createTask(string $queueName, Task $task): Task

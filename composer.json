@@ -8,6 +8,7 @@
         }
     ],
     "require": {
+        "php": "^8.1",
         "ext-json": "*",
         "phpseclib/phpseclib": "^3.0",
         "google/auth": "^v1.29.1",

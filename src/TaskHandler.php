@@ -6,6 +6,7 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
@@ -120,17 +121,16 @@ class TaskHandler
 
     private function handleTask(array $task): void
     {
-        $job = new CloudTasksJob($task, $this->queue);
-
-        $fullTaskName = $this->client->taskName(
-            $this->config['project'],
-            $this->config['location'],
-            $job->getQueue() ?: $this->config['queue'],
-            request()->header('X-CloudTasks-TaskName') ?? request()->header('X-AppEngine-TaskName'),
+        $job = new CloudTasksJob(
+            Container::getInstance(),
+            $this->queue,
+            $task,
+            $this->config['connection'],
+            $task['internal']['queue'],
         );
 
         try {
-            $apiTask = CloudTasksApi::getTask($fullTaskName);
+            $apiTask = CloudTasksApi::getTask($task['internal']['taskName']);
         } catch (ApiException $e) {
             if (in_array($e->getStatus(), ['NOT_FOUND', 'PRECONDITION_FAILED'])) {
                 abort(404);

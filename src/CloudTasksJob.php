@@ -13,27 +13,26 @@ use function Safe\json_encode;
 
 class CloudTasksJob extends LaravelJob implements JobContract
 {
-    /**
-     * The Cloud Tasks raw job payload (request payload).
-     */
+    protected $container;
+
+    private CloudTasksQueue $cloudTasksQueue;
+
     public array $job;
 
-    /**
-     * @var CloudTasksQueue
-     */
-    public $cloudTasksQueue;
+    protected $connectionName;
 
-    public function __construct(array $job, CloudTasksQueue $cloudTasksQueue)
+    protected $queue;
+
+    public function __construct(Container $container, CloudTasksQueue $cloudTasksQueue, $job, $connectionName, $queue)
     {
-        $this->job = $job;
-        $this->container = Container::getInstance();
+        $this->container = $container;
         $this->cloudTasksQueue = $cloudTasksQueue;
-
-        $command = TaskHandler::getCommandProperties($job['data']['command']);
-        $this->queue = $command['queue'] ?? config('queue.connections.'.config('queue.default').'.queue');
+        $this->job = $job;
+        $this->connectionName = $connectionName;
+        $this->queue = $queue;
     }
 
-    public function job()
+    public function job(): array
     {
         return $this->job;
     }
@@ -63,9 +62,9 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->job['internal']['attempts'] = $attempts;
     }
 
-    public function setQueue(string $queue): void
+    public function getTaskName(): string
     {
-        $this->queue = $queue;
+        return $this->job['internal']['taskName'];
     }
 
     public function delete(): void
@@ -95,9 +94,9 @@ class CloudTasksJob extends LaravelJob implements JobContract
         return data_get($this->job, 'internal.errored') === true;
     }
 
-    public function release($delay = 0)
+    public function release($delay = 0): void
     {
-        parent::release();
+        parent::release($delay);
 
         $this->cloudTasksQueue->release($this, $delay);
 

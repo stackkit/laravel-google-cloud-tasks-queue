@@ -20,30 +20,21 @@ use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 use function Safe\json_decode;
 use function Safe\json_encode;
+use function Safe\preg_replace;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
-    /**
-     * @var CloudTasksClient
-     */
-    private $client;
-
-    public array $config;
-
-    public function __construct(array $config, CloudTasksClient $client, $dispatchAfterCommit = false)
+    public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
-        $this->client = $client;
-        $this->config = $config;
-        $this->dispatchAfterCommit = $dispatchAfterCommit;
+        //
     }
 
     /**
      * Get the size of the queue.
      *
      * @param  string|null  $queue
-     * @return int
      */
-    public function size($queue = null)
+    public function size($queue = null): int
     {
         // It is not possible to know the number of tasks in the queue.
         return 0;
@@ -61,7 +52,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     {
         return $this->enqueueUsing(
             $job,
-            $this->createPayload($job, $this->getQueue($queue), $data),
+            $this->createPayload($job, $queue, $data),
             $queue,
             null,
             function ($payload, $queue) {
@@ -97,7 +88,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     {
         return $this->enqueueUsing(
             $job,
-            $this->createPayload($job, $this->getQueue($queue), $data),
+            $this->createPayload($job, $queue, $data),
             $queue,
             $delay,
             function ($payload, $queue, $delay) {
@@ -116,7 +107,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     protected function pushToCloudTasks($queue, $payload, $delay = 0)
     {
-        $queue = $this->getQueue($queue);
+        $queue = $queue ?: $this->config['queue'];
         $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
         $availableAt = $this->availableAt($delay);
 
@@ -127,8 +118,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         // value and need to manually set and update the number of times a task has been attempted.
         $payload = $this->withAttempts($payload);
 
-        $task = $this->createTask();
+        $payload = $this->withQueueName($payload, $queue);
+
+        $task = new Task();
         $task->setName($this->taskName($queue, $payload));
+
+        $payload = $this->withTaskName($payload, $task->getName());
 
         if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -144,7 +139,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             }
             $task->setAppEngineHttpRequest($appEngineRequest);
         } else {
-            $httpRequest = $this->createHttpRequest();
+            $httpRequest = new HttpRequest();
             $httpRequest->setUrl($this->getHandler());
             $httpRequest->setHttpMethod(HttpMethod::POST);
 
@@ -189,7 +184,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         );
     }
 
-    private function sanitizeTaskName(string $taskName)
+    private function sanitizeTaskName(string $taskName): string
     {
         // Remove all characters that are not -, letters, numbers, or whitespace
         $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
@@ -209,6 +204,20 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload;
     }
 
+    private function withQueueName(array $payload, string $queueName): array
+    {
+        $payload['internal']['queue'] = $queueName;
+
+        return $payload;
+    }
+
+    private function withTaskName(array $payload, string $taskName): array
+    {
+        $payload['internal']['taskName'] = $taskName;
+
+        return $payload;
+    }
+
     /**
      * Pop the next job off of the queue.
      *
@@ -217,35 +226,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function pop($queue = null)
     {
-        // TODO: Implement pop() method.
-    }
-
-    private function getQueue(?string $queue = null): string
-    {
-        return $queue ?: $this->config['queue'];
-    }
-
-    private function createHttpRequest(): HttpRequest
-    {
-        return app(HttpRequest::class);
+        //
     }
 
     public function delete(CloudTasksJob $job): void
     {
-        $config = $this->config;
-
-        $queue = $job->getQueue() ?: $this->config['queue']; // @todo: make this a helper method somewhere.
-
-        $headerTaskName = request()->headers->get('X-Cloudtasks-Taskname')
-            ?? request()->headers->get('X-AppEngine-TaskName');
-        $taskName = $this->client->taskName(
-            $config['project'],
-            $config['location'],
-            $queue,
-            (string) $headerTaskName
-        );
-
-        CloudTasksApi::deleteTask($taskName);
+        CloudTasksApi::deleteTask($job->getTaskName());
     }
 
     public function release(CloudTasksJob $job, int $delay = 0): void
@@ -257,11 +243,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $options = ['delay' => $delay];
 
         $this->pushRaw($payload, $job->getQueue(), $options);
-    }
-
-    private function createTask(): Task
-    {
-        return app(Task::class);
     }
 
     public function getHandler(): string
