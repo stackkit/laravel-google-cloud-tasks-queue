@@ -19,7 +19,6 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
-use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobThatWillBeReleased;
@@ -154,7 +153,7 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = TaskHandler::getCommandProperties($decoded['data']['command']);
+            $command = $this->getCommandProperties($decoded['data']['command']);
 
             return $decoded['displayName'] === SimpleJob::class
                 && ($command['queue'] ?? null) === null
@@ -163,7 +162,7 @@ class QueueTest extends TestCase
 
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = TaskHandler::getCommandProperties($decoded['data']['command']);
+            $command = $this->getCommandProperties($decoded['data']['command']);
 
             return $decoded['displayName'] === FailingJob::class
                 && $command['queue'] === 'my-special-queue'

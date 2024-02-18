@@ -9,10 +9,12 @@ use Firebase\JWT\JWT;
 use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
@@ -134,16 +136,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
             $payload = $request->getBody();
             $payloadAsArray = json_decode($payload, true);
             $task = $event->task;
-
-            [,,,,,,,$taskName] = explode('/', $task->getName());
-
-            if ($task->hasHttpRequest()) {
-                request()->headers->set('X-Cloudtasks-Taskname', $taskName);
-            }
-
-            if ($task->hasAppEngineHttpRequest()) {
-                request()->headers->set('X-AppEngine-TaskName', $taskName);
-            }
         });
 
         dispatch($job);
@@ -270,5 +262,21 @@ class TestCase extends \Orchestra\Testbench\TestCase
                 $this->setConfigValue('signed_audience', true);
                 break;
         }
+    }
+
+    public static function getCommandProperties(string $command): array
+    {
+        if (Str::startsWith($command, 'O:')) {
+            return (array) unserialize($command, ['allowed_classes' => false]);
+        }
+
+        if (app()->bound(Encrypter::class)) {
+            return (array) unserialize(
+                app(Encrypter::class)->decrypt($command),
+                ['allowed_classes' => ['Illuminate\Support\Carbon']]
+            );
+        }
+
+        return [];
     }
 }

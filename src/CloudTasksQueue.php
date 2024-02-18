@@ -113,17 +113,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = json_decode($payload, true);
 
-        // Since 3.x tasks are released back onto the queue after an exception has
-        // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
-        // value and need to manually set and update the number of times a task has been attempted.
-        $payload = $this->withAttempts($payload);
-
-        $payload = $this->withQueueName($payload, $queue);
-
         $task = new Task();
         $task->setName($this->taskName($queue, $payload));
 
+        $payload = $this->withAttempts($payload);
+        $payload = $this->withQueueName($payload, $queue);
         $payload = $this->withTaskName($payload, $task->getName());
+        $payload = $this->withConnectionName($payload, $this->getConnectionName());
 
         if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -214,6 +210,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     private function withTaskName(array $payload, string $taskName): array
     {
         $payload['internal']['taskName'] = $taskName;
+
+        return $payload;
+    }
+
+    private function withConnectionName(array $payload, string $connectionName): array
+    {
+        $payload['internal']['connection'] = $connectionName;
 
         return $payload;
     }

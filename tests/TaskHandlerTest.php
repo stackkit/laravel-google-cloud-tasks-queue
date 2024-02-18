@@ -16,7 +16,6 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksException;
 use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
-use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithMaxTries;
@@ -32,88 +31,6 @@ class TaskHandlerTest extends TestCase
         parent::setUp();
 
         CloudTasksApi::fake();
-    }
-
-    /**
-     * @test
-     *
-     * @testWith [true]
-     *           [false]
-     */
-    public function it_returns_responses_for_empty_payloads($debug)
-    {
-        // Arrange
-        config()->set('app.debug', $debug);
-
-        // Act
-        $response = $this->postJson(action([TaskHandler::class, 'handle']));
-
-        // Assert
-        if ($debug) {
-            $response->assertJsonValidationErrors('task');
-        } else {
-            $response->assertNotFound();
-        }
-    }
-
-    /**
-     * @test
-     *
-     * @testWith [true]
-     *           [false]
-     */
-    public function it_returns_responses_for_invalid_json($debug)
-    {
-        // Arrange
-        config()->set('app.debug', $debug);
-
-        // Act
-        $response = $this->call(
-            'POST',
-            action([TaskHandler::class, 'handle']),
-            [],
-            [],
-            [],
-            [
-                'HTTP_ACCEPT' => 'application/json',
-            ],
-            'test',
-        );
-
-        // Assert
-        if ($debug) {
-            $response->assertJsonValidationErrors('task');
-        } else {
-            $response->assertNotFound();
-        }
-    }
-
-    /**
-     * @test
-     *
-     * @testWith ["{\"invalid\": \"data\"}"]
-     *           ["{\"data\": \"\"}"]
-     *           ["{\"data\": \"test\"}"]
-     */
-    public function it_returns_responses_for_invalid_payloads(string $payload)
-    {
-        // Arrange
-
-        // Act
-        $response = $this->call(
-            'POST',
-            action([TaskHandler::class, 'handle']),
-            [],
-            [],
-            [],
-            [
-                'HTTP_ACCEPT' => 'application/json',
-            ],
-            $payload,
-        );
-
-        // Assert
-        $response->assertJsonValidationErrors('task.data');
     }
 
     /**

@@ -100,11 +100,8 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
         $this->cloudTasksQueue->release($this, $delay);
 
-        $properties = TaskHandler::getCommandProperties($this->job['data']['command']);
-        $connection = $properties['connection'] ?? config('queue.default');
-
         if (! data_get($this->job, 'internal.errored')) {
-            app('events')->dispatch(new JobReleased($connection, $this, $delay));
+            app('events')->dispatch(new JobReleased($this->getConnectionName(), $this, $delay));
         }
     }
 }

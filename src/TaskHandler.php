@@ -7,11 +7,9 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Encryption\Encrypter;
+use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
-use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-use Safe\Exceptions\JsonException;
+use Throwable;
 
 use function Safe\json_decode;
 
@@ -39,70 +37,13 @@ class TaskHandler
 
     public function handle(?string $task = null): void
     {
-        $task = $this->captureTask($task);
+        $task = json_decode((string) $task ?: request()->getContent(), assoc: true);
 
-        $this->loadQueueConnectionConfiguration($task);
-
-        $this->setQueue();
+        $this->config = config('queue.connections.'.$task['internal']['connection']);
 
         $this->guard();
 
         $this->handleTask($task);
-    }
-
-    /**
-     * @param  string|array|null  $task
-     *
-     * @throws JsonException
-     */
-    private function captureTask($task): array
-    {
-        $task = $task ?: (string) (request()->getContent());
-
-        try {
-            $array = json_decode($task, true);
-        } catch (JsonException $e) {
-            $array = [];
-        }
-
-        $validator = validator([
-            'json' => $task,
-            'task' => $array,
-        ], [
-            'json' => 'required|json',
-            'task' => 'required|array',
-            'task.data' => 'required|array',
-        ]);
-
-        try {
-            $validator->validate();
-        } catch (ValidationException $e) {
-            if (config('app.debug')) {
-                throw $e;
-            } else {
-                abort(404);
-            }
-        }
-
-        return json_decode($task, true);
-    }
-
-    private function loadQueueConnectionConfiguration(array $task): void
-    {
-        $command = self::getCommandProperties($task['data']['command']);
-        $connection = $command['connection'] ?? config('queue.default');
-        $baseConfig = config('queue.connections.'.$connection);
-        $config = (new CloudTasksConnector())->connect($baseConfig)->config;
-
-        // The connection name from the config may not be the actual connection name
-        $config['connection'] = $connection;
-
-        $this->config = $config;
-    }
-
-    private function setQueue(): void
-    {
-        $this->queue = new CloudTasksQueue($this->config, $this->client);
     }
 
     private function guard(): void
@@ -121,18 +62,25 @@ class TaskHandler
 
     private function handleTask(array $task): void
     {
+        $queue = new CloudTasksQueue(
+            config: $this->config,
+            client: $this->client,
+        );
+
+        $queue->setConnectionName($task['internal']['connection']);
+
         $job = new CloudTasksJob(
-            Container::getInstance(),
-            $this->queue,
-            $task,
-            $this->config['connection'],
-            $task['internal']['queue'],
+            container: Container::getInstance(),
+            cloudTasksQueue: $queue,
+            job: $task,
+            connectionName: $task['internal']['connection'],
+            queue: $task['internal']['queue'],
         );
 
         try {
-            $apiTask = CloudTasksApi::getTask($task['internal']['taskName']);
-        } catch (ApiException $e) {
-            if (in_array($e->getStatus(), ['NOT_FOUND', 'PRECONDITION_FAILED'])) {
+            CloudTasksApi::getTask($task['internal']['taskName']);
+        } catch (Throwable $e) {
+            if ($e instanceof ApiException && in_array($e->getStatus(), ['NOT_FOUND', 'PRECONDITION_FAILED'])) {
                 abort(404);
             }
 
@@ -141,23 +89,11 @@ class TaskHandler
 
         $job->setAttempts($job->attempts() + 1);
 
-        app('queue.worker')->process($this->config['connection'], $job, $this->getWorkerOptions());
-    }
-
-    public static function getCommandProperties(string $command): array
-    {
-        if (Str::startsWith($command, 'O:')) {
-            return (array) unserialize($command, ['allowed_classes' => false]);
-        }
-
-        if (app()->bound(Encrypter::class)) {
-            return (array) unserialize(
-                app(Encrypter::class)->decrypt($command),
-                ['allowed_classes' => ['Illuminate\Support\Carbon']]
-            );
-        }
-
-        return [];
+        tap(app('queue.worker'), fn (Worker $worker) => $worker->process(
+            connectionName: $job->getConnectionName(),
+            job: $job,
+            options: $this->getWorkerOptions()
+        ));
     }
 
     public function getWorkerOptions(): WorkerOptions
