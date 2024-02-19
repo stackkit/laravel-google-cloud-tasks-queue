@@ -32,6 +32,17 @@ class CloudTasksApiFake implements CloudTasksApiContract
             ->setName($taskName);
     }
 
+    public function exists(string $taskName): bool
+    {
+        foreach ($this->createdTasks as $createdTask) {
+            if ($createdTask['task']->getName() === $taskName) {
+                return ! in_array($taskName, $this->deletedTasks);
+            }
+        }
+
+        return false;
+    }
+
     public function assertTaskDeleted(string $taskName): void
     {
         Assert::assertTrue(

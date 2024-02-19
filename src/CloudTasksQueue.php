@@ -262,9 +262,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $handler = rtrim($this->config['handler'], '/');
 
-        return match (true) {
-            ! str_ends_with($handler, '/handle-task') => $handler.'/handle-task',
-            default => $this->config['handler'],
-        };
+        if (str_ends_with($handler, '/handle-task')) {
+            return $handler;
+        }
+
+        return $handler.'/handle-task';
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\CreateTaskRequest;
 use Google\Cloud\Tasks\V2\DeleteTaskRequest;
@@ -17,6 +18,9 @@ class CloudTasksApiConcrete implements CloudTasksApiContract
         //
     }
 
+    /**
+     * @throws ApiException
+     */
     public function createTask(string $queueName, Task $task): Task
     {
         return $this->client->createTask(new CreateTaskRequest([
@@ -25,6 +29,9 @@ class CloudTasksApiConcrete implements CloudTasksApiContract
         ]));
     }
 
+    /**
+     * @throws ApiException
+     */
     public function deleteTask(string $taskName): void
     {
         $this->client->deleteTask(new DeleteTaskRequest([
@@ -32,10 +39,30 @@ class CloudTasksApiConcrete implements CloudTasksApiContract
         ]));
     }
 
+    /**
+     * @throws ApiException
+     */
     public function getTask(string $taskName): Task
     {
         return $this->client->getTask(new GetTaskRequest([
             'name' => $taskName,
         ]));
+    }
+
+    public function exists(string $taskName): bool
+    {
+        try {
+            $this->getTask($taskName);
+
+            return true;
+        } catch (ApiException $e) {
+            if ($e->getStatus() === 'NOT_FOUND') {
+                return false;
+            }
+
+            report($e);
+        }
+
+        return false;
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static Task createTask(string $queueName, Task $task)
  * @method static void deleteTask(string $taskName)
  * @method static Task getTask(string $taskName)
+ * @method static bool exists(string $taskName)
  */
 class CloudTasksApi extends Facade
 {

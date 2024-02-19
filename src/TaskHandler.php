@@ -4,92 +4,50 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Container\Container;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
-use Throwable;
-
-use function Safe\json_decode;
 
 class TaskHandler
 {
-    /**
-     * @var array
-     */
-    private $config;
+    private array $config;
 
-    /**
-     * @var CloudTasksClient
-     */
-    private $client;
-
-    /**
-     * @var CloudTasksQueue
-     */
-    private $queue;
-
-    public function __construct(CloudTasksClient $client)
+    public function __construct(private readonly CloudTasksClient $client)
     {
-        $this->client = $client;
+        //
     }
 
     public function handle(?string $task = null): void
     {
-        $task = json_decode((string) $task ?: request()->getContent(), assoc: true);
+        $task = IncomingTask::fromJson($task ?: request()->getContent());
 
-        $this->config = config('queue.connections.'.$task['internal']['connection']);
-
-        $this->guard($task);
-
-        $this->handleTask($task);
-    }
-
-    private function guard(array $task): void
-    {
-        $appEngine = ! empty($this->config['app_engine']);
-
-        if ($appEngine) {
-            // https://cloud.google.com/tasks/docs/creating-appengine-handlers#reading_task_request_headers
-            // "If your request handler finds any of the headers listed above, it can trust
-            // that the request is a Cloud Tasks request."
-            abort_if(empty(request()->header('X-AppEngine-TaskName')), 404);
-
-            return;
+        if ($task->isEmpty()) {
+            abort(422, 'Invalid task payload');
         }
 
-        if (config('cloud-tasks.disable_security_key_verification') !== true) {
-            abort_if(decrypt($task['internal']['securityKey']) !== $task['uuid'], 404);
+        if (! CloudTasksApi::exists($task->taskName())) {
+            abort(404);
         }
+
+        $config = config('queue.connections.'.$task->connection());
+
+        $this->config = is_array($config) ? $config : [];
+
+        $this->run($task);
     }
 
-    private function handleTask(array $task): void
+    private function run(IncomingTask $task): void
     {
-        $queue = new CloudTasksQueue(
-            config: $this->config,
-            client: $this->client,
-        );
-
-        $queue->setConnectionName($task['internal']['connection']);
+        $queue = tap(new CloudTasksQueue($this->config, $this->client))->setConnectionName($task->connection());
 
         $job = new CloudTasksJob(
             container: Container::getInstance(),
-            cloudTasksQueue: $queue,
-            job: $task,
-            connectionName: $task['internal']['connection'],
-            queue: $task['internal']['queue'],
+            driver: $queue,
+            job: $task->toArray(),
+            connectionName: $task->connection(),
+            queue: $task->queue(),
         );
-
-        try {
-            CloudTasksApi::getTask($task['internal']['taskName']);
-        } catch (Throwable $e) {
-            if ($e instanceof ApiException && in_array($e->getStatus(), ['NOT_FOUND', 'PRECONDITION_FAILED'])) {
-                abort(404);
-            }
-
-            throw $e;
-        }
 
         $job->setAttempts($job->attempts() + 1);
 

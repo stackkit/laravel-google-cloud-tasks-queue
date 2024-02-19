@@ -13,4 +13,6 @@ interface CloudTasksApiContract
     public function deleteTask(string $taskName): void;
 
     public function getTask(string $taskName): Task;
+
+    public function exists(string $taskName): bool;
 }

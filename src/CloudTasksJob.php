@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Exception;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\Job as JobContract;
 use Illuminate\Queue\Jobs\Job as LaravelJob;
+use Safe\Exceptions\JsonException;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 
 use function Safe\json_encode;
@@ -15,7 +17,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
 {
     protected $container;
 
-    private CloudTasksQueue $cloudTasksQueue;
+    private CloudTasksQueue $driver;
 
     public array $job;
 
@@ -23,35 +25,28 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
     protected $queue;
 
-    /**
-     * @param  array  $job
-     * @param  string  $connectionName
-     * @param  string  $queue
-     */
-    public function __construct(Container $container, CloudTasksQueue $cloudTasksQueue, $job, $connectionName, $queue)
+    public function __construct(
+        Container $container,
+        CloudTasksQueue $driver,
+        array $job,
+        string $connectionName,
+        string $queue)
     {
         $this->container = $container;
-        $this->cloudTasksQueue = $cloudTasksQueue;
+        $this->driver = $driver;
         $this->job = $job;
         $this->connectionName = $connectionName;
         $this->queue = $queue;
     }
 
-    public function job(): array
-    {
-        return $this->job;
-    }
-
     public function getJobId(): string
     {
-        return $this->job['uuid'];
+        return $this->uuid() ?? throw new Exception();
     }
 
-    public function uuid(): string
-    {
-        return $this->job['uuid'];
-    }
-
+    /**
+     * @throws JsonException
+     */
     public function getRawBody(): string
     {
         return json_encode($this->job);
@@ -91,7 +86,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
         parent::delete();
 
-        $this->cloudTasksQueue->delete($this);
+        $this->driver->delete($this);
     }
 
     public function hasError(): bool
@@ -103,7 +98,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
     {
         parent::release($delay);
 
-        $this->cloudTasksQueue->release($this, $delay);
+        $this->driver->release($this, $delay);
 
         if (! data_get($this->job, 'internal.errored')) {
             app('events')->dispatch(new JobReleased($this->getConnectionName(), $this, $delay));
