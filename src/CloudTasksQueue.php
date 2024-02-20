@@ -111,41 +111,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
-        $task = new Task([
-            'name' => $this->taskName($queue, $payload),
-        ]);
+        $task = tap(new Task())->setName($this->taskName($queue, $payload));
 
-        $payload = $this->withAttempts($payload);
-        $payload = $this->withQueueName($payload, $queue);
-        $payload = $this->withTaskName($payload, $task->getName());
-        $payload = $this->withConnectionName($payload, $this->getConnectionName());
-        $payload = $this->withSecurityKey($payload);
+        $payload = $this->enrichPayloadWithInternalData(
+            payload: $payload,
+            taskName: $task->getName(),
+            connectionName: $this->getConnectionName(),
+            queueName: $queue,
+        );
 
-        if (! empty($this->config['app_engine'])) {
-            $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
-
-            $appEngineRequest = new AppEngineHttpRequest();
-            $appEngineRequest->setRelativeUri($path);
-            $appEngineRequest->setHttpMethod(HttpMethod::POST);
-            $appEngineRequest->setBody(json_encode($payload));
-            if (! empty($service = $this->config['app_engine_service'])) {
-                $routing = new AppEngineRouting();
-                $routing->setService($service);
-                $appEngineRequest->setAppEngineRouting($routing);
-            }
-            $task->setAppEngineHttpRequest($appEngineRequest);
-        } else {
-            $httpRequest = new HttpRequest();
-            $httpRequest->setUrl($this->getHandler());
-            $httpRequest->setHttpMethod(HttpMethod::POST);
-
-            $httpRequest->setBody(json_encode($payload));
-
-            $token = new OidcToken;
-            $token->setServiceAccountEmail($this->config['service_account_email']);
-            $httpRequest->setOidcToken($token);
-            $task->setHttpRequest($httpRequest);
-        }
+        $this->addPayloadToTask($payload, $task);
 
         // The deadline for requests sent to the app. If the app does not respond by
         // this deadline then the request is cancelled and the attempt is marked as
@@ -190,52 +165,60 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return trim($sanitizedName, '-');
     }
 
-    private function withAttempts(array $payload): array
+    private function enrichPayloadWithInternalData(
+        array $payload,
+        string $queueName,
+        string $taskName,
+        string $connectionName,
+    ): array
     {
-        if (! isset($payload['internal']['attempts'])) {
-            $payload['internal']['attempts'] = 0;
+        $payload['internal'] = [
+            'attempts' => $payload['internal']['attempts'] ?? 0,
+            'queue' => $queueName,
+            'taskName' => $taskName,
+            'connection' => $connectionName,
+        ];
+
+        return $payload;
+    }
+
+    public function addPayloadToTask(array $payload, Task $task): Task
+    {
+        if (!empty($this->config['app_engine'])) {
+            $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
+
+            $appEngineRequest = new AppEngineHttpRequest();
+            $appEngineRequest->setRelativeUri($path);
+            $appEngineRequest->setHttpMethod(HttpMethod::POST);
+            $appEngineRequest->setBody(json_encode($payload));
+
+            if (!empty($service = $this->config['app_engine_service'])) {
+                $routing = new AppEngineRouting();
+                $routing->setService($service);
+                $appEngineRequest->setAppEngineRouting($routing);
+            }
+
+            $task->setAppEngineHttpRequest($appEngineRequest);
+        } else {
+            $httpRequest = new HttpRequest();
+            $httpRequest->setUrl($this->getHandler());
+
+            $httpRequest->setBody(json_encode($payload));
+            $httpRequest->setHttpMethod(HttpMethod::POST);
+
+            $token = new OidcToken;
+            $token->setServiceAccountEmail($this->config['service_account_email']);
+            $httpRequest->setOidcToken($token);
+            $task->setHttpRequest($httpRequest);
         }
 
-        return $payload;
+        return $task;
     }
 
-    private function withQueueName(array $payload, string $queueName): array
-    {
-        $payload['internal']['queue'] = $queueName;
-
-        return $payload;
-    }
-
-    private function withTaskName(array $payload, string $taskName): array
-    {
-        $payload['internal']['taskName'] = $taskName;
-
-        return $payload;
-    }
-
-    private function withConnectionName(array $payload, string $connectionName): array
-    {
-        $payload['internal']['connection'] = $connectionName;
-
-        return $payload;
-    }
-
-    private function withSecurityKey(array $payload): array
-    {
-        $payload['internal']['securityKey'] = encrypt($this->config['security_key'] ?? $payload['uuid']);
-
-        return $payload;
-    }
-
-    /**
-     * Pop the next job off of the queue.
-     *
-     * @param  string|null  $queue
-     * @return \Illuminate\Contracts\Queue\Job|null
-     */
     public function pop($queue = null)
     {
-        //
+        // It is not possible to pop a job from the queue.
+        return null;
     }
 
     public function delete(CloudTasksJob $job): void
