@@ -30,6 +30,6 @@ class UserJob implements ShouldQueue
      */
     public function handle()
     {
-        logger('UserJob:'.$this->user->name);
+        event(new JobOutput('UserJob:'.$this->user->name));
     }
 }

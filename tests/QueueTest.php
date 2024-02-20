@@ -13,13 +13,12 @@ use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
+use Tests\Support\JobOutput;
 use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 use Tests\Support\User;
@@ -375,7 +374,7 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
         $this->dispatch(new FailingJob())
@@ -384,7 +383,7 @@ class QueueTest extends TestCase
             ->runAndGetReleasedJob();
 
         // Assert
-        Log::assertLogged('FailingJob:failed');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'FailingJob:failed');
     }
 
     /** @test */
@@ -392,20 +391,20 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
         Queue::before(function (JobProcessing $event) {
-            logger('Queue::before:'.$event->job->payload()['data']['commandName']);
+            event(new JobOutput('Queue::before:'.$event->job->payload()['data']['commandName']));
         });
         Queue::after(function (JobProcessed $event) {
-            logger('Queue::after:'.$event->job->payload()['data']['commandName']);
+            event(new JobOutput('Queue::after:'.$event->job->payload()['data']['commandName']));
         });
         $this->dispatch(new SimpleJob())->run();
 
         // Assert
-        Log::assertLogged('Queue::before:Tests\Support\SimpleJob');
-        Log::assertLogged('Queue::after:Tests\Support\SimpleJob');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'Queue::before:Tests\Support\SimpleJob');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'Queue::after:Tests\Support\SimpleJob');
     }
 
     /** @test */
@@ -413,16 +412,17 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
         Queue::looping(function () {
-            logger('Queue::looping');
+            event(new JobOutput('Queue::looping'));
         });
         $this->dispatch(new SimpleJob())->run();
 
         // Assert
-        Log::assertNotLogged('Queue::looping');
+        Event::assertDispatchedTimes(JobOutput::class, times: 1);
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
     /** @test */
@@ -430,7 +430,7 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         $user1 = User::create([
             'name' => 'John',
@@ -452,7 +452,7 @@ class QueueTest extends TestCase
         $job->runWithoutExceptionHandler();
 
         // Act
-        Log::assertLogged('UserJob:John');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'UserJob:John');
         CloudTasksApi::assertTaskNotDeleted($job->task->getName());
     }
 

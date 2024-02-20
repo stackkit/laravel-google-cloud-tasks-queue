@@ -4,21 +4,16 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Google\Cloud\Tasks\V2\Task;
-use Illuminate\Queue\Events\JobProcessed;
-use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobReleasedAfterException;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
-use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithMaxTries;
 use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
 use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\FailingJobWithUnlimitedTries;
+use Tests\Support\JobOutput;
 use Tests\Support\SimpleJob;
 
 class TaskHandlerTest extends TestCase
@@ -36,14 +31,13 @@ class TaskHandlerTest extends TestCase
     public function it_can_run_a_task()
     {
         // Arrange
-        Log::swap(new LogFake());
-        Event::fake([JobProcessing::class, JobProcessed::class]);
+        Event::fake(JobOutput::class);
 
         // Act
         $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
 
         // Assert
-        Log::assertLogged('SimpleJob:success');
+        Event::assertDispatched(fn(JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
     /**
@@ -52,8 +46,8 @@ class TaskHandlerTest extends TestCase
     public function it_can_run_a_task_using_the_task_connection()
     {
         // Arrange
-        Log::swap(new LogFake());
-        Event::fake([JobProcessing::class, JobProcessed::class]);
+
+        Event::fake(JobOutput::class);
         $this->app['config']->set('queue.default', 'non-existing-connection');
 
         // Act
@@ -62,7 +56,7 @@ class TaskHandlerTest extends TestCase
         $this->dispatch($job)->runWithoutExceptionHandler();
 
         // Assert
-        Log::assertLogged('SimpleJob:success');
+        Event::assertDispatched(fn(JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
     /**
@@ -92,7 +86,6 @@ class TaskHandlerTest extends TestCase
     public function after_max_attempts_it_will_delete_the_task()
     {
         // Arrange
-
         $job = $this->dispatch(new FailingJob());
 
         // Act & Assert
@@ -195,7 +188,7 @@ class TaskHandlerTest extends TestCase
     public function it_can_handle_encrypted_jobs()
     {
         // Arrange
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
         $job = $this->dispatch(new EncryptedJob());
@@ -207,7 +200,7 @@ class TaskHandlerTest extends TestCase
             decrypt($job->payloadAsArray('data.command')),
         );
 
-        Log::assertLogged('EncryptedJob:success');
+        Event::assertDispatched(fn(JobOutput $event) => $event->output === 'EncryptedJob:success');
     }
 
     /**

@@ -33,6 +33,6 @@ class SimpleJob implements ShouldQueue
      */
     public function handle()
     {
-        logger('SimpleJob:success');
+        event(new JobOutput('SimpleJob:success'));
     }
 }
