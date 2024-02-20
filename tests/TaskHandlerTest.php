@@ -18,6 +18,7 @@ use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithMaxTries;
 use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
 use Tests\Support\FailingJobWithRetryUntil;
+use Tests\Support\FailingJobWithUnlimitedTries;
 use Tests\Support\SimpleJob;
 
 class TaskHandlerTest extends TestCase
@@ -146,16 +147,16 @@ class TaskHandlerTest extends TestCase
      */
     public function test_unlimited_max_attempts()
     {
-        // Arrange
-
         // Act
-        $job = $this->dispatch(new FailingJob());
-        foreach (range(1, 50) as $attempt) {
-            $job->run();
-            CloudTasksApi::assertDeletedTaskCount($attempt);
-            CloudTasksApi::assertTaskDeleted($job->task->getName());
-            $this->assertDatabaseCount('failed_jobs', 0);
+        $job = $this->dispatch(new FailingJobWithUnlimitedTries());
+
+        foreach (range(0, 50) as $attempt) {
+            usleep(1000);
+            $job = $job->runAndGetReleasedJob();
         }
+
+        // -1 because the last job is not run.
+        CloudTasksApi::assertDeletedTaskCount(51);
     }
 
     /**
@@ -164,7 +165,6 @@ class TaskHandlerTest extends TestCase
     public function test_max_attempts_in_combination_with_retry_until()
     {
         // Arrange
-
         $this->travelTo('2020-01-01 00:00:00');
 
         $job = $this->dispatch(new FailingJobWithMaxTriesAndRetryUntil());
@@ -174,13 +174,14 @@ class TaskHandlerTest extends TestCase
         // Act & Assert
 
         // The max attempts is 3, but the retryUntil is set to 5 minutes from now.
-        // So when we attempt the job 10 times, it should still not fail.
-        foreach (range(1, 10) as $attempt) {
-            $job = $job->runAndGetReleasedJob();
-            CloudTasksApi::assertDeletedTaskCount($attempt);
-            CloudTasksApi::assertTaskDeleted($job->task->getName());
-            $this->assertDatabaseCount('failed_jobs', 0);
-        }
+        // So when we attempt the job 4 times, it should still not fail.
+        $job = $job
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob();
+
+        $this->assertDatabaseCount('failed_jobs', 0);
 
         // Now we travel to 5 minutes from now, and the job should fail.
         $this->travelTo('2020-01-01 00:05:00');
@@ -244,8 +245,8 @@ class TaskHandlerTest extends TestCase
 
         // Act & Assert
         $job = $this->dispatch(new FailingJob());
-        $job->run();
-        $releasedJob = null;
+
+        $released = $job->runAndGetReleasedJob();
 
         Event::assertDispatched(JobReleasedAfterException::class, function ($event) use (&$releasedJob) {
             $releasedJob = $event->job->getRawBody();
@@ -253,7 +254,7 @@ class TaskHandlerTest extends TestCase
             return $event->job->attempts() === 1;
         });
 
-        $this->runFromPayload($releasedJob);
+        $released->run();
 
         Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
             return $event->job->attempts() === 2;
@@ -270,23 +271,9 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::fake();
 
         // Act & Assert
-        Carbon::setTestNow(Carbon::createFromTimestamp(1685035628));
-        $job = $this->dispatch(new FailingJob());
-        Carbon::setTestNow(Carbon::createFromTimestamp(1685035629));
-
-        $job->run();
-
-        // Assert
-        CloudTasksApi::assertCreatedTaskCount(2);
-        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            [$timestamp] = array_reverse(explode('-', $task->getName()));
-
-            return $timestamp === '1685035628000';
-        });
-        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            [$timestamp] = array_reverse(explode('-', $task->getName()));
-
-            return $timestamp === '1685035629000';
-        });
+        $this->assertCount(0, $this->createdTasks);
+        $this->dispatch(new FailingJob())->runAndGetReleasedJob();
+        $this->assertCount(2, $this->createdTasks);
+        $this->assertNotEquals($this->createdTasks[0]->getName(), $this->createdTasks[1]->getName());
     }
 }

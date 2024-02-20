@@ -27,11 +27,17 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     public string $releasedJobPayload;
 
+    public array $createdTasks = [];
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->withFactories(__DIR__.'/../factories');
+
+        Event::listen(TaskCreated::class, function (TaskCreated $event) {
+            $this->createdTasks[] = $event->task;
+        });
 
         Event::listen(
             JobReleasedAfterException::class,
@@ -123,13 +129,11 @@ class TestCase extends \Orchestra\Testbench\TestCase
     public function dispatch($job)
     {
         $payload = null;
-        $payloadAsArray = [];
         $task = null;
 
-        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$payloadAsArray, &$task) {
+        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$task) {
             $request = $event->task->getHttpRequest() ?? $event->task->getAppEngineHttpRequest();
             $payload = $request->getBody();
-            $payloadAsArray = json_decode($payload, true);
             $task = $event->task;
         });
 
@@ -168,9 +172,18 @@ class TestCase extends \Orchestra\Testbench\TestCase
                     app(TaskHandler::class)->handle($this->payload);
                 });
 
+                $releasedTask = end($this->testCase->createdTasks);
+
+                if (! $releasedTask) {
+                    $this->testCase->fail('No task was released.');
+                }
+
+                $payload = $releasedTask->getAppEngineHttpRequest()?->getBody()
+                    ?: $releasedTask->getHttpRequest()->getBody();
+
                 return new self(
-                    $this->testCase->releasedJobPayload,
-                    $this->task,
+                    $payload,
+                    $releasedTask,
                     $this->testCase
                 );
             }

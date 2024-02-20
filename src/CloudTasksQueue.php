@@ -175,7 +175,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName.'-'.$payload['uuid'].'-'.Carbon::now()->getTimeStampMs(),
+            $displayName.'-'. bin2hex(random_bytes(8)),
         );
     }
 
