@@ -26,6 +26,35 @@ class ConfigHandlerTest extends TestCase
         });
     }
 
+    /** @test */
+    public function the_handle_route_task_uri_can_be_configured(): void
+    {
+        CloudTasksApi::fake();
+
+        $this->app['config']->set('cloud-tasks.uri', 'my-custom-route');
+
+        $this->dispatch(new SimpleJob());
+
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getHttpRequest()->getUrl() === 'https://docker.for.mac.localhost:8080/my-custom-route';
+        });
+    }
+
+    /** @test */
+    public function the_handle_route_task_uri_in_combination_with_path_can_be_configured(): void
+    {
+        CloudTasksApi::fake();
+
+        $this->setConfigValue('handler', 'https://example.com/api');
+        $this->app['config']->set('cloud-tasks.uri', 'my-custom-route');
+
+        $this->dispatch(new SimpleJob());
+
+        CloudTasksApi::assertTaskCreated(function (Task $task) {
+            return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route';
+        });
+    }
+
     public static function handlerDataProvider(): array
     {
         return [

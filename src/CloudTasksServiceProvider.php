@@ -64,7 +64,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
          */
         $router = $this->app['router'];
 
-        $router->post('handle-task', [TaskHandler::class, 'handle'])->name('cloud-tasks.handle-task');
+        $router->post(config('cloud-tasks.uri'), [TaskHandler::class, 'handle'])->name('cloud-tasks.handle-task');
     }
 
     private function registerEvents(): void
