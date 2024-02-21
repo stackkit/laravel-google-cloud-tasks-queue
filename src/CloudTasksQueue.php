@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Closure;
 use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
 use Google\Cloud\Tasks\V2\AppEngineRouting;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
@@ -15,7 +16,6 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Support\Carbon;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 use function Safe\json_decode;
@@ -24,6 +24,8 @@ use function Safe\preg_replace;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
+    private Closure | array $headers = [];
+
     public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
         //
@@ -184,6 +186,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     public function addPayloadToTask(array $payload, Task $task): Task
     {
+        $headers = value($this->headers, $payload) ?: [];
+
         if (!empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
 
@@ -191,6 +195,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $appEngineRequest->setRelativeUri($path);
             $appEngineRequest->setHttpMethod(HttpMethod::POST);
             $appEngineRequest->setBody(json_encode($payload));
+            $appEngineRequest->setHeaders($headers);
 
             if (!empty($service = $this->config['app_engine_service'])) {
                 $routing = new AppEngineRouting();
@@ -202,9 +207,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         } else {
             $httpRequest = new HttpRequest();
             $httpRequest->setUrl($this->getHandler());
-
             $httpRequest->setBody(json_encode($payload));
             $httpRequest->setHttpMethod(HttpMethod::POST);
+            $httpRequest->setHeaders($headers);
 
             $token = new OidcToken;
             $token->setServiceAccountEmail($this->config['service_account_email']);
@@ -250,5 +255,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         }
 
         return $handler.'/'. config('cloud-tasks.uri');
+    }
+
+    public function setTaskHeaders(Closure | array $headers): void
+    {
+        $this->headers = $headers;
     }
 }

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
@@ -473,6 +474,50 @@ class QueueTest extends TestCase
                 $task->getName(),
                 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob'
             );
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function headers_can_be_added_to_the_task()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        Queue::connection()->setTaskHeaders([
+            'X-MyHeader' => 'MyValue',
+        ]);
+
+        $this->dispatch((new SimpleJob()));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === 'MyValue';
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function headers_can_be_added_to_the_task_with_job_context()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        Queue::connection()->setTaskHeaders(function (array $payload) {
+            return [
+                'X-MyHeader' => $payload['displayName'],
+            ];
+        });
+
+        $this->dispatch((new SimpleJob()));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === SimpleJob::class;
         });
     }
 }
