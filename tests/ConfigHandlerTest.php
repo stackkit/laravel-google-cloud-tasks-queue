@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\Task;
+use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Tests\Support\SimpleJob;
 
@@ -26,7 +27,7 @@ class ConfigHandlerTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function the_handle_route_task_uri_can_be_configured(): void
     {
         CloudTasksApi::fake();
@@ -40,7 +41,7 @@ class ConfigHandlerTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function the_handle_route_task_uri_in_combination_with_path_can_be_configured(): void
     {
         CloudTasksApi::fake();

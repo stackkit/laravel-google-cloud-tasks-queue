@@ -6,6 +6,8 @@ namespace Tests;
 
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\Event;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\TestWith;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
@@ -25,9 +27,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::fake();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_run_a_task()
     {
         // Arrange
@@ -40,9 +40,7 @@ class TaskHandlerTest extends TestCase
         Event::assertDispatched(fn(JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_run_a_task_using_the_task_connection()
     {
         // Arrange
@@ -59,9 +57,7 @@ class TaskHandlerTest extends TestCase
         Event::assertDispatched(fn(JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function after_max_attempts_it_will_log_to_failed_table()
     {
         // Arrange
@@ -80,9 +76,7 @@ class TaskHandlerTest extends TestCase
         $this->assertDatabaseCount('failed_jobs', 1);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function after_max_attempts_it_will_delete_the_task()
     {
         // Arrange
@@ -105,13 +99,10 @@ class TaskHandlerTest extends TestCase
         $this->assertDatabaseCount('failed_jobs', 1);
     }
 
-    /**
-     * @test
-     *
-     * @testWith [{"now": "2020-01-01 00:00:00", "try_at": "2020-01-01 00:00:00", "should_fail": false}]
-     *           [{"now": "2020-01-01 00:00:00", "try_at": "2020-01-01 00:04:59", "should_fail": false}]
-     *           [{"now": "2020-01-01 00:00:00", "try_at": "2020-01-01 00:05:00", "should_fail": true}]
-     */
+    #[Test]
+    #[TestWith([['now' => '2020-01-01 00:00:00', 'try_at' => '2020-01-01 00:00:00', 'should_fail' => false]])]
+    #[TestWith([['now' => '2020-01-01 00:00:00', 'try_at' => '2020-01-01 00:04:59', 'should_fail' => false]])]
+    #[TestWith([['now' => '2020-01-01 00:00:00', 'try_at' => '2020-01-01 00:05:00', 'should_fail' => true]])]
     public function after_max_retry_until_it_will_log_to_failed_table_and_delete_the_task(array $args)
     {
         // Arrange
@@ -135,9 +126,7 @@ class TaskHandlerTest extends TestCase
         $this->assertDatabaseCount('failed_jobs', $args['should_fail'] ? 1 : 0);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function test_unlimited_max_attempts()
     {
         // Act
@@ -152,9 +141,7 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::assertDeletedTaskCount(51);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function test_max_attempts_in_combination_with_retry_until()
     {
         // Arrange
@@ -182,9 +169,7 @@ class TaskHandlerTest extends TestCase
         $this->assertDatabaseCount('failed_jobs', 1);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_handle_encrypted_jobs()
     {
         // Arrange
@@ -203,9 +188,7 @@ class TaskHandlerTest extends TestCase
         Event::assertDispatched(fn(JobOutput $event) => $event->output === 'EncryptedJob:success');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function failing_jobs_are_released()
     {
         // Arrange
@@ -228,9 +211,7 @@ class TaskHandlerTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function attempts_are_tracked_internally()
     {
         // Arrange
@@ -254,9 +235,7 @@ class TaskHandlerTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function retried_jobs_get_a_new_name()
     {
         // Arrange

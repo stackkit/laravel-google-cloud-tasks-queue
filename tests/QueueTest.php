@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
@@ -27,9 +28,7 @@ use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function a_http_request_with_the_handler_url_is_made()
     {
         // Arrange
@@ -44,9 +43,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_posts_to_the_handler()
     {
         // Arrange
@@ -61,9 +58,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_posts_to_the_correct_handler_url()
     {
         // Arrange
@@ -79,9 +74,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_posts_the_serialized_job_payload_to_the_handler()
     {
         // Arrange
@@ -100,9 +93,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_will_set_the_scheduled_time_when_dispatching_later()
     {
         // Arrange
@@ -118,9 +109,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function test_dispatch_deadline_config()
     {
         // Arrange
@@ -137,9 +126,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_posts_the_task_the_correct_queue()
     {
         // Arrange
@@ -169,9 +156,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_dispatch_after_commit_inline()
     {
         // Arrange
@@ -191,9 +176,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_dispatch_after_commit_through_config()
     {
         // Arrange
@@ -214,9 +197,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function jobs_can_be_released()
     {
         // Arrange
@@ -258,9 +239,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function jobs_can_be_released_with_a_delay()
     {
         // Arrange
@@ -287,7 +266,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_default_backoff()
     {
         // Arrange
@@ -303,7 +282,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_backoff_from_queue_config()
     {
         // Arrange
@@ -322,7 +301,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_backoff_from_job()
     {
         // Arrange
@@ -342,7 +321,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_exponential_backoff_from_job_method()
     {
         // Arrange
@@ -370,7 +349,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_failing_method_on_job()
     {
         // Arrange
@@ -387,7 +366,7 @@ class QueueTest extends TestCase
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'FailingJob:failed');
     }
 
-    /** @test */
+    #[Test]
     public function test_queue_before_and_after_hooks()
     {
         // Arrange
@@ -408,7 +387,7 @@ class QueueTest extends TestCase
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'Queue::after:Tests\Support\SimpleJob');
     }
 
-    /** @test */
+    #[Test]
     public function test_queue_looping_hook_not_supported_with_this_package()
     {
         // Arrange
@@ -426,7 +405,7 @@ class QueueTest extends TestCase
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
-    /** @test */
+    #[Test]
     public function test_ignoring_jobs_with_deleted_models()
     {
         // Arrange
@@ -457,9 +436,7 @@ class QueueTest extends TestCase
         CloudTasksApi::assertTaskNotDeleted($job->task->getName());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_adds_a_task_name_based_on_the_display_name()
     {
         // Arrange
@@ -477,9 +454,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function headers_can_be_added_to_the_task()
     {
         // Arrange
@@ -498,9 +473,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function headers_can_be_added_to_the_task_with_job_context()
     {
         // Arrange

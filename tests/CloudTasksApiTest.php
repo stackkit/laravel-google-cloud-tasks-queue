@@ -10,6 +10,7 @@ use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Timestamp;
+use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 
 class CloudTasksApiTest extends TestCase
@@ -41,9 +42,7 @@ class CloudTasksApiTest extends TestCase
 
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function test_create_task()
     {
         // Arrange
@@ -72,9 +71,7 @@ class CloudTasksApiTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function test_delete_task_on_non_existing_task()
     {
         // Assert
@@ -93,9 +90,7 @@ class CloudTasksApiTest extends TestCase
 
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function test_delete_task()
     {
         // Arrange
