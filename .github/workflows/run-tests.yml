@@ -67,6 +67,8 @@ jobs:
           - { queue: 'github-actions-laravel10-php83', laravel: '10.*', php: '8.3', 'testbench': '8.*'}
           - { queue: 'github-actions-laravel10-php82', laravel: '10.*', php: '8.2', 'testbench': '8.*'}
           - { queue: 'github-actions-laravel10-php81', laravel: '10.*', php: '8.1', 'testbench': '8.*'}
+          - { queue: 'github-actions-laravel11-php82', laravel: '11.*', php: '8.2', 'testbench': '9.*' }
+          - { queue: 'github-actions-laravel12-php83', laravel: '11.*', php: '8.3', 'testbench': '9.*' }
 
     name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db }}
 
