@@ -115,9 +115,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = $this->enrichPayloadWithInternalData(
             payload: $payload,
+            queueName: $queue,
             taskName: $task->getName(),
             connectionName: $this->getConnectionName(),
-            queueName: $queue,
         );
 
         $this->addPayloadToTask($payload, $task);
