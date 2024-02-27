@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Tests\Support\CustomHandlerUrlJob;
+use Tests\Support\CustomHeadersJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobOutput;
@@ -507,6 +508,25 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === SimpleJob::class;
+        });
+    }
+
+    #[Test]
+    public function job_headers_can_be_added_to_the_task()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        Queue::connection()->setTaskHeaders([
+            'X-MyHeader' => 'MyValue',
+        ]);
+        $this->dispatch((new CustomHeadersJob()));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            $headers = $task->getHttpRequest()->getHeaders();
+            return $headers['X-MyHeader'] === 'MyValue' && $headers['X-MyJobHeader'] === 'MyJobValue';
         });
     }
 }

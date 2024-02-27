@@ -190,6 +190,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public function addPayloadToTask(array $payload, Task $task, mixed $job): Task
     {
         $headers = value($this->headers, $payload) ?: [];
+        if ($job instanceof HasTaskHeaders) {
+            $headers = [
+                ...$headers,
+                ...$job->taskHeaders(),
+            ];
+        }
 
         if (!empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
