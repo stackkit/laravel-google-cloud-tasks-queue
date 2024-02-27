@@ -495,7 +495,7 @@ class QueueTest extends TestCase
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $uuid = \Safe\json_decode($task->getHttpRequest()->getBody(), true)['uuid'];
 
-            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid . '-1685649757000';
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/'.md5(1685649757000).'-Tests-Support-SimpleJob-' . $uuid;
         });
     }
 }
