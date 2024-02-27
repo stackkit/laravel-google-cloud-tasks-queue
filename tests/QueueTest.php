@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+use Tests\Support\CustomHandlerUrlJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobOutput;
@@ -59,7 +59,7 @@ class QueueTest extends TestCase
     }
 
     #[Test]
-    public function it_posts_to_the_correct_handler_url()
+    public function it_posts_to_the_configured_handler_url()
     {
         // Arrange
         $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
@@ -71,6 +71,22 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getHttpRequest()->getUrl() === 'https://docker.for.mac.localhost:8081/handle-task';
+        });
+    }
+
+    #[Test]
+    public function it_posts_to_the_job_handler_url()
+    {
+        // Arrange
+        $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
+        CloudTasksApi::fake();
+
+        // Act
+        $this->dispatch(new CustomHandlerUrlJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route';
         });
     }
 

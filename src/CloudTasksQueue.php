@@ -57,8 +57,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $this->createPayload($job, $queue, $data),
             $queue,
             null,
-            function ($payload, $queue) {
-                return $this->pushRaw($payload, $queue);
+            function ($payload, $queue) use ($job) {
+                return $this->pushRaw($payload, $queue, ['job' => $job]);
             }
         );
     }
@@ -73,8 +73,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public function pushRaw($payload, $queue = null, array $options = [])
     {
         $delay = ! empty($options['delay']) ? $options['delay'] : 0;
+        $job = $options['job'] ?? null;
 
-        return $this->pushToCloudTasks($queue, $payload, $delay);
+        return $this->pushToCloudTasks($queue, $payload, $delay, $job);
     }
 
     /**
@@ -93,8 +94,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $this->createPayload($job, $queue, $data),
             $queue,
             $delay,
-            function ($payload, $queue, $delay) {
-                return $this->pushToCloudTasks($queue, $payload, $delay);
+            function ($payload, $queue, $delay) use ($job) {
+                return $this->pushToCloudTasks($queue, $payload, $delay, $job);
             }
         );
     }
@@ -105,9 +106,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * @param  string|null  $queue
      * @param  string  $payload
      * @param  \DateTimeInterface|\DateInterval|int  $delay
+     * @param  string|object $job
      * @return string
      */
-    protected function pushToCloudTasks($queue, $payload, $delay = 0)
+    protected function pushToCloudTasks($queue, $payload, $delay, mixed $job)
     {
         $queue = $queue ?: $this->config['queue'];
 
@@ -122,7 +124,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             connectionName: $this->getConnectionName(),
         );
 
-        $this->addPayloadToTask($payload, $task);
+        $this->addPayloadToTask($payload, $task, $job);
 
         // The deadline for requests sent to the app. If the app does not respond by
         // this deadline then the request is cancelled and the attempt is marked as
@@ -184,7 +186,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload;
     }
 
-    public function addPayloadToTask(array $payload, Task $task): Task
+    /** @param string|object $job */
+    public function addPayloadToTask(array $payload, Task $task, mixed $job): Task
     {
         $headers = value($this->headers, $payload) ?: [];
 
@@ -206,7 +209,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $task->setAppEngineHttpRequest($appEngineRequest);
         } else {
             $httpRequest = new HttpRequest();
-            $httpRequest->setUrl($this->getHandler());
+            $httpRequest->setUrl($this->getHandler($job));
             $httpRequest->setBody(json_encode($payload));
             $httpRequest->setHttpMethod(HttpMethod::POST);
             $httpRequest->setHeaders($headers);
@@ -237,13 +240,18 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = $job->getRawBody();
 
-        $options = ['delay' => $delay];
+        $options = ['delay' => $delay, 'job' => $job];
 
         $this->pushRaw($payload, $job->getQueue(), $options);
     }
 
-    public function getHandler(): string
+    /** @param string|object $job */
+    public function getHandler(mixed $job): string
     {
+        if ($job instanceof HasTaskHandlerUrl) {
+            return $job->taskHandlerUrl();
+        }
+
         if (empty($this->config['handler'])) {
             $this->config['handler'] = request()->getSchemeAndHttpHost();
         }
