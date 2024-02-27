@@ -490,12 +490,12 @@ class TaskHandlerTest extends TestCase
         // Assert
         CloudTasksApi::assertCreatedTaskCount(2);
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            [$timestamp] = array_reverse(explode('-', $task->getName()));
-            return $timestamp === '1685035628000';
+            [$timestamp] = explode('-', $task->getName());
+            return $timestamp === md5('1685035628000');
         });
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            [$timestamp] = array_reverse(explode('-', $task->getName()));
-            return $timestamp === '1685035629000';
+            [$timestamp] = explode('-', $task->getName());
+            return $timestamp === md5('1685035629000');
         });
     }
 }
