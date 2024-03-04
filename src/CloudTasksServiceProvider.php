@@ -36,7 +36,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 $app['queue'],
                 $app['events'],
                 $app[ExceptionHandler::class],
-                fn() => $app->isDownForMaintenance(),
+                fn () => $app->isDownForMaintenance(),
             );
         });
 

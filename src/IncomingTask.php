@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Safe\Exceptions\JsonException;
+
 use function Safe\json_decode;
 
 class IncomingTask

@@ -38,7 +38,7 @@ class TaskHandlerTest extends TestCase
         $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
 
         // Assert
-        Event::assertDispatched(fn(JobOutput $event) => $event->output === 'SimpleJob:success');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
     #[Test]
@@ -55,7 +55,7 @@ class TaskHandlerTest extends TestCase
         $this->dispatch($job)->runWithoutExceptionHandler();
 
         // Assert
-        Event::assertDispatched(fn(JobOutput $event) => $event->output === 'SimpleJob:success');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
     #[Test]
@@ -186,7 +186,7 @@ class TaskHandlerTest extends TestCase
             decrypt($job->payloadAsArray('data.command')),
         );
 
-        Event::assertDispatched(fn(JobOutput $event) => $event->output === 'EncryptedJob:success');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'EncryptedJob:success');
     }
 
     #[Test]
@@ -260,7 +260,7 @@ class TaskHandlerTest extends TestCase
         $this->dispatch(new SimpleJobWithTimeout())->run();
 
         // Assert
-        $events = Event::dispatched(JobOutput::class)->map(fn($event) => $event[0]->output)->toArray();
+        $events = Event::dispatched(JobOutput::class)->map(fn ($event) => $event[0]->output)->toArray();
         $this->assertEquals([
             'SimpleJobWithTimeout:1',
             'SimpleJobWithTimeout:2',
