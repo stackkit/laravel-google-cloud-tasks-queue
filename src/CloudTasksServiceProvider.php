@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Foundation\Application;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
@@ -27,6 +29,15 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     {
         $this->app->singleton(CloudTasksClient::class, function () {
             return new CloudTasksClient();
+        });
+
+        $this->app->singleton('cloud-tasks.worker', function (Application $app) {
+            return new Worker(
+                $app['queue'],
+                $app['events'],
+                $app[ExceptionHandler::class],
+                fn() => $app->isDownForMaintenance(),
+            );
         });
 
         $this->app->bind('cloud-tasks-api', CloudTasksApiConcrete::class);

@@ -17,6 +17,7 @@ use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\FailingJobWithUnlimitedTries;
 use Tests\Support\JobOutput;
 use Tests\Support\SimpleJob;
+use Tests\Support\SimpleJobWithTimeout;
 
 class TaskHandlerTest extends TestCase
 {
@@ -247,5 +248,26 @@ class TaskHandlerTest extends TestCase
         $this->dispatch(new FailingJob())->runAndGetReleasedJob();
         $this->assertCount(2, $this->createdTasks);
         $this->assertNotEquals($this->createdTasks[0]->getName(), $this->createdTasks[1]->getName());
+    }
+
+    #[Test]
+    public function test_job_timeout()
+    {
+        // Arrange
+        Event::fake(JobOutput::class);
+
+        // Act
+        $this->dispatch(new SimpleJobWithTimeout())->run();
+
+        // Assert
+        $events = Event::dispatched(JobOutput::class)->map(fn($event) => $event[0]->output)->toArray();
+        $this->assertEquals([
+            'SimpleJobWithTimeout:1',
+            'SimpleJobWithTimeout:2',
+            'SimpleJobWithTimeout:3',
+            'SimpleJobWithTimeout:worker-stopping',
+            'SimpleJobWithTimeout:4',
+            'SimpleJobWithTimeout:5',
+        ], $events);
     }
 }
