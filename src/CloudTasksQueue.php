@@ -152,7 +152,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $payload = $this->withAttempts($payload);
 
         $task = $this->createTask();
-        $task->setName($this->taskName($queue, $payload));
 
         if (!empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -209,29 +208,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         }
 
         return $payload;
-    }
-
-    private function taskName(string $queueName, array $payload): string
-    {
-        $displayName = $this->sanitizeTaskName($payload['displayName']);
-
-        return CloudTasksClient::taskName(
-            $this->config['project'],
-            $this->config['location'],
-            $queueName,
-            $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimeStampMs(),
-        );
-    }
-
-    private function sanitizeTaskName(string $taskName)
-    {
-        // Remove all characters that are not -, letters, numbers, or whitespace
-        $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
-
-        // Replace all separator characters and whitespace by a -
-        $sanitizedName = preg_replace('![-\s]+!u', '-', $sanitizedName);
-
-        return trim($sanitizedName, '-');
     }
 
     private function withAttempts(array $payload): array
