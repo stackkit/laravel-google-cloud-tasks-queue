@@ -13,7 +13,6 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
@@ -213,25 +212,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     private function taskName(string $queueName, array $payload): string
     {
-        $displayName = $this->sanitizeTaskName($payload['displayName']);
-
         return CloudTasksClient::taskName(
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimeStampMs(),
+            bin2hex(random_bytes(16)),
         );
-    }
-
-    private function sanitizeTaskName(string $taskName)
-    {
-        // Remove all characters that are not -, letters, numbers, or whitespace
-        $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
-
-        // Replace all separator characters and whitespace by a -
-        $sanitizedName = preg_replace('![-\s]+!u', '-', $sanitizedName);
-
-        return trim($sanitizedName, '-');
     }
 
     private function withAttempts(array $payload): array
