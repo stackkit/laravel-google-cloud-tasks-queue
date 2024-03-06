@@ -436,7 +436,7 @@ class QueueTest extends TestCase
     }
 
     #[Test]
-    public function it_adds_a_task_name_based_on_the_display_name()
+    public function it_adds_a_pre_defined_task_name()
     {
         // Arrange
         CloudTasksApi::fake();
@@ -446,10 +446,7 @@ class QueueTest extends TestCase
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return str_starts_with(
-                $task->getName(),
-                'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob'
-            );
+            return str($task->getName())->test('/projects\/.+\/locations\/.+\/queues\/.+\/tasks\/[a-z0-9]{16}/');
         });
     }
 

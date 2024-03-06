@@ -20,7 +20,6 @@ use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 use function Safe\json_decode;
 use function Safe\json_encode;
-use function Safe\preg_replace;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
@@ -113,7 +112,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
-        $task = tap(new Task())->setName($this->taskName($queue, $payload));
+        $task = tap(new Task())->setName($this->taskName($queue));
 
         $payload = $this->enrichPayloadWithInternalData(
             payload: $payload,
@@ -144,27 +143,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload['uuid'];
     }
 
-    private function taskName(string $queueName, array $payload): string
+    private function taskName(string $queueName): string
     {
-        $displayName = $this->sanitizeTaskName($payload['displayName']);
-
         return CloudTasksClient::taskName(
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName.'-'.bin2hex(random_bytes(8)),
+            bin2hex(random_bytes(16)),
         );
-    }
-
-    private function sanitizeTaskName(string $taskName): string
-    {
-        // Remove all characters that are not -, letters, numbers, or whitespace
-        $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
-
-        // Replace all separator characters and whitespace by a -
-        $sanitizedName = preg_replace('![-\s]+!u', '-', $sanitizedName);
-
-        return trim($sanitizedName, '-');
     }
 
     private function enrichPayloadWithInternalData(
