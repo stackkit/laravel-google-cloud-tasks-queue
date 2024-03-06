@@ -482,7 +482,7 @@ class QueueTest extends TestCase
     /**
      * @test
      */
-    public function it_adds_a_task_name_based_on_the_display_name()
+    public function it_adds_a_task_name()
     {
         // Arrange
         CloudTasksApi::fake();
@@ -492,10 +492,8 @@ class QueueTest extends TestCase
         $this->dispatch((new SimpleJob()));
 
         // Assert
-        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
-            $uuid = \Safe\json_decode($task->getHttpRequest()->getBody(), true)['uuid'];
-
-            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid . '-1685649757000';
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return str_starts_with($task->getName(), 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/');
         });
     }
 }

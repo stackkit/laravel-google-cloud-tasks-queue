@@ -13,7 +13,6 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
@@ -152,6 +151,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $payload = $this->withAttempts($payload);
 
         $task = $this->createTask();
+        $task->setName($this->taskName($queue, $payload));
 
         if (!empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -208,6 +208,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         }
 
         return $payload;
+    }
+
+    private function taskName(string $queueName, array $payload): string
+    {
+        return CloudTasksClient::taskName(
+            $this->config['project'],
+            $this->config['location'],
+            $queueName,
+            bin2hex(random_bytes(16)),
+        );
     }
 
     private function withAttempts(array $payload): array
