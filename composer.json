@@ -9,8 +9,8 @@
     ],
     "require": {
         "ext-json": "*",
-        "phpseclib/phpseclib": "~2.0",
-        "google/cloud-tasks": "^1.10",
+        "phpseclib/phpseclib": "~3.0",
+        "google/cloud-tasks": "v1.14.3",
         "thecodingmachine/safe": "^1.0|^2.0"
     },
     "require-dev": {
