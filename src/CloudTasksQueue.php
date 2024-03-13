@@ -24,7 +24,7 @@ use function Safe\preg_replace;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
-    private Closure | array $headers = [];
+    private Closure|array $headers = [];
     private static ?Closure $handlerUrlCallback = null;
 
     public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
@@ -160,7 +160,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName.'-'. bin2hex(random_bytes(8)),
+            $displayName.'-'.bin2hex(random_bytes(8)),
         );
     }
 
@@ -180,8 +180,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         string $queueName,
         string $taskName,
         string $connectionName,
-    ): array
-    {
+    ): array {
         $payload['internal'] = [
             'attempts' => $payload['internal']['attempts'] ?? 0,
             'queue' => $queueName,
@@ -197,7 +196,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     {
         $headers = value($this->headers, $payload) ?: [];
 
-        if (!empty($this->config['app_engine'])) {
+        if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
 
             $appEngineRequest = new AppEngineHttpRequest();
@@ -206,7 +205,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $appEngineRequest->setBody(json_encode($payload));
             $appEngineRequest->setHeaders($headers);
 
-            if (!empty($service = $this->config['app_engine_service'])) {
+            if (! empty($service = $this->config['app_engine_service'])) {
                 $routing = new AppEngineRouting();
                 $routing->setService($service);
                 $appEngineRequest->setAppEngineRouting($routing);
@@ -264,14 +263,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $handler = rtrim($this->config['handler'], '/');
 
-        if (str_ends_with($handler, '/'. config('cloud-tasks.uri'))) {
+        if (str_ends_with($handler, '/'.config('cloud-tasks.uri'))) {
             return $handler;
         }
 
-        return $handler.'/'. config('cloud-tasks.uri');
+        return $handler.'/'.config('cloud-tasks.uri');
     }
 
-    public function setTaskHeaders(Closure | array $headers): void
+    public function setTaskHeaders(Closure|array $headers): void
     {
         $this->headers = $headers;
     }

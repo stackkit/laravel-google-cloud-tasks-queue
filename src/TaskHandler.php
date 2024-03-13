@@ -6,7 +6,6 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Container\Container;
-use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
 
 class TaskHandler
@@ -51,7 +50,7 @@ class TaskHandler
 
         $job->setAttempts($job->attempts() + 1);
 
-        tap(app('queue.worker'), fn (Worker $worker) => $worker->process(
+        tap(app('cloud-tasks.worker'), fn (Worker $worker) => $worker->process(
             connectionName: $job->getConnectionName(),
             job: $job,
             options: $this->getWorkerOptions()
