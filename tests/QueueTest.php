@@ -16,9 +16,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Tests\Support\CustomHandlerUrlJob;
-use Tests\Support\CustomHeadersJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobOutput;
@@ -76,18 +75,21 @@ class QueueTest extends TestCase
     }
 
     #[Test]
-    public function it_posts_to_the_job_handler_url()
+    public function it_posts_to_the_callback_handler_url()
     {
         // Arrange
         $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
         CloudTasksApi::fake();
+        CloudTasksQueue::configureHandlerUrlUsing(static fn(SimpleJob $job) => 'https://example.com/api/my-custom-route?job=' . $job->id);
 
         // Act
-        $this->dispatch(new CustomHandlerUrlJob());
+        $job = new SimpleJob();
+        $job->id = 1;
+        $this->dispatch($job);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route';
+            return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route?job=1';
         });
     }
 
@@ -508,25 +510,6 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === SimpleJob::class;
-        });
-    }
-
-    #[Test]
-    public function job_headers_can_be_added_to_the_task()
-    {
-        // Arrange
-        CloudTasksApi::fake();
-
-        // Act
-        Queue::connection()->setTaskHeaders([
-            'X-MyHeader' => 'MyValue',
-        ]);
-        $this->dispatch((new CustomHeadersJob()));
-
-        // Assert
-        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            $headers = $task->getHttpRequest()->getHeaders();
-            return $headers['X-MyHeader'] === 'MyValue' && $headers['X-MyJobHeader'] === 'MyJobValue';
         });
     }
 }

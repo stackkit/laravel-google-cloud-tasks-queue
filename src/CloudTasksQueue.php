@@ -25,10 +25,16 @@ use function Safe\preg_replace;
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
     private Closure | array $headers = [];
+    private static ?Closure $handlerUrlCallback = null;
 
     public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
         //
+    }
+    
+    public static function configureHandlerUrlUsing(Closure $callback): void
+    {
+        static::$handlerUrlCallback = $callback;
     }
 
     /**
@@ -190,12 +196,6 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public function addPayloadToTask(array $payload, Task $task, mixed $job): Task
     {
         $headers = value($this->headers, $payload) ?: [];
-        if ($job instanceof HasTaskHeaders) {
-            $headers = [
-                ...$headers,
-                ...$job->taskHeaders(),
-            ];
-        }
 
         if (!empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -254,8 +254,8 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /** @param string|object $job */
     public function getHandler(mixed $job): string
     {
-        if ($job instanceof HasTaskHandlerUrl) {
-            return $job->taskHandlerUrl();
+        if (static::$handlerUrlCallback) {
+            return (static::$handlerUrlCallback)($job);
         }
 
         if (empty($this->config['handler'])) {
