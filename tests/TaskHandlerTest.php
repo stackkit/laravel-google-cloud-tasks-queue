@@ -78,25 +78,23 @@ class TaskHandlerTest extends TestCase
     }
 
     #[Test]
-    public function after_max_attempts_it_will_delete_the_task()
+    public function after_max_attempts_it_will_no_longer_execute_the_task()
     {
         // Arrange
+        Event::fake([JobOutput::class]);
         $job = $this->dispatch(new FailingJob());
 
         // Act & Assert
         $releasedJob = $job->runAndGetReleasedJob();
-        CloudTasksApi::assertDeletedTaskCount(1);
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        Event::assertDispatched(JobOutput::class, 1);
         $this->assertDatabaseCount('failed_jobs', 0);
 
         $releasedJob = $releasedJob->runAndGetReleasedJob();
-        CloudTasksApi::assertDeletedTaskCount(2);
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        Event::assertDispatched(JobOutput::class, 2);
         $this->assertDatabaseCount('failed_jobs', 0);
 
         $releasedJob->run();
-        CloudTasksApi::assertDeletedTaskCount(3);
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
+        Event::assertDispatched(JobOutput::class, 4);
         $this->assertDatabaseCount('failed_jobs', 1);
     }
 
@@ -104,7 +102,7 @@ class TaskHandlerTest extends TestCase
     #[TestWith([['now' => '2020-01-01 00:00:00', 'try_at' => '2020-01-01 00:00:00', 'should_fail' => false]])]
     #[TestWith([['now' => '2020-01-01 00:00:00', 'try_at' => '2020-01-01 00:04:59', 'should_fail' => false]])]
     #[TestWith([['now' => '2020-01-01 00:00:00', 'try_at' => '2020-01-01 00:05:00', 'should_fail' => true]])]
-    public function after_max_retry_until_it_will_log_to_failed_table_and_delete_the_task(array $args)
+    public function after_max_retry_until_it_will_log_to_failed_table(array $args)
     {
         // Arrange
         $this->travelTo($args['now']);
@@ -115,8 +113,6 @@ class TaskHandlerTest extends TestCase
         $releasedJob = $job->runAndGetReleasedJob();
 
         // Assert
-        CloudTasksApi::assertDeletedTaskCount(1);
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
         $this->assertDatabaseCount('failed_jobs', 0);
 
         // Act
@@ -130,6 +126,9 @@ class TaskHandlerTest extends TestCase
     #[Test]
     public function test_unlimited_max_attempts()
     {
+        // Assert
+        Event::fake(JobOutput::class);
+
         // Act
         $job = $this->dispatch(new FailingJobWithUnlimitedTries());
 
@@ -138,8 +137,7 @@ class TaskHandlerTest extends TestCase
             $job = $job->runAndGetReleasedJob();
         }
 
-        // -1 because the last job is not run.
-        CloudTasksApi::assertDeletedTaskCount(51);
+        Event::assertDispatched(JobOutput::class, 51);
     }
 
     #[Test]
@@ -204,9 +202,7 @@ class TaskHandlerTest extends TestCase
 
         $job->run();
 
-        CloudTasksApi::assertDeletedTaskCount(1);
         CloudTasksApi::assertCreatedTaskCount(2);
-        CloudTasksApi::assertTaskDeleted($job->task->getName());
         Event::assertDispatched(JobReleasedAfterException::class, function ($event) {
             return $event->job->attempts() === 1;
         });

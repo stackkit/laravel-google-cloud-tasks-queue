@@ -222,13 +222,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     public function release(CloudTasksJob $job, int $delay = 0): void
     {
-        $job->delete();
-
-        $payload = $job->getRawBody();
-
-        $options = ['delay' => $delay];
-
-        $this->pushRaw($payload, $job->getQueue(), $options);
+        $this->pushRaw(
+            payload: $job->getRawBody(),
+            queue: $job->getQueue(),
+            options: ['delay' => $delay]
+        );
     }
 
     public function getHandler(): string

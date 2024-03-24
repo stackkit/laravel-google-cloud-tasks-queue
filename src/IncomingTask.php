@@ -26,7 +26,7 @@ class IncomingTask
         }
     }
 
-    public function isEmpty(): bool
+    public function isInvalid(): bool
     {
         return $this->task === [];
     }
