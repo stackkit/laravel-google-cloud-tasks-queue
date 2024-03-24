@@ -1,16 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests;
 
-use Closure;
-use Firebase\JWT\JWT;
 use Google\ApiCore\ApiException;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
 
@@ -19,19 +21,23 @@ class TestCase extends \Orchestra\Testbench\TestCase
     use DatabaseTransactions;
 
     /**
-     * @var \Mockery\Mock|CloudTasksClient $client
+     * @var CloudTasksClient
      */
     public $client;
 
     public string $releasedJobPayload;
 
+    public array $createdTasks = [];
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->withFactories(__DIR__ . '/../factories');
+        $this->withFactories(__DIR__.'/../factories');
 
-        $this->defaultHeaders['Authorization'] = 'Bearer ' . encrypt(time() + 10);
+        Event::listen(TaskCreated::class, function (TaskCreated $event) {
+            $this->createdTasks[] = $event->task;
+        });
 
         Event::listen(
             JobReleasedAfterException::class,
@@ -47,8 +53,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
      * In a normal app environment these would be added to the 'providers' array in
      * the config/app.php file.
      *
-     * @param  \Illuminate\Foundation\Application $app
-     *
+     * @param  \Illuminate\Foundation\Application  $app
      * @return array
      */
     protected function getPackageProviders($app)
@@ -65,14 +70,14 @@ class TestCase extends \Orchestra\Testbench\TestCase
      */
     protected function defineDatabaseMigrations()
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../migrations');
-        $this->loadMigrationsFrom(__DIR__ . '/../vendor/orchestra/testbench-core/laravel/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../vendor/orchestra/testbench-core/laravel/migrations');
     }
 
     /**
      * Define environment setup.
      *
-     * @param  \Illuminate\Foundation\Application $app
+     * @param  \Illuminate\Foundation\Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
@@ -84,13 +89,13 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('database.default', 'testbench');
         $port = env('DB_DRIVER') === 'mysql' ? 3307 : 5432;
         $app['config']->set('database.connections.testbench', [
-            'driver'   => env('DB_DRIVER', 'mysql'),
+            'driver' => env('DB_DRIVER', 'mysql'),
             'host' => '127.0.0.1',
             'port' => $port,
             'database' => 'cloudtasks',
             'username' => 'cloudtasks',
             'password' => 'cloudtasks',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
 
         $app['config']->set('cache.default', 'file');
@@ -102,7 +107,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'location' => 'europe-west6',
             'handler' => env('CLOUD_TASKS_HANDLER', 'https://docker.for.mac.localhost:8080'),
             'service_account_email' => 'info@stackkit.io',
-            'signed_audience' => true,
         ]);
         $app['config']->set('queue.failed.driver', 'database-uuids');
         $app['config']->set('queue.failed.database', 'testbench');
@@ -119,37 +123,28 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function setConfigValue($key, $value)
     {
-        $this->app['config']->set('queue.connections.my-cloudtasks-connection.' . $key, $value);
+        $this->app['config']->set('queue.connections.my-cloudtasks-connection.'.$key, $value);
     }
 
     public function dispatch($job)
     {
         $payload = null;
-        $payloadAsArray = [];
         $task = null;
 
-        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$payloadAsArray, &$task) {
+        Event::listen(TaskCreated::class, function (TaskCreated $event) use (&$payload, &$task) {
             $request = $event->task->getHttpRequest() ?? $event->task->getAppEngineHttpRequest();
             $payload = $request->getBody();
-            $payloadAsArray = json_decode($payload, true);
             $task = $event->task;
-
-            [,,,,,,,$taskName] = explode('/', $task->getName());
-
-            if ($task->hasHttpRequest()) {
-                request()->headers->set('X-Cloudtasks-Taskname', $taskName);
-            }
-
-            if ($task->hasAppEngineHttpRequest()) {
-                request()->headers->set('X-AppEngine-TaskName', $taskName);
-            }
         });
 
         dispatch($job);
 
-        return new class($payload, $task, $this) {
+        return new class($payload, $task, $this)
+        {
             public string $payload;
+
             public Task $task;
+
             public TestCase $testCase;
 
             public function __construct(string $payload, Task $task, TestCase $testCase)
@@ -177,9 +172,18 @@ class TestCase extends \Orchestra\Testbench\TestCase
                     app(TaskHandler::class)->handle($this->payload);
                 });
 
+                $releasedTask = end($this->testCase->createdTasks);
+
+                if (! $releasedTask) {
+                    $this->testCase->fail('No task was released.');
+                }
+
+                $payload = $releasedTask->getAppEngineHttpRequest()?->getBody()
+                    ?: $releasedTask->getHttpRequest()->getBody();
+
                 return new self(
-                    $this->testCase->releasedJobPayload,
-                    $this->task,
+                    $payload,
+                    $releasedTask,
                     $this->testCase
                 );
             }
@@ -218,27 +222,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
             $this->assertInstanceOf(Task::class, $task);
         } catch (ApiException $e) {
-            $this->fail('Task [' . $taskId . '] should exist but it does not (or something else went wrong).');
+            $this->fail('Task ['.$taskId.'] should exist but it does not (or something else went wrong).');
         }
-    }
-
-    protected function addIdTokenToHeader(?Closure $closure = null): void
-    {
-        $base = [
-            'iss' => 'https://accounts.google.com',
-            'aud' => 'https://docker.for.mac.localhost:8080',
-            'exp' => time() + 10,
-        ];
-
-        if ($closure) {
-            $base = $closure($base);
-        }
-
-        $privateKey = file_get_contents(__DIR__ . '/../tests/Support/self-signed-private-key.txt');
-
-        $token = JWT::encode($base, $privateKey, 'RS256', 'abc123');
-
-        request()->headers->set('Authorization', 'Bearer ' . $token);
     }
 
     protected function assertDatabaseCount($table, int $count, $connection = null)
@@ -252,7 +237,6 @@ class TestCase extends \Orchestra\Testbench\TestCase
             case 'appengine':
                 $this->setConfigValue('handler', null);
                 $this->setConfigValue('service_account_email', null);
-                $this->setConfigValue('signed_audience', null);
 
                 $this->setConfigValue('app_engine', true);
                 $this->setConfigValue('app_engine_service', 'api');
@@ -263,8 +247,23 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
                 $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8080');
                 $this->setConfigValue('service_account_email', 'info@stackkit.io');
-                $this->setConfigValue('signed_audience', true);
                 break;
         }
+    }
+
+    public static function getCommandProperties(string $command): array
+    {
+        if (Str::startsWith($command, 'O:')) {
+            return (array) unserialize($command, ['allowed_classes' => false]);
+        }
+
+        if (app()->bound(Encrypter::class)) {
+            return (array) unserialize(
+                app(Encrypter::class)->decrypt($command),
+                ['allowed_classes' => ['Illuminate\Support\Carbon']]
+            );
+        }
+
+        return [];
     }
 }

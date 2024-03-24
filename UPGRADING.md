@@ -1,3 +1,11 @@
+# From 3.x to 4.x
+
+## New task internal metadata (Impact: high)
+
+The task internal metadata has been enriched with `queue`, `taskName`, `connection` and `securityKey`.
+Existing tasks in the queue cannot be processed because they are missing these fields.
+Please ensure that all tasks in the queue are processed before upgrading to 4.x.
+
 # From 2.x to 3.x
 
 PHP 7.2 and 7.3, and Laravel 5.x are no longer supported.
