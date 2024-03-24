@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
@@ -440,13 +441,14 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
+        Str::createUlidsUsingSequence(['01HSR4V9QE2F4T0K8RBAYQ88KE']);
 
         // Act
         $this->dispatch((new SimpleJob()));
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return str($task->getName())->test('/projects\/.+\/locations\/.+\/queues\/.+\/tasks\/[a-z0-9]{16}/');
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/01HSR4V9QE2F4T0K8RBAYQ88KE-SimpleJob';
         });
     }
 

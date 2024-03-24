@@ -16,6 +16,7 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
+use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 use function Safe\json_decode;
@@ -112,7 +113,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
-        $task = tap(new Task())->setName($this->taskName($queue));
+        $task = tap(new Task())->setName($this->taskName($queue, $payload['displayName']));
 
         $payload = $this->enrichPayloadWithInternalData(
             payload: $payload,
@@ -143,13 +144,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload['uuid'];
     }
 
-    private function taskName(string $queueName): string
+    private function taskName(string $queueName, string $displayName): string
     {
         return CloudTasksClient::taskName(
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            bin2hex(random_bytes(16)),
+            str($displayName)
+                ->afterLast('\\')
+                ->prepend((string) Str::ulid(), '-')
+                ->toString(),
         );
     }
 
