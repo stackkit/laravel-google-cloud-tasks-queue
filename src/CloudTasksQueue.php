@@ -16,11 +16,11 @@ use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
+use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 use function Safe\json_decode;
 use function Safe\json_encode;
-use function Safe\preg_replace;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
@@ -136,7 +136,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
-        $task = tap(new Task())->setName($this->taskName($queue, $payload));
+        $task = tap(new Task())->setName($this->taskName($queue, $payload['displayName']));
 
         $payload = $this->enrichPayloadWithInternalData(
             payload: $payload,
@@ -167,27 +167,17 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload['uuid'];
     }
 
-    private function taskName(string $queueName, array $payload): string
+    private function taskName(string $queueName, string $displayName): string
     {
-        $displayName = $this->sanitizeTaskName($payload['displayName']);
-
         return CloudTasksClient::taskName(
             $this->config['project'],
             $this->config['location'],
             $queueName,
-            $displayName.'-'.bin2hex(random_bytes(8)),
+            str($displayName)
+                ->afterLast('\\')
+                ->prepend((string) Str::ulid(), '-')
+                ->toString(),
         );
-    }
-
-    private function sanitizeTaskName(string $taskName): string
-    {
-        // Remove all characters that are not -, letters, numbers, or whitespace
-        $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
-
-        // Replace all separator characters and whitespace by a -
-        $sanitizedName = preg_replace('![-\s]+!u', '-', $sanitizedName);
-
-        return trim($sanitizedName, '-');
     }
 
     private function enrichPayloadWithInternalData(
@@ -256,13 +246,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     public function release(CloudTasksJob $job, int $delay = 0): void
     {
-        $job->delete();
-
-        $payload = $job->getRawBody();
-
-        $options = ['delay' => $delay, 'job' => $job];
-
-        $this->pushRaw($payload, $job->getQueue(), $options);
+        $this->pushRaw(
+            payload: $job->getRawBody(),
+            queue: $job->getQueue(),
+            options: ['delay' => $delay, 'job' => $job],
+        );
     }
 
     /** @param string|object $job */

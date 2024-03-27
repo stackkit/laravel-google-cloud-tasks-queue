@@ -12,6 +12,7 @@ class FailingJob extends BaseJob
 
     public function handle()
     {
+        event(new JobOutput('FailingJob:running'));
         throw new Error('simulating a failing job');
     }
 

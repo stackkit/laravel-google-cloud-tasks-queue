@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
@@ -466,20 +467,18 @@ class QueueTest extends TestCase
     }
 
     #[Test]
-    public function it_adds_a_task_name_based_on_the_display_name()
+    public function it_adds_a_pre_defined_task_name()
     {
         // Arrange
         CloudTasksApi::fake();
+        Str::createUlidsUsingSequence(['01HSR4V9QE2F4T0K8RBAYQ88KE']);
 
         // Act
         $this->dispatch((new SimpleJob()));
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return str_starts_with(
-                $task->getName(),
-                'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob'
-            );
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/01HSR4V9QE2F4T0K8RBAYQ88KE-SimpleJob';
         });
     }
 
