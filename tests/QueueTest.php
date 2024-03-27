@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
@@ -28,6 +29,15 @@ use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
+    #[Override]
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        CloudTasksQueue::forgetHandlerUrlCallback();
+        CloudTasksQueue::forgetTaskHeadersCallback();
+    }
+
     #[Test]
     public function a_http_request_with_the_handler_url_is_made()
     {
@@ -480,7 +490,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        Queue::connection()->setTaskHeaders([
+        CloudTasksQueue::setTaskHeadersUsing(static fn() => [
             'X-MyHeader' => 'MyValue',
         ]);
 
@@ -499,11 +509,9 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        Queue::connection()->setTaskHeaders(function (array $payload) {
-            return [
-                'X-MyHeader' => $payload['displayName'],
-            ];
-        });
+        CloudTasksQueue::setTaskHeadersUsing(static fn(array $payload) => [
+            'X-MyHeader' => $payload['displayName'],
+        ]);
 
         $this->dispatch((new SimpleJob()));
 

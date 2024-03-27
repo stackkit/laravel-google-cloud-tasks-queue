@@ -24,8 +24,8 @@ use function Safe\preg_replace;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
-    private Closure|array $headers = [];
     private static ?Closure $handlerUrlCallback = null;
+    private static ?Closure $taskHeadersCallback = null;
 
     public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
@@ -35,6 +35,21 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public static function configureHandlerUrlUsing(Closure $callback): void
     {
         static::$handlerUrlCallback = $callback;
+    }
+
+    public static function forgetHandlerUrlCallback(): void
+    {
+        self::$handlerUrlCallback = null;
+    }
+
+    public static function setTaskHeadersUsing(Closure $callback): void
+    {
+        static::$taskHeadersCallback = $callback;
+    }
+
+    public static function forgetTaskHeadersCallback(): void
+    {
+        self::$taskHeadersCallback = null;
     }
 
     /**
@@ -194,7 +209,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /** @param string|object $job */
     public function addPayloadToTask(array $payload, Task $task, mixed $job): Task
     {
-        $headers = value($this->headers, $payload) ?: [];
+        $headers = $this->headers($payload);
 
         if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
@@ -270,8 +285,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $handler.'/'.config('cloud-tasks.uri');
     }
 
-    public function setTaskHeaders(Closure|array $headers): void
+    /**
+     * @param array<string, mixed> $payload 
+     * @return array<string, mixed> 
+     */
+    private function headers(mixed $payload): array
     {
-        $this->headers = $headers;
+        if (!static::$taskHeadersCallback) {
+            return [];
+        }
+
+        return (static::$taskHeadersCallback)($payload);
     }
 }
