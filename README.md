@@ -102,24 +102,42 @@ Please check the table below on what the values mean and what their value should
 
 #### Passing headers to a task
 
-You can pass headers to a task by using the `withHeaders` method on the queue connection.
+You can pass headers to a task by using the `setTaskHeadersUsing` method on the `CloudTasksQueue` class.
 
 ```php
-use Illuminate\Queue\Queue;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 
-Queue::connection()->setTaskHeaders([
+CloudTasksQueue::setTaskHeadersUsing(static fn() => [
   'X-My-Header' => 'My-Value',
 ]);
+```
+
+If necessary, the current payload being dispatched is also available:
+
+```php
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
+
+CloudTasksQueue::setTaskHeadersUsing(static fn(array $payload) => [
+  'X-My-Header' => $payload['displayName'],
+]);
+```
+
+#### Configure task handler url
+
+You can set the handler url for a task by using the `configureHandlerUrlUsing` method on the `CloudTasksQueue` class.
+
+```php
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
+
+CloudTasksQueue::configureHandlerUrlUsing(static fn() => 'https://example.com/my-url');
 ```
 
 If necessary, the current job being dispatched is also available:
 
 ```php
-use Illuminate\Queue\Queue;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 
-Queue::connection()->setTaskHeaders(fn (array $job) => [
-    'X-My-Header' => $job['displayName']
-]);
+CloudTasksQueue::configureHandlerUrlUsing(static fn(MyJob $job) => 'https://example.com/my-url/' . $job->something());
 ```
 
 <details>
