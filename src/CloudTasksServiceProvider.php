@@ -95,20 +95,6 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             );
         });
 
-        $events->listen(JobProcessing::class, function (JobProcessing $event) {
-            if (! $event->job instanceof CloudTasksJob) {
-                return;
-            }
-        });
-
-        $events->listen(JobProcessed::class, function (JobProcessed $event) {
-            if (! $event->job instanceof CloudTasksJob) {
-                return;
-            }
-
-            data_set($event->job->job, 'internal.processed', true);
-        });
-
         $events->listen(JobExceptionOccurred::class, function (JobExceptionOccurred $event) {
             if (! $event->job instanceof CloudTasksJob) {
                 return;

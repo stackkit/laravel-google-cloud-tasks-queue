@@ -35,7 +35,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Act
-        $this->dispatch(new SimpleJob())->runWithoutExceptionHandler();
+        $this->dispatch(new SimpleJob())->run();
 
         // Assert
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
@@ -52,7 +52,7 @@ class TaskHandlerTest extends TestCase
         // Act
         $job = new SimpleJob();
         $job->connection = 'my-cloudtasks-connection';
-        $this->dispatch($job)->runWithoutExceptionHandler();
+        $this->dispatch($job)->run();
 
         // Assert
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
@@ -179,11 +179,6 @@ class TaskHandlerTest extends TestCase
         $job->run();
 
         // Assert
-        $this->assertStringContainsString(
-            'O:26:"Tests\Support\EncryptedJob"',
-            decrypt($job->payloadAsArray('data.command')),
-        );
-
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'EncryptedJob:success');
     }
 

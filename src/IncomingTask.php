@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Error;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Safe\Exceptions\JsonException;
 
 use function Safe\json_decode;
@@ -33,17 +35,42 @@ class IncomingTask
 
     public function connection(): string
     {
-        return $this->task['internal']['connection'];
+        if ($connection = data_get($this->command(), 'connection')) {
+            return $connection;
+        }
+
+        return config('queue.default');
     }
 
     public function queue(): string
     {
-        return $this->task['internal']['queue'];
+        if ($queue = data_get($this->command(), 'queue')) {
+            return $queue;
+        }
+
+        return config('queue.connections.'.$this->connection().'.queue');
     }
 
     public function taskName(): string
     {
-        return $this->task['internal']['taskName'];
+        return request()->header('X-CloudTasks-TaskName')
+            ?? request()->header('X-AppEngine-TaskName')
+            ?? throw new Error('Unable to extract taskname from header');
+    }
+
+    public function command(): array
+    {
+        $command = $this->task['data']['command'];
+
+        if (str_starts_with($command, 'O:')) {
+            return (array) unserialize($command, ['allowed_classes' => false]);
+        }
+
+        if (app()->bound(Encrypter::class)) {
+            return (array) unserialize(app(Encrypter::class)->decrypt($command));
+        }
+
+        return [];
     }
 
     public function toArray(): array

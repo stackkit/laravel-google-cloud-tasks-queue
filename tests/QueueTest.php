@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobOutput;
@@ -140,23 +141,6 @@ class QueueTest extends TestCase
     }
 
     #[Test]
-    public function test_dispatch_deadline_config()
-    {
-        // Arrange
-        CloudTasksApi::fake();
-        $this->setConfigValue('dispatch_deadline', 30);
-
-        // Act
-        $this->dispatch(new SimpleJob());
-
-        // Assert
-        CloudTasksApi::assertTaskCreated(function (Task $task) {
-            return $task->hasDispatchDeadline()
-                && $task->getDispatchDeadline()->getSeconds() === 30;
-        });
-    }
-
-    #[Test]
     public function it_posts_the_task_the_correct_queue()
     {
         // Arrange
@@ -169,7 +153,7 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = $this->getCommandProperties($decoded['data']['command']);
+            $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
 
             return $decoded['displayName'] === SimpleJob::class
                 && ($command['queue'] ?? null) === null
@@ -178,7 +162,7 @@ class QueueTest extends TestCase
 
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = $this->getCommandProperties($decoded['data']['command']);
+            $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
 
             return $decoded['displayName'] === FailingJob::class
                 && $command['queue'] === 'my-special-queue'
@@ -238,17 +222,12 @@ class QueueTest extends TestCase
         ]);
 
         // Act
-        $this->dispatch(new JobThatWillBeReleased())->run();
+        $this->dispatch(new JobThatWillBeReleased())
+            ->runAndGetReleasedJob()
+            ->run();
+
 
         // Assert
-        Event::assertNotDispatched(JobReleasedAfterException::class);
-        CloudTasksApi::assertDeletedTaskCount(0); // it returned 200 OK so we dont delete it, but Google does
-        $releasedJob = null;
-        Event::assertDispatched(JobReleased::class, function (JobReleased $event) use (&$releasedJob) {
-            $releasedJob = $event->job;
-
-            return true;
-        });
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
@@ -257,9 +236,6 @@ class QueueTest extends TestCase
                 && $decoded['internal']['attempts'] === 1;
         });
 
-        $this->runFromPayload($releasedJob->getRawBody());
-
-        CloudTasksApi::assertDeletedTaskCount(0);
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
@@ -455,11 +431,11 @@ class QueueTest extends TestCase
         ]);
 
         // Act
-        $this->dispatch(new UserJob($user1))->runWithoutExceptionHandler();
+        $this->dispatch(new UserJob($user1))->run();
 
         $job = $this->dispatch(new UserJob($user2));
         $user2->delete();
-        $job->runWithoutExceptionHandler();
+        $job->run();
 
         // Act
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'UserJob:John');

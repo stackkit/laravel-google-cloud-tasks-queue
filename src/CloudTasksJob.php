@@ -62,21 +62,11 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->job['internal']['attempts'] = $attempts;
     }
 
-    public function getTaskName(): string
-    {
-        return $this->job['internal']['taskName'];
-    }
-
     public function delete(): void
     {
         // Laravel automatically calls delete() after a job is processed successfully.
         // However, this is not what we want to happen in Cloud Tasks because Cloud Tasks
         // will also delete the task upon a 200 OK status, which means a task is deleted twice.
-    }
-
-    public function hasError(): bool
-    {
-        return data_get($this->job, 'internal.errored') === true;
     }
 
     public function release($delay = 0): void
@@ -86,7 +76,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->driver->release($this, $delay);
 
         if (! data_get($this->job, 'internal.errored')) {
-            app('events')->dispatch(new JobReleased($this->getConnectionName(), $this, $delay));
+            event(new JobReleased($this->getConnectionName(), $this, $delay));
         }
     }
 }

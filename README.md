@@ -59,10 +59,6 @@ Add a new queue connection to `config/queue.php`
   'handler'               => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
   'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
   
-  // Optional: The deadline in seconds for requests sent to the worker. If the worker
-  // does not respond by this deadline then the request is cancelled and the attempt
-  // is marked as a DEADLINE_EXCEEDED failure.
-  'dispatch_deadline' => null,
   'backoff' => 0,
 ],
 ```

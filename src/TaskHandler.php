@@ -7,6 +7,7 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Container\Container;
 use Illuminate\Queue\WorkerOptions;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskIncoming;
 
 class TaskHandler
 {
@@ -20,6 +21,8 @@ class TaskHandler
     public function handle(?string $task = null): void
     {
         $task = IncomingTask::fromJson($task ?: request()->getContent());
+
+        event(new TaskIncoming($task));
 
         if ($task->isInvalid()) {
             abort(422, 'Invalid task payload');

@@ -12,7 +12,6 @@ use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\OidcToken;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
@@ -138,21 +137,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $task = tap(new Task())->setName($this->taskName($queue, $payload['displayName']));
 
-        $payload = $this->enrichPayloadWithInternalData(
-            payload: $payload,
-            queueName: $queue,
-            taskName: $task->getName(),
-            connectionName: $this->getConnectionName(),
-        );
+        $payload = $this->enrichPayloadWithAttempts($payload);
 
         $this->addPayloadToTask($payload, $task, $job);
-
-        // The deadline for requests sent to the app. If the app does not respond by
-        // this deadline then the request is cancelled and the attempt is marked as
-        // a failure. Cloud Tasks will retry the task according to the RetryConfig.
-        if (! empty($this->config['dispatch_deadline'])) {
-            $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
-        }
 
         $availableAt = $this->availableAt($delay);
         if ($availableAt > time()) {
@@ -175,22 +162,18 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $queueName,
             str($displayName)
                 ->afterLast('\\')
+                ->replaceMatches('![^-\pL\pN\s]+!u', '-')
+                ->replaceMatches('![-\s]+!u', '-')
                 ->prepend((string) Str::ulid(), '-')
                 ->toString(),
         );
     }
 
-    private function enrichPayloadWithInternalData(
+    private function enrichPayloadWithAttempts(
         array $payload,
-        string $queueName,
-        string $taskName,
-        string $connectionName,
     ): array {
         $payload['internal'] = [
             'attempts' => $payload['internal']['attempts'] ?? 0,
-            'queue' => $queueName,
-            'taskName' => $taskName,
-            'connection' => $connectionName,
         ];
 
         return $payload;
@@ -241,7 +224,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
     public function delete(CloudTasksJob $job): void
     {
-        CloudTasksApi::deleteTask($job->getTaskName());
+        // Job deletion will be handled by Cloud Tasks.
     }
 
     public function release(CloudTasksJob $job, int $delay = 0): void
