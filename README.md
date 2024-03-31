@@ -15,20 +15,11 @@ This package allows Google Cloud Tasks to be used as the queue driver.
 <img src="/assets/cloud-tasks-home.png" width="100%">
 </p>
 
-<details>
-<summary>
-Requirements
-</summary>
+### Requirements
 
-<br>
-This package requires Laravel 10 or higher and supports MySQL 8 and PostgreSQL 15. Might support older database versions too, but package hasn't been tested for it.
+This package requires Laravel 10 or 11.
 
-Please check the [Laravel support policy](https://laravel.com/docs/master/releases#support-policy) table for supported
-Laravel and PHP versions.
-</details>
-<details>
-<summary>Installation</summary>
-<br>
+### Installation
 
 Require the package using Composer
 
@@ -63,14 +54,13 @@ Add a new queue connection to `config/queue.php`
 ],
 ```
 
-If you are using separate services for dispatching and handling tasks, you may want to change the following settings:
+If you are using separate services for dispatching and handling tasks, and your application only dispatches jobs and should not be able to handle jobs, you may disable the task handler from `config/cloud-tasks.php`:
 
 ```php
-// config/cloud-tasks.php
-
-// If the application only dispatches jobs
 'disable_task_handler' => env('STACKKIT_CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
 ```
+
+Finally, change the `QUEUE_CONNECTION` to the newly defined connection.
 
 ```dotenv
 QUEUE_CONNECTION=cloudtasks
@@ -136,11 +126,8 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 CloudTasksQueue::configureHandlerUrlUsing(static fn(MyJob $job) => 'https://example.com/my-url/' . $job->something());
 ```
 
-<details>
-<summary>
-How it works & Differences
-</summary>
-<br>
+### How it works and differences
+
 Using Cloud Tasks as a Laravel queue driver is fundamentally different than other Laravel queue drivers, like Redis.
 
 Typically a Laravel queue has a worker that listens to incoming jobs using the `queue:work` / `queue:listen` command.
@@ -149,53 +136,9 @@ your application with the job payload. There is no need to run a `queue:work/lis
 
 #### Good to know
 
-- Backoff, retries, max tries, retryUntil are all handled by Laravel. All these options are ignored in the Cloud Tasks
-  configuration.
+Cloud Tasks has it's own retry configuration options: maximum number of attempts, retry duration, min/max backoff and max doublings. All of these options are ignored by this package. Instead, you may configure max attempts, retry duration and backoff strategy right from Laravel.
 
-</details>
-<details>
-<summary>Dashboard (beta)</summary>
-<br>
-The package comes with a beautiful dashboard that can be used to monitor all queued jobs.
-
-
-<img src="/assets/dashboard.png" width="100%">
-
----
-
-_Experimental_
-
-The dashboard works by storing all outgoing tasks in a database table. When Cloud Tasks calls the application and this
-package handles the task, we will automatically update the tasks' status, attempts
-and possible errors.
-
-There is probably a (small) performance penalty because each task dispatch and handling does extra database read and
-writes.
-Also, the dashboard has not been tested with high throughput queues.
-
----
-
-
-To make use of it, enable it through the `.env` file:
-
-```dotenv
-STACKKIT_CLOUD_TASKS_DASHBOARD_ENABLED=true
-STACKKIT_CLOUD_TASKS_DASHBOARD_PASSWORD=MySecretLoginPasswordPleaseChangeThis
-```
-
-Then publish its assets and migrations:
-
-```console
-php artisan vendor:publish --tag=cloud-tasks
-php artisan migrate
-```
-
-The dashboard is accessible at the URI: /cloud-tasks
-
-</details>
-<details>
-<summary>Authentication</summary>
-<br>
+### Authentication
 
 Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the credentials file.
 
@@ -210,20 +153,6 @@ works:
 4. Cloud Tasks Task Deleter
 5. Service Account User
 
-</details>
-<details>
-<summary>Security</summary>
-<br>
-The job handler requires each request to have an OpenID token. In the installation step we set the service account email, and with that service account, Cloud Tasks will generate an OpenID token and send it along with the job payload to the handler.
+### Upgrading
 
-This package verifies that the token is digitally signed by Google. Only Google Tasks will be able to call your handler.
-
-More information about OpenID Connect:
-
-https://developers.google.com/identity/protocols/oauth2/openid-connect
-</details>
-<details>
-<summary>Upgrading</summary>
-<br>
 Read [UPGRADING.MD](UPGRADING.md) on how to update versions.
-</details>
