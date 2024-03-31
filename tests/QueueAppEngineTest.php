@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\Task;
+use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Tests\Support\SimpleJob;
 
@@ -17,9 +18,7 @@ class QueueAppEngineTest extends TestCase
         $this->withTaskType('appengine');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function an_app_engine_http_request_with_the_handler_url_is_made()
     {
         // Arrange
@@ -34,9 +33,7 @@ class QueueAppEngineTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_routes_to_the_service()
     {
         // Arrange
@@ -51,9 +48,7 @@ class QueueAppEngineTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_contains_the_payload()
     {
         // Arrange

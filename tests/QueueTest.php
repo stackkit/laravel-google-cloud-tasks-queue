@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\HttpMethod;
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -14,15 +13,17 @@ use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
+use Override;
+use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Stackkit\LaravelGoogleCloudTasksQueue\LogFake;
-use Stackkit\LaravelGoogleCloudTasksQueue\OpenIdVerificator;
-use Stackkit\LaravelGoogleCloudTasksQueue\TaskHandler;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
+use Tests\Support\JobOutput;
 use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
 use Tests\Support\User;
@@ -30,9 +31,16 @@ use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Override]
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        CloudTasksQueue::forgetHandlerUrlCallback();
+        CloudTasksQueue::forgetTaskHeadersCallback();
+    }
+
+    #[Test]
     public function a_http_request_with_the_handler_url_is_made()
     {
         // Arrange
@@ -47,9 +55,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_posts_to_the_handler()
     {
         // Arrange
@@ -64,10 +70,8 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
-    public function it_posts_to_the_correct_handler_url()
+    #[Test]
+    public function it_posts_to_the_configured_handler_url()
     {
         // Arrange
         $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
@@ -82,9 +86,26 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
+    public function it_posts_to_the_callback_handler_url()
+    {
+        // Arrange
+        $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
+        CloudTasksApi::fake();
+        CloudTasksQueue::configureHandlerUrlUsing(static fn (SimpleJob $job) => 'https://example.com/api/my-custom-route?job='.$job->id);
+
+        // Act
+        $job = new SimpleJob();
+        $job->id = 1;
+        $this->dispatch($job);
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route?job=1';
+        });
+    }
+
+    #[Test]
     public function it_posts_the_serialized_job_payload_to_the_handler()
     {
         // Arrange
@@ -103,9 +124,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_will_set_the_scheduled_time_when_dispatching_later()
     {
         // Arrange
@@ -121,28 +140,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
-    public function test_dispatch_deadline_config()
-    {
-        // Arrange
-        CloudTasksApi::fake();
-        $this->setConfigValue('dispatch_deadline', 30);
-
-        // Act
-        $this->dispatch(new SimpleJob());
-
-        // Assert
-        CloudTasksApi::assertTaskCreated(function (Task $task) {
-            return $task->hasDispatchDeadline()
-                && $task->getDispatchDeadline()->getSeconds() === 30;
-        });
-    }
-
-    /**
-     * @test
-     */
+    #[Test]
     public function it_posts_the_task_the_correct_queue()
     {
         // Arrange
@@ -155,7 +153,7 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = TaskHandler::getCommandProperties($decoded['data']['command']);
+            $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
 
             return $decoded['displayName'] === SimpleJob::class
                 && ($command['queue'] ?? null) === null
@@ -164,7 +162,7 @@ class QueueTest extends TestCase
 
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
             $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-            $command = TaskHandler::getCommandProperties($decoded['data']['command']);
+            $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
 
             return $decoded['displayName'] === FailingJob::class
                 && $command['queue'] === 'my-special-queue'
@@ -172,9 +170,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_dispatch_after_commit_inline()
     {
         // Arrange
@@ -194,9 +190,7 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_dispatch_after_commit_through_config()
     {
         // Arrange
@@ -217,56 +211,44 @@ class QueueTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function jobs_can_be_released()
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake([
             JobReleasedAfterException::class,
             JobReleased::class,
         ]);
 
         // Act
-        $this->dispatch(new JobThatWillBeReleased())->run();
+        $this->dispatch(new JobThatWillBeReleased())
+            ->runAndGetReleasedJob()
+            ->run();
 
         // Assert
-        Event::assertNotDispatched(JobReleasedAfterException::class);
-        CloudTasksApi::assertDeletedTaskCount(0); // it returned 200 OK so we dont delete it, but Google does
-        $releasedJob = null;
-        Event::assertDispatched(JobReleased::class, function (JobReleased $event) use (&$releasedJob) {
-            $releasedJob = $event->job;
-            return true;
-        });
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
+
             return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
                 && $decoded['internal']['attempts'] === 1;
         });
 
-        $this->runFromPayload($releasedJob->getRawBody());
-
-        CloudTasksApi::assertDeletedTaskCount(0);
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             $body = $task->getHttpRequest()->getBody();
             $decoded = json_decode($body, true);
+
             return $decoded['data']['commandName'] === 'Tests\\Support\\JobThatWillBeReleased'
                 && $decoded['internal']['attempts'] === 2;
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function jobs_can_be_released_with_a_delay()
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake([
             JobReleasedAfterException::class,
             JobReleased::class,
@@ -289,12 +271,11 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_default_backoff()
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -306,14 +287,13 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_backoff_from_queue_config()
     {
         // Arrange
         Carbon::setTestNow(now()->addDay());
         $this->setConfigValue('backoff', 123);
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -326,13 +306,12 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_backoff_from_job()
     {
         // Arrange
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
         Event::fake(JobReleasedAfterException::class);
 
         // Act
@@ -347,13 +326,12 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_exponential_backoff_from_job_method()
     {
         // Arrange
         Carbon::setTestNow(now()->addDay());
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
 
         // Act
         $releasedJob = $this->dispatch(new FailingJobWithExponentialBackoff())
@@ -376,72 +354,68 @@ class QueueTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function test_failing_method_on_job()
     {
         // Arrange
         CloudTasksApi::fake();
-        CloudTasksApi::partialMock()->shouldReceive('getRetryConfig')->andReturn(
-            (new RetryConfig())->setMaxAttempts(1)
-        );
-
-        OpenIdVerificator::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
-        $this->dispatch(new FailingJob())->run();
+        $this->dispatch(new FailingJob())
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob();
 
         // Assert
-        Log::assertLogged('FailingJob:failed');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'FailingJob:failed');
     }
 
-    /** @test */
+    #[Test]
     public function test_queue_before_and_after_hooks()
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
         Queue::before(function (JobProcessing $event) {
-            logger('Queue::before:' . $event->job->payload()['data']['commandName']);
+            event(new JobOutput('Queue::before:'.$event->job->payload()['data']['commandName']));
         });
         Queue::after(function (JobProcessed $event) {
-            logger('Queue::after:' . $event->job->payload()['data']['commandName']);
+            event(new JobOutput('Queue::after:'.$event->job->payload()['data']['commandName']));
         });
         $this->dispatch(new SimpleJob())->run();
 
         // Assert
-        Log::assertLogged('Queue::before:Tests\Support\SimpleJob');
-        Log::assertLogged('Queue::after:Tests\Support\SimpleJob');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'Queue::before:Tests\Support\SimpleJob');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'Queue::after:Tests\Support\SimpleJob');
     }
 
-    /** @test */
+    #[Test]
     public function test_queue_looping_hook_not_supported_with_this_package()
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         // Act
         Queue::looping(function () {
-            logger('Queue::looping');
+            event(new JobOutput('Queue::looping'));
         });
         $this->dispatch(new SimpleJob())->run();
 
         // Assert
-        Log::assertNotLogged('Queue::looping');
+        Event::assertDispatchedTimes(JobOutput::class, times: 1);
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
     }
 
-    /** @test */
+    #[Test]
     public function test_ignoring_jobs_with_deleted_models()
     {
         // Arrange
         CloudTasksApi::fake();
-        OpenIdVerificator::fake();
-        Log::swap(new LogFake());
+        Event::fake(JobOutput::class);
 
         $user1 = User::create([
             'name' => 'John',
@@ -456,34 +430,68 @@ class QueueTest extends TestCase
         ]);
 
         // Act
-        $this->dispatch(new UserJob($user1))->runWithoutExceptionHandler();
+        $this->dispatch(new UserJob($user1))->run();
 
         $job = $this->dispatch(new UserJob($user2));
         $user2->delete();
-        $job->runWithoutExceptionHandler();
+        $job->run();
 
         // Act
-        Log::assertLogged('UserJob:John');
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'UserJob:John');
         CloudTasksApi::assertTaskNotDeleted($job->task->getName());
     }
 
-    /**
-     * @test
-     */
-    public function it_adds_a_task_name_based_on_the_display_name()
+    #[Test]
+    public function it_adds_a_pre_defined_task_name()
     {
         // Arrange
         CloudTasksApi::fake();
-        Carbon::setTestNow(Carbon::create(2023, 6, 1, 20, 2, 37));
+        Str::createUlidsUsingSequence(['01HSR4V9QE2F4T0K8RBAYQ88KE']);
 
         // Act
         $this->dispatch((new SimpleJob()));
 
         // Assert
-        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
-            $uuid = \Safe\json_decode($task->getHttpRequest()->getBody(), true)['uuid'];
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/01HSR4V9QE2F4T0K8RBAYQ88KE-SimpleJob';
+        });
+    }
 
-            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/Tests-Support-SimpleJob-' . $uuid . '-1685649757000';
+    #[Test]
+    public function headers_can_be_added_to_the_task()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        CloudTasksQueue::setTaskHeadersUsing(static fn () => [
+            'X-MyHeader' => 'MyValue',
+        ]);
+
+        $this->dispatch((new SimpleJob()));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === 'MyValue';
+        });
+    }
+
+    #[Test]
+    public function headers_can_be_added_to_the_task_with_job_context()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        CloudTasksQueue::setTaskHeadersUsing(static fn (array $payload) => [
+            'X-MyHeader' => $payload['displayName'],
+        ]);
+
+        $this->dispatch((new SimpleJob()));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === SimpleJob::class;
         });
     }
 }

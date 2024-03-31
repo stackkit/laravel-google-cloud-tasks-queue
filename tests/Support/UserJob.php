@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Support;
 
 use Illuminate\Bus\Queueable;
@@ -7,7 +9,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Mail;
 
 class UserJob implements ShouldQueue
 {
@@ -29,6 +30,6 @@ class UserJob implements ShouldQueue
      */
     public function handle()
     {
-        logger('UserJob:' . $this->user->name);
+        event(new JobOutput('UserJob:'.$this->user->name));
     }
 }

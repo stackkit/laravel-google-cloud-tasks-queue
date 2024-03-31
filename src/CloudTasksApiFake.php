@@ -5,28 +5,14 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Closure;
-use Google\Cloud\Tasks\V2\RetryConfig;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Duration;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use PHPUnit\Framework\Assert;
 
 class CloudTasksApiFake implements CloudTasksApiContract
 {
     public array $createdTasks = [];
+
     public array $deletedTasks = [];
-
-    public function getRetryConfig(string $queueName): RetryConfig
-    {
-        $retryConfig = new RetryConfig();
-
-        $retryConfig
-            ->setMinBackoff((new Duration(['seconds' => 0])))
-            ->setMaxBackoff((new Duration(['seconds' => 0])));
-
-        return $retryConfig;
-    }
 
     public function createTask(string $queueName, Task $task): Task
     {
@@ -46,17 +32,22 @@ class CloudTasksApiFake implements CloudTasksApiContract
             ->setName($taskName);
     }
 
-
-    public function getRetryUntilTimestamp(Task $task): ?int
+    public function exists(string $taskName): bool
     {
-        return null;
+        foreach ($this->createdTasks as $createdTask) {
+            if ($createdTask['task']->getName() === $taskName) {
+                return ! in_array($taskName, $this->deletedTasks);
+            }
+        }
+
+        return false;
     }
 
     public function assertTaskDeleted(string $taskName): void
     {
         Assert::assertTrue(
             in_array($taskName, $this->deletedTasks),
-            'The task [' . $taskName . '] should have been deleted but it is not.'
+            'The task ['.$taskName.'] should have been deleted but it is not.'
         );
     }
 
@@ -64,7 +55,7 @@ class CloudTasksApiFake implements CloudTasksApiContract
     {
         Assert::assertTrue(
             ! in_array($taskName, $this->deletedTasks),
-            'The task [' . $taskName . '] should not have been deleted but it was.'
+            'The task ['.$taskName.'] should not have been deleted but it was.'
         );
     }
 
