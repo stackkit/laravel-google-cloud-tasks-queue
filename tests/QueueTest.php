@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithExponentialBackoff;
@@ -28,6 +30,15 @@ use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
+    #[Override]
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        CloudTasksQueue::forgetHandlerUrlCallback();
+        CloudTasksQueue::forgetTaskHeadersCallback();
+    }
+
     #[Test]
     public function a_http_request_with_the_handler_url_is_made()
     {
@@ -59,7 +70,7 @@ class QueueTest extends TestCase
     }
 
     #[Test]
-    public function it_posts_to_the_correct_handler_url()
+    public function it_posts_to_the_configured_handler_url()
     {
         // Arrange
         $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
@@ -71,6 +82,25 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getHttpRequest()->getUrl() === 'https://docker.for.mac.localhost:8081/handle-task';
+        });
+    }
+
+    #[Test]
+    public function it_posts_to_the_callback_handler_url()
+    {
+        // Arrange
+        $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
+        CloudTasksApi::fake();
+        CloudTasksQueue::configureHandlerUrlUsing(static fn(SimpleJob $job) => 'https://example.com/api/my-custom-route?job=' . $job->id);
+
+        // Act
+        $job = new SimpleJob();
+        $job->id = 1;
+        $this->dispatch($job);
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route?job=1';
         });
     }
 
@@ -459,7 +489,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        Queue::connection()->setTaskHeaders([
+        CloudTasksQueue::setTaskHeadersUsing(static fn() => [
             'X-MyHeader' => 'MyValue',
         ]);
 
@@ -478,11 +508,9 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        Queue::connection()->setTaskHeaders(function (array $payload) {
-            return [
-                'X-MyHeader' => $payload['displayName'],
-            ];
-        });
+        CloudTasksQueue::setTaskHeadersUsing(static fn(array $payload) => [
+            'X-MyHeader' => $payload['displayName'],
+        ]);
 
         $this->dispatch((new SimpleJob()));
 
