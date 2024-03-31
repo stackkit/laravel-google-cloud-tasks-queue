@@ -24,13 +24,14 @@ use function Safe\json_encode;
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
     private static ?Closure $handlerUrlCallback = null;
+
     private static ?Closure $taskHeadersCallback = null;
 
     public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
         //
     }
-    
+
     public static function configureHandlerUrlUsing(Closure $callback): void
     {
         static::$handlerUrlCallback = $callback;
@@ -126,7 +127,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * @param  string|null  $queue
      * @param  string  $payload
      * @param  \DateTimeInterface|\DateInterval|int  $delay
-     * @param  string|object $job
+     * @param  string|object  $job
      * @return string
      */
     protected function pushToCloudTasks($queue, $payload, $delay, mixed $job)
@@ -257,12 +258,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     }
 
     /**
-     * @param array<string, mixed> $payload 
-     * @return array<string, mixed> 
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
      */
     private function headers(mixed $payload): array
     {
-        if (!static::$taskHeadersCallback) {
+        if (! static::$taskHeadersCallback) {
             return [];
         }
 

@@ -9,8 +9,6 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Application;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Queue\Events\JobProcessed;
-use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 

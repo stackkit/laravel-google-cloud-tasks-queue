@@ -92,7 +92,7 @@ class QueueTest extends TestCase
         // Arrange
         $this->setConfigValue('handler', 'https://docker.for.mac.localhost:8081');
         CloudTasksApi::fake();
-        CloudTasksQueue::configureHandlerUrlUsing(static fn(SimpleJob $job) => 'https://example.com/api/my-custom-route?job=' . $job->id);
+        CloudTasksQueue::configureHandlerUrlUsing(static fn (SimpleJob $job) => 'https://example.com/api/my-custom-route?job='.$job->id);
 
         // Act
         $job = new SimpleJob();
@@ -225,7 +225,6 @@ class QueueTest extends TestCase
         $this->dispatch(new JobThatWillBeReleased())
             ->runAndGetReleasedJob()
             ->run();
-
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task) {
@@ -465,7 +464,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        CloudTasksQueue::setTaskHeadersUsing(static fn() => [
+        CloudTasksQueue::setTaskHeadersUsing(static fn () => [
             'X-MyHeader' => 'MyValue',
         ]);
 
@@ -484,7 +483,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        CloudTasksQueue::setTaskHeadersUsing(static fn(array $payload) => [
+        CloudTasksQueue::setTaskHeadersUsing(static fn (array $payload) => [
             'X-MyHeader' => $payload['displayName'],
         ]);
 
