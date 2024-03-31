@@ -38,17 +38,17 @@ Add a new queue connection to `config/queue.php`
 ```php
 'cloudtasks' => [
   'driver' => 'cloudtasks',
-  'project' => env('STACKKIT_CLOUD_TASKS_PROJECT', ''),
-  'location' => env('STACKKIT_CLOUD_TASKS_LOCATION', ''),
-  'queue' => env('STACKKIT_CLOUD_TASKS_QUEUE', 'default'),
+  'project' => env('CLOUD_TASKS_PROJECT', ''),
+  'location' => env('CLOUD_TASKS_LOCATION', ''),
+  'queue' => env('CLOUD_TASKS_QUEUE', 'default'),
   
   // Required when using AppEngine
-  'app_engine'            => env('STACKKIT_APP_ENGINE_TASK', false),
-  'app_engine_service'    => env('STACKKIT_APP_ENGINE_SERVICE', ''),
+  'app_engine'            => env('APP_ENGINE_TASK', false),
+  'app_engine_service'    => env('APP_ENGINE_SERVICE', ''),
   
   // Required when not using AppEngine
-  'handler'               => env('STACKKIT_CLOUD_TASKS_HANDLER', ''),
-  'service_account_email' => env('STACKKIT_CLOUD_TASKS_SERVICE_EMAIL', ''),
+  'handler'               => env('CLOUD_TASKS_HANDLER', ''),
+  'service_account_email' => env('CLOUD_TASKS_SERVICE_EMAIL', ''),
   
   'backoff' => 0,
 ],
@@ -57,7 +57,7 @@ Add a new queue connection to `config/queue.php`
 If you are using separate services for dispatching and handling tasks, and your application only dispatches jobs and should not be able to handle jobs, you may disable the task handler from `config/cloud-tasks.php`:
 
 ```php
-'disable_task_handler' => env('STACKKIT_CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
+'disable_task_handler' => env('CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
 ```
 
 Finally, change the `QUEUE_CONNECTION` to the newly defined connection.
@@ -72,15 +72,15 @@ Please check the table below on what the values mean and what their value should
 
 | Environment variable                              | Description                                                                                                                                              | Example                                          
 ---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------
-| `STACKKIT_CLOUD_TASKS_PROJECT`                    | The project your queue belongs to.                                                                                                                       | `my-project`                                     
-| `STACKKIT_CLOUD_TASKS_LOCATION`                   | The region where the project is hosted.                                                                                                                  | `europe-west6`                                   
-| `STACKKIT_CLOUD_TASKS_QUEUE`                      | The default queue a job will be added to.                                                                                                                | `emails`                                         
+| `CLOUD_TASKS_PROJECT`                    | The project your queue belongs to.                                                                                                                       | `my-project`                                     
+| `CLOUD_TASKS_LOCATION`                   | The region where the project is hosted.                                                                                                                  | `europe-west6`                                   
+| `CLOUD_TASKS_QUEUE`                      | The default queue a job will be added to.                                                                                                                | `emails`                                         
 | **App Engine**                                    
-| `STACKKIT_APP_ENGINE_TASK` (optional)             | Set to true to use App Engine task (else a Http task will be used). Defaults to false.                                                                   | `true`                                           
-| `STACKKIT_APP_ENGINE_SERVICE` (optional)          | The App Engine service to handle the task (only if using App Engine task).                                                                               | `api`                                            
+| `APP_ENGINE_TASK` (optional)             | Set to true to use App Engine task (else a Http task will be used). Defaults to false.                                                                   | `true`                                           
+| `APP_ENGINE_SERVICE` (optional)          | The App Engine service to handle the task (only if using App Engine task).                                                                               | `api`                                            
 | **Non- App Engine apps**                          
-| `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL`   (optional) | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                | `my-service-account@appspot.gserviceaccount.com` 
-| `STACKKIT_CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. | `https://<your website>.com`                     
+| `CLOUD_TASKS_SERVICE_EMAIL`   (optional) | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                | `my-service-account@appspot.gserviceaccount.com` 
+| `CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. | `https://<your website>.com`                     
 
 </details>
 
