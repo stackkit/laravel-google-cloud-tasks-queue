@@ -1,10 +1,40 @@
 # From 3.x to 4.x
 
-## New task internal metadata (Impact: high)
+## Renamed environment names (Impact: high)
 
-The task internal metadata has been enriched with `queue`, `taskName`, `connection` and `securityKey`.
-Existing tasks in the queue cannot be processed because they are missing these fields.
-Please ensure that all tasks in the queue are processed before upgrading to 4.x.
+The following environment variables have been shortened:
+- `STACKKIT_CLOUD_TASKS_PROJECT` → `CLOUD_TASKS_PROJECT`
+- `STACKKIT_CLOUD_TASKS_LOCATION` → `CLOUD_TASKS_LOCATION`
+- `STACKKIT_CLOUD_TASKS_QUEUE` → `CLOUD_TASKS_QUEUE`
+- `STACKKIT_CLOUD_TASKS_HANDLER` → `CLOUD_TASKS_HANDLER`
+- `STACKKIT_CLOUD_TASKS_SERVICE_EMAIL` → `CLOUD_TASKS_SERVICE_EMAIL`
+
+The following environment variables have been renamed to be more consistent:
+
+- `STACKKIT_APP_ENGINE_TASK` → `CLOUD_TASKS_APP_ENGINE_TASK`
+- `STACKKIT_APP_ENGINE_SERVICE` → `CLOUD_TASKS_APP_ENGINE_SERVICE`
+
+The following environment variable has been removed:
+- `STACKKIT_CLOUD_TASKS_SIGNED_AUDIENCE`
+
+## Removed dashboard (Impact: high)
+
+The dashboard has been removed to keep the package minimal. A separate composer package might be created with an updated version of the dashboard.
+
+## New configuration file (Impact: medium)
+
+The configuration file has been updated to reflect the removed dashboard and to add new configurable options.
+
+Please publish the new configuration file:
+
+```shell
+php artisan vendor:publish --tag=cloud-tasks --force
+```
+
+## Dispatch deadline (Impact: medium)
+
+The `dispatch_deadline` has been removed from the task configuration. You may now use Laravel's timeout configuration to control the maximum execution time of a task.
+
 
 # From 2.x to 3.x
 
