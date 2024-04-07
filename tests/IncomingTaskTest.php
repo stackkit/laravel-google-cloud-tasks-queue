@@ -41,7 +41,7 @@ class IncomingTaskTest extends TestCase
 
         // Assert
         Event::assertDispatched(function (TaskIncoming $event) use ($job) {
-            return $event->task->shortTaskName() === '01HSR4V9QE2F4T0K8RBAYQ88KE-'.class_basename($job)
+            return $event->task->fullyQualifiedTaskName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/01HSR4V9QE2F4T0K8RBAYQ88KE-'.class_basename($job)
                 && $event->task->connection() === 'my-cloudtasks-connection'
                 && $event->task->queue() === 'barbequeue';
         });

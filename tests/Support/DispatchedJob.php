@@ -31,7 +31,6 @@ class DispatchedJob
             default => throw new Error('Task does not have a request.'),
         };
 
-
         $this->testCase->call(
             method: 'POST',
             uri: route('cloud-tasks.handle-task'),
