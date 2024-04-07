@@ -35,7 +35,7 @@ class DispatchedJob
             method: 'POST',
             uri: route('cloud-tasks.handle-task'),
             server: [
-                $header => $this->task->getName(),
+                $header => (string) str($this->task->getName())->after('/tasks/'),
             ],
             content: $this->payload,
         );

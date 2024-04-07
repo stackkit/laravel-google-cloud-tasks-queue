@@ -28,7 +28,7 @@ class TaskHandler
             abort(422, 'Invalid task payload');
         }
 
-        if (! CloudTasksApi::exists($task->taskName())) {
+        if (! CloudTasksApi::exists($task->fullyQualifiedTaskName())) {
             abort(404);
         }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Error;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Safe\Exceptions\JsonException;
 
@@ -51,11 +52,23 @@ class IncomingTask
         return config('queue.connections.'.$this->connection().'.queue');
     }
 
-    public function taskName(): string
+    public function shortTaskName(): string
     {
         return request()->header('X-CloudTasks-TaskName')
             ?? request()->header('X-AppEngine-TaskName')
             ?? throw new Error('Unable to extract taskname from header');
+    }
+
+    public function fullyQualifiedTaskName(): string
+    {
+        $config = config('queue.connections.'.$this->connection());
+
+        return CloudTasksClient::taskName(
+            project: $config['project'],
+            location: $config['location'],
+            queue: $this->queue(),
+            task: $this->shortTaskName(),
+        );
     }
 
     public function command(): array
