@@ -1,19 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Closure;
 use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
 use Google\Cloud\Tasks\V2\AppEngineRouting;
-use Google\Cloud\Tasks\V2\CloudTasksClient;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\OidcToken;
 use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Duration;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
@@ -22,68 +23,63 @@ use function Safe\json_encode;
 
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
-    /**
-     * @var CloudTasksClient
-     */
-    private $client;
+    private static ?Closure $handlerUrlCallback = null;
 
-    public array $config;
+    private static ?Closure $taskHeadersCallback = null;
 
-    public function __construct(array $config, CloudTasksClient $client, $dispatchAfterCommit = false)
+    public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
-        $this->client = $client;
-        $this->config = $config;
-        $this->dispatchAfterCommit = $dispatchAfterCommit;
+        //
+    }
+
+    public static function configureHandlerUrlUsing(Closure $callback): void
+    {
+        static::$handlerUrlCallback = $callback;
+    }
+
+    public static function forgetHandlerUrlCallback(): void
+    {
+        self::$handlerUrlCallback = null;
+    }
+
+    public static function setTaskHeadersUsing(Closure $callback): void
+    {
+        static::$taskHeadersCallback = $callback;
+    }
+
+    public static function forgetTaskHeadersCallback(): void
+    {
+        self::$taskHeadersCallback = null;
     }
 
     /**
      * Get the size of the queue.
      *
-     * @param string|null $queue
-     * @return int
+     * @param  string|null  $queue
      */
-    public function size($queue = null)
+    public function size($queue = null): int
     {
         // It is not possible to know the number of tasks in the queue.
         return 0;
     }
 
     /**
-     * Fallback method for Laravel 6x and 7x
-     *
-     * @param \Closure|string|object $job
-     * @param string $payload
-     * @param string $queue
-     * @param \DateTimeInterface|\DateInterval|int|null $delay
-     * @param callable $callback
-     * @return mixed
-     */
-    protected function enqueueUsing($job, $payload, $queue, $delay, $callback)
-    {
-        if (method_exists(parent::class, 'enqueueUsing')) {
-            return parent::enqueueUsing($job, $payload, $queue, $delay, $callback);
-        }
-
-        return $callback($payload, $queue, $delay);
-    }
-
-    /**
      * Push a new job onto the queue.
      *
-     * @param string|object $job
-     * @param mixed $data
-     * @param string|null $queue
+     * @param  string|object  $job
+     * @param  mixed  $data
+     * @param  string|null  $queue
      * @return void
      */
     public function push($job, $data = '', $queue = null)
     {
         return $this->enqueueUsing(
             $job,
-            $this->createPayload($job, $this->getQueue($queue), $data),
+            $this->createPayload($job, $queue, $data),
             $queue,
             null,
-            function ($payload, $queue) {
-                return $this->pushRaw($payload, $queue);
+            function ($payload, $queue) use ($job) {
+                return $this->pushRaw($payload, $queue, ['job' => $job]);
             }
         );
     }
@@ -91,36 +87,36 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a raw payload onto the queue.
      *
-     * @param string $payload
-     * @param string|null $queue
-     * @param array $options
+     * @param  string  $payload
+     * @param  string|null  $queue
      * @return string
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $delay = !empty($options['delay']) ? $options['delay'] : 0;
+        $delay = ! empty($options['delay']) ? $options['delay'] : 0;
+        $job = $options['job'] ?? null;
 
-        return $this->pushToCloudTasks($queue, $payload, $delay);
+        return $this->pushToCloudTasks($queue, $payload, $delay, $job);
     }
 
     /**
      * Push a new job onto the queue after a delay.
      *
-     * @param \DateTimeInterface|\DateInterval|int $delay
-     * @param string|object $job
-     * @param mixed $data
-     * @param string|null $queue
+     * @param  \DateTimeInterface|\DateInterval|int  $delay
+     * @param  string|object  $job
+     * @param  mixed  $data
+     * @param  string|null  $queue
      * @return void
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
         return $this->enqueueUsing(
             $job,
-            $this->createPayload($job, $this->getQueue($queue), $data),
+            $this->createPayload($job, $queue, $data),
             $queue,
             $delay,
-            function ($payload, $queue, $delay) {
-                return $this->pushToCloudTasks($queue, $payload, $delay);
+            function ($payload, $queue, $delay) use ($job) {
+                return $this->pushToCloudTasks($queue, $payload, $delay, $job);
             }
         );
     }
@@ -128,183 +124,149 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a job to Cloud Tasks.
      *
-     * @param string|null $queue
-     * @param string $payload
-     * @param \DateTimeInterface|\DateInterval|int $delay
+     * @param  string|null  $queue
+     * @param  string  $payload
+     * @param  \DateTimeInterface|\DateInterval|int  $delay
+     * @param  string|object  $job
      * @return string
      */
-    protected function pushToCloudTasks($queue, $payload, $delay = 0)
+    protected function pushToCloudTasks($queue, $payload, $delay, mixed $job)
     {
-        $queue = $this->getQueue($queue);
-        $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
+        $queue = $queue ?: $this->config['queue'];
+
+        $payload = (array) json_decode($payload, true);
+
+        $task = tap(new Task())->setName($this->taskName($queue, $payload['displayName']));
+
+        $payload = $this->enrichPayloadWithAttempts($payload);
+
+        $this->addPayloadToTask($payload, $task, $job);
+
         $availableAt = $this->availableAt($delay);
+        if ($availableAt > time()) {
+            $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
+        }
 
-        $payload = json_decode($payload, true);
+        $queueName = $this->client->queueName($this->config['project'], $this->config['location'], $queue);
+        CloudTasksApi::createTask($queueName, $task);
 
-        // Laravel 7+ jobs have a uuid, but Laravel 6 doesn't have it.
-        // Since we are using and expecting the uuid in some places
-        // we will add it manually here if it's not present yet.
-        $payload = $this->withUuid($payload);
+        event(new TaskCreated($queue, $task));
 
-        // Since 3.x tasks are released back onto the queue after an exception has
-        // been thrown. This means we lose the native [X-CloudTasks-TaskRetryCount] header
-        // value and need to manually set and update the number of times a task has been attempted.
-        $payload = $this->withAttempts($payload);
+        return $payload['uuid'];
+    }
 
-        $task = $this->createTask();
-        $task->setName($this->taskName($queue, $payload));
+    private function taskName(string $queueName, string $displayName): string
+    {
+        return CloudTasksClient::taskName(
+            $this->config['project'],
+            $this->config['location'],
+            $queueName,
+            str($displayName)
+                ->afterLast('\\')
+                ->replaceMatches('![^-\pL\pN\s]+!u', '-')
+                ->replaceMatches('![-\s]+!u', '-')
+                ->prepend((string) Str::ulid(), '-')
+                ->toString(),
+        );
+    }
 
-        if (!empty($this->config['app_engine'])) {
+    private function enrichPayloadWithAttempts(
+        array $payload,
+    ): array {
+        $payload['internal'] = [
+            'attempts' => $payload['internal']['attempts'] ?? 0,
+        ];
+
+        return $payload;
+    }
+
+    /** @param string|object $job */
+    public function addPayloadToTask(array $payload, Task $task, mixed $job): Task
+    {
+        $headers = $this->headers($payload);
+
+        if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
 
             $appEngineRequest = new AppEngineHttpRequest();
             $appEngineRequest->setRelativeUri($path);
             $appEngineRequest->setHttpMethod(HttpMethod::POST);
             $appEngineRequest->setBody(json_encode($payload));
-            if (!empty($service = $this->config['app_engine_service'])) {
+            $appEngineRequest->setHeaders($headers);
+
+            if (! empty($service = $this->config['app_engine_service'])) {
                 $routing = new AppEngineRouting();
                 $routing->setService($service);
                 $appEngineRequest->setAppEngineRouting($routing);
             }
+
             $task->setAppEngineHttpRequest($appEngineRequest);
         } else {
-            $httpRequest = $this->createHttpRequest();
-            $httpRequest->setUrl($this->getHandler());
-            $httpRequest->setHttpMethod(HttpMethod::POST);
-
+            $httpRequest = new HttpRequest();
+            $httpRequest->setUrl($this->getHandler($job));
             $httpRequest->setBody(json_encode($payload));
+            $httpRequest->setHttpMethod(HttpMethod::POST);
+            $httpRequest->setHeaders($headers);
 
             $token = new OidcToken;
             $token->setServiceAccountEmail($this->config['service_account_email']);
-            if ($audience = $this->getAudience()) {
-                $token->setAudience($audience);
-            }
             $httpRequest->setOidcToken($token);
             $task->setHttpRequest($httpRequest);
         }
 
-
-        // The deadline for requests sent to the app. If the app does not respond by
-        // this deadline then the request is cancelled and the attempt is marked as
-        // a failure. Cloud Tasks will retry the task according to the RetryConfig.
-        if (!empty($this->config['dispatch_deadline'])) {
-            $task->setDispatchDeadline(new Duration(['seconds' => $this->config['dispatch_deadline']]));
-        }
-
-        if ($availableAt > time()) {
-            $task->setScheduleTime(new Timestamp(['seconds' => $availableAt]));
-        }
-
-        CloudTasksApi::createTask($queueName, $task);
-
-        event((new TaskCreated)->queue($queue)->task($task));
-
-        return $payload['uuid'];
+        return $task;
     }
 
-    private function withUuid(array $payload): array
-    {
-        if (!isset($payload['uuid'])) {
-            $payload['uuid'] = (string)Str::uuid();
-        }
-
-        return $payload;
-    }
-
-    private function taskName(string $queueName, array $payload): string
-    {
-        $displayName = $this->sanitizeTaskName($payload['displayName']);
-
-        return CloudTasksClient::taskName(
-            $this->config['project'],
-            $this->config['location'],
-            $queueName,
-            $displayName . '-' . $payload['uuid'] . '-' . Carbon::now()->getTimeStampMs(),
-        );
-    }
-
-    private function sanitizeTaskName(string $taskName)
-    {
-        // Remove all characters that are not -, letters, numbers, or whitespace
-        $sanitizedName = preg_replace('![^-\pL\pN\s]+!u', '-', $taskName);
-
-        // Replace all separator characters and whitespace by a -
-        $sanitizedName = preg_replace('![-\s]+!u', '-', $sanitizedName);
-
-        return trim($sanitizedName, '-');
-    }
-
-    private function withAttempts(array $payload): array
-    {
-        if (!isset($payload['internal']['attempts'])) {
-            $payload['internal']['attempts'] = 0;
-        }
-
-        return $payload;
-    }
-
-    /**
-     * Pop the next job off of the queue.
-     *
-     * @param string|null $queue
-     * @return \Illuminate\Contracts\Queue\Job|null
-     */
     public function pop($queue = null)
     {
-        // TODO: Implement pop() method.
-    }
-
-    private function getQueue(?string $queue = null): string
-    {
-        return $queue ?: $this->config['queue'];
-    }
-
-    private function createHttpRequest(): HttpRequest
-    {
-        return app(HttpRequest::class);
+        // It is not possible to pop a job from the queue.
+        return null;
     }
 
     public function delete(CloudTasksJob $job): void
     {
-        $config = $this->config;
-
-        $queue = $job->getQueue() ?: $this->config['queue']; // @todo: make this a helper method somewhere.
-
-        $headerTaskName = request()->headers->get('X-Cloudtasks-Taskname')
-            ?? request()->headers->get('X-AppEngine-TaskName');
-        $taskName = $this->client->taskName(
-            $config['project'],
-            $config['location'],
-            $queue,
-            (string)$headerTaskName
-        );
-
-        CloudTasksApi::deleteTask($taskName);
+        // Job deletion will be handled by Cloud Tasks.
     }
 
     public function release(CloudTasksJob $job, int $delay = 0): void
     {
-        $job->delete();
-
-        $payload = $job->getRawBody();
-
-        $options = ['delay' => $delay];
-
-        $this->pushRaw($payload, $job->getQueue(), $options);
+        $this->pushRaw(
+            payload: $job->getRawBody(),
+            queue: $job->getQueue(),
+            options: ['delay' => $delay, 'job' => $job],
+        );
     }
 
-    private function createTask(): Task
+    /** @param string|object $job */
+    public function getHandler(mixed $job): string
     {
-        return app(Task::class);
+        if (static::$handlerUrlCallback) {
+            return (static::$handlerUrlCallback)($job);
+        }
+
+        if (empty($this->config['handler'])) {
+            $this->config['handler'] = request()->getSchemeAndHttpHost();
+        }
+
+        $handler = rtrim($this->config['handler'], '/');
+
+        if (str_ends_with($handler, '/'.config('cloud-tasks.uri'))) {
+            return $handler;
+        }
+
+        return $handler.'/'.config('cloud-tasks.uri');
     }
 
-    public function getHandler(): string
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function headers(mixed $payload): array
     {
-        return Config::getHandler($this->config['handler']);
-    }
+        if (! static::$taskHeadersCallback) {
+            return [];
+        }
 
-    public function getAudience(): ?string
-    {
-        return Config::getAudience($this->config);
+        return (static::$taskHeadersCallback)($payload);
     }
 }

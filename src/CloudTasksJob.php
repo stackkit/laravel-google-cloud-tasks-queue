@@ -1,56 +1,52 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Exception;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\Job as JobContract;
 use Illuminate\Queue\Jobs\Job as LaravelJob;
+use Safe\Exceptions\JsonException;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleasedAfterException;
+
 use function Safe\json_encode;
 
 class CloudTasksJob extends LaravelJob implements JobContract
 {
-    /**
-     * The Cloud Tasks raw job payload (request payload).
-     *
-     * @var array
-     */
+    protected $container;
+
+    private CloudTasksQueue $driver;
+
     public array $job;
 
-    private ?int $maxTries;
-    public ?int $retryUntil = null;
+    protected $connectionName;
 
-    /**
-     * @var CloudTasksQueue
-     */
-    public $cloudTasksQueue;
+    protected $queue;
 
-    public function __construct(array $job, CloudTasksQueue $cloudTasksQueue)
+    public function __construct(
+        Container $container,
+        CloudTasksQueue $driver,
+        array $job,
+        string $connectionName,
+        string $queue)
     {
+        $this->container = $container;
+        $this->driver = $driver;
         $this->job = $job;
-        $this->container = Container::getInstance();
-        $this->cloudTasksQueue = $cloudTasksQueue;
-        
-        $command = TaskHandler::getCommandProperties($job['data']['command']);
-        $this->queue = $command['queue'] ?? config('queue.connections.' .config('queue.default') . '.queue');
-    }
-
-    public function job()
-    {
-        return $this->job;
+        $this->connectionName = $connectionName;
+        $this->queue = $queue;
     }
 
     public function getJobId(): string
     {
-        return $this->job['uuid'];
+        return $this->uuid() ?? throw new Exception();
     }
 
-    public function uuid(): string
-    {
-        return $this->job['uuid'];
-    }
-
+    /**
+     * @throws JsonException
+     */
     public function getRawBody(): string
     {
         return json_encode($this->job);
@@ -66,89 +62,21 @@ class CloudTasksJob extends LaravelJob implements JobContract
         $this->job['internal']['attempts'] = $attempts;
     }
 
-    public function setMaxTries(int $maxTries): void
-    {
-        if ($maxTries === -1) {
-            $maxTries = 0;
-        }
-
-        $this->maxTries = $maxTries;
-    }
-
-    public function maxTries(): ?int
-    {
-        return $this->maxTries;
-    }
-
-    public function setQueue(string $queue): void
-    {
-        $this->queue = $queue;
-    }
-
-    public function setRetryUntil(?int $retryUntil): void
-    {
-        $this->retryUntil = $retryUntil;
-    }
-
-    public function retryUntil(): ?int
-    {
-        return $this->retryUntil;
-    }
-
-    // timeoutAt was renamed to retryUntil in 8.x but we still support this.
-    public function timeoutAt(): ?int
-    {
-        return $this->retryUntil;
-    }
-
     public function delete(): void
     {
-        // Laravel automatically calls delete() after a job is processed successfully. However, this is
-        // not what we want to happen in Cloud Tasks because Cloud Tasks will also delete the task upon
-        // a 200 OK status, which means a task is deleted twice, possibly resulting in errors. So if the
-        // task was processed successfully (no errors or failures) then we will not delete the task
-        // manually and will let Cloud Tasks do it.
-        $successful =
-            // If the task has failed, we should be able to delete it permanently
-            $this->hasFailed() === false
-            // If the task has errored, it should be released, which in process deletes the errored task
-            && $this->hasError() === false;
-
-        if ($successful) {
-            return;
-        }
-
-        parent::delete();
-
-        $this->cloudTasksQueue->delete($this);
+        // Laravel automatically calls delete() after a job is processed successfully.
+        // However, this is not what we want to happen in Cloud Tasks because Cloud Tasks
+        // will also delete the task upon a 200 OK status, which means a task is deleted twice.
     }
 
-    public function hasError(): bool
+    public function release($delay = 0): void
     {
-        return data_get($this->job, 'internal.errored') === true;
-    }
+        parent::release($delay);
 
-    public function release($delay = 0)
-    {
-        parent::release();
-
-        $this->cloudTasksQueue->release($this, $delay);
-
-        $properties = TaskHandler::getCommandProperties($this->job['data']['command']);
-        $connection = $properties['connection'] ?? config('queue.default');
-
-        // The package uses the JobReleasedAfterException provided by Laravel to grab
-        // the payload of the released job in tests to easily run and test a released
-        // job. Because the event is only accessible in Laravel 9.x, we create an
-        // identical event to hook into for Laravel versions older than 9.x
-        if (version_compare(app()->version(), '9.0.0', '<')) {
-            if (data_get($this->job, 'internal.errored')) {
-                app('events')->dispatch(new JobReleasedAfterException($connection, $this));
-            }
-        }
+        $this->driver->release($this, $delay);
 
         if (! data_get($this->job, 'internal.errored')) {
-            app('events')->dispatch(new JobReleased($connection, $this, $delay));
+            event(new JobReleased($this->getConnectionName(), $this, $delay));
         }
     }
 }
