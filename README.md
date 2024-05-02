@@ -7,6 +7,8 @@
 <a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/downloads.svg" alt="Downloads"></a>
 </p>
 
+<p align="center"><sub>Companion packages: <a href="https://github.com/stackkit/laravel-google-cloud-scheduler">Cloud Scheduler</a>, <a href="https://github.com/marickvantuil/laravel-google-cloud-logging">Cloud Logging</a></sub></p>
+
 # Introduction
 
 This package allows Google Cloud Tasks to be used as the queue driver.
