@@ -61,7 +61,7 @@ class TaskHandler
         tap(app('cloud-tasks.worker'), fn (Worker $worker) => $worker->process(
             connectionName: $job->getConnectionName(),
             job: $job,
-            options: $this->getWorkerOptions()
+            options: CloudTasksQueue::getWorkerOptionsCallback() ? (CloudTasksQueue::getWorkerOptionsCallback())($task) : $this->getWorkerOptions()
         ));
     }
 

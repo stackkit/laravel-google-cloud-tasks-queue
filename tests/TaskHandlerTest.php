@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace Tests;
 
 use Illuminate\Queue\Events\JobReleasedAfterException;
+use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Event;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Tests\Support\EncryptedJob;
 use Tests\Support\FailingJob;
 use Tests\Support\FailingJobWithMaxTries;
 use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
+use Tests\Support\FailingJobWithNoMaxTries;
 use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\FailingJobWithUnlimitedTries;
 use Tests\Support\JobOutput;
@@ -27,6 +32,14 @@ class TaskHandlerTest extends TestCase
 
         CloudTasksApi::fake();
     }
+
+	#[Override]
+	protected function tearDown(): void
+	{
+		parent::tearDown();
+
+		CloudTasksQueue::forgetWorkerOptionsCallback();
+	}
 
     #[Test]
     public function it_can_run_a_task()
@@ -70,6 +83,38 @@ class TaskHandlerTest extends TestCase
         $releasedJob = $job->runAndGetReleasedJob();
         $this->assertDatabaseCount('failed_jobs', 0);
 
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $releasedJob->run();
+        $this->assertDatabaseCount('failed_jobs', 1);
+    }
+
+    #[Test]
+    public function uses_worker_options_callback_and_after_max_attempts_it_will_log_to_failed_table()
+    {
+        // Arrange
+        CloudTasksQueue::configureWorkerOptionsUsing(function (IncomingTask $task) {
+            $queueTries = [
+                'high' => 5,
+                'low' => 1,
+            ];
+
+            return new WorkerOptions(maxTries: $queueTries[$task->queue()] ?? 1);
+        });
+
+        $job = $this->dispatch(tap(new FailingJobWithNoMaxTries(), fn ($job) => $job->queue = 'high'));
+
+        // Act & Assert
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $releasedJob = $job->runAndGetReleasedJob();
+        $this->assertDatabaseCount('failed_jobs', 0);
+
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
+        $this->assertDatabaseCount('failed_jobs', 0);
+        $releasedJob = $releasedJob->runAndGetReleasedJob();
+        $this->assertDatabaseCount('failed_jobs', 0);
         $releasedJob = $releasedJob->runAndGetReleasedJob();
         $this->assertDatabaseCount('failed_jobs', 0);
 
