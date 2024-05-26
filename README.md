@@ -128,6 +128,23 @@ use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 CloudTasksQueue::configureHandlerUrlUsing(static fn(MyJob $job) => 'https://example.com/my-url/' . $job->something());
 ```
 
+#### Configure worker options
+
+You can configure worker options by using the `configureWorkerOptionsUsing` method on the `CloudTasksQueue` class.
+
+```php
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
+
+CloudTasksQueue::configureWorkerOptionsUsing(function (IncomingTask $task) {
+    $queueTries = [
+        'high' => 5,
+        'low' => 1,
+    ];
+
+    return new WorkerOptions(maxTries: $queueTries[$task->queue()] ?? 1);
+});
+```
+
 ### How it works and differences
 
 Using Cloud Tasks as a Laravel queue driver is fundamentally different than other Laravel queue drivers, like Redis.
