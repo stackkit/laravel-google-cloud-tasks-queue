@@ -15,6 +15,7 @@ use Google\Cloud\Tasks\V2\Task;
 use Google\Protobuf\Timestamp;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue as LaravelQueue;
+use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Str;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
@@ -26,6 +27,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     private static ?Closure $handlerUrlCallback = null;
 
     private static ?Closure $taskHeadersCallback = null;
+
+    /** @var (Closure(IncomingTask): WorkerOptions)|null */
+    private static ?Closure $workerOptionsCallback = null;
 
     public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
     {
@@ -50,6 +54,27 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     public static function forgetTaskHeadersCallback(): void
     {
         self::$taskHeadersCallback = null;
+    }
+
+    /**
+     * @param  Closure(IncomingTask): WorkerOptions  $callback
+     */
+    public static function configureWorkerOptionsUsing(Closure $callback): void
+    {
+        static::$workerOptionsCallback = $callback;
+    }
+
+    /**
+     * @return (Closure(IncomingTask): WorkerOptions)|null
+     */
+    public static function getWorkerOptionsCallback(): ?Closure
+    {
+        return self::$workerOptionsCallback;
+    }
+
+    public static function forgetWorkerOptionsCallback(): void
+    {
+        self::$workerOptionsCallback = null;
     }
 
     /**
