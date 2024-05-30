@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
+use Illuminate\Foundation\Bus\PendingClosureDispatch;
+use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Event;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksServiceProvider;
@@ -82,7 +84,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->app['config']->set('queue.connections.my-cloudtasks-connection.'.$key, $value);
     }
 
-    public function dispatch($job): DispatchedJob
+    public function dispatch($job, ?string $onQueue = null): DispatchedJob
     {
         $payload = null;
         $task = null;
@@ -93,7 +95,11 @@ class TestCase extends \Orchestra\Testbench\TestCase
             $task = $event->task;
         });
 
-        dispatch($job);
+        tap(dispatch($job), function (PendingClosureDispatch|PendingDispatch $pendingDispatch) use ($onQueue) {
+            if ($onQueue !== null) {
+                $pendingDispatch->onQueue($onQueue);
+            }
+        });
 
         return new DispatchedJob($payload, $task, $this);
     }
