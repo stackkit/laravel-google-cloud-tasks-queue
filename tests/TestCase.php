@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
-use Illuminate\Foundation\Bus\PendingClosureDispatch;
-use Illuminate\Foundation\Bus\PendingDispatch;
+use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Event;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksServiceProvider;
@@ -42,6 +41,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
         // Necessary to test the [failed_jobs] table.
 
         $this->loadMigrationsFrom(__DIR__.'/../vendor/orchestra/testbench-core/laravel/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../vendor/orchestra/testbench-core/laravel/migrations/queue');
     }
 
     protected function getEnvironmentSetUp($app)
@@ -95,11 +95,21 @@ class TestCase extends \Orchestra\Testbench\TestCase
             $task = $event->task;
         });
 
-        tap(dispatch($job), function (PendingClosureDispatch|PendingDispatch $pendingDispatch) use ($onQueue) {
-            if ($onQueue !== null) {
+        if ($job instanceof PendingBatch) {
+            if ($onQueue) {
+                $job->onQueue($onQueue);
+            }
+
+            $job->dispatch();
+        } else {
+            $pendingDispatch = dispatch($job);
+
+            if ($onQueue) {
                 $pendingDispatch->onQueue($onQueue);
             }
-        });
+
+            unset($pendingDispatch);
+        }
 
         return new DispatchedJob($payload, $task, $this);
     }

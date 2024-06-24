@@ -12,6 +12,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
@@ -27,6 +28,7 @@ use Tests\Support\FailingJobWithExponentialBackoff;
 use Tests\Support\JobOutput;
 use Tests\Support\JobThatWillBeReleased;
 use Tests\Support\SimpleJob;
+use Tests\Support\SimpleJobWithTimeout;
 use Tests\Support\User;
 use Tests\Support\UserJob;
 
@@ -516,6 +518,36 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getHttpRequest()->getHeaders()['X-MyHeader'] === SimpleJob::class;
+        });
+    }
+
+    #[Test]
+    public function batched_jobs_with_custom_queue_are_dispatched_on_the_custom_queue()
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        $this->dispatch(Bus::batch([
+            tap(new SimpleJob(), function (SimpleJob $job) {
+                $job->queue = 'my-queue1';
+            }),
+            tap(new SimpleJobWithTimeout(), function (SimpleJob $job) {
+                $job->queue = 'my-queue2';
+            }),
+        ])->onQueue('my-batch-queue'));
+
+        // Assert
+        CloudTasksApi::assertCreatedTaskCount(2);
+
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return str_contains($task->getName(), 'SimpleJob')
+                && str_contains($task->getName(), 'my-batch-queue');
+        });
+
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return str_contains($task->getName(), 'SimpleJobWithTimeout')
+                && str_contains($task->getName(), 'my-batch-queue');
         });
     }
 }
