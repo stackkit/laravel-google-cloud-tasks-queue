@@ -98,6 +98,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      */
     public function push($job, $data = '', $queue = null)
     {
+        if (! ($job instanceof Closure)) {
+            $job->queue = $queue ?? $job->queue ?? $this->config['queue'];
+        }
+
         return $this->enqueueUsing(
             $job,
             $this->createPayload($job, $queue, $data),

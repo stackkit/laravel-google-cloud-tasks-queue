@@ -6,6 +6,7 @@ namespace Tests;
 
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Queue\CallQueuedClosure;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
@@ -146,9 +147,14 @@ class QueueTest extends TestCase
         // Arrange
         CloudTasksApi::fake();
 
+        $closure = fn () => 'closure job';
+        $closureDisplayName = CallQueuedClosure::create($closure)->displayName();
+
         // Act
         $this->dispatch((new SimpleJob()));
         $this->dispatch((new FailingJob())->onQueue('my-special-queue'));
+        $this->dispatch($closure);
+        $this->dispatch($closure, 'my-special-queue');
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName): bool {
@@ -156,7 +162,7 @@ class QueueTest extends TestCase
             $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
 
             return $decoded['displayName'] === SimpleJob::class
-                && ($command['queue'] ?? null) === null
+                && $command['queue'] === 'barbequeue'
                 && $queueName === 'projects/my-test-project/locations/europe-west6/queues/barbequeue';
         });
 
@@ -165,6 +171,24 @@ class QueueTest extends TestCase
             $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
 
             return $decoded['displayName'] === FailingJob::class
+                && $command['queue'] === 'my-special-queue'
+                && $queueName === 'projects/my-test-project/locations/europe-west6/queues/my-special-queue';
+        });
+
+        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName) use ($closureDisplayName): bool {
+            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
+            $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
+
+            return $decoded['displayName'] === $closureDisplayName
+                && $command['queue'] === 'barbequeue'
+                && $queueName === 'projects/my-test-project/locations/europe-west6/queues/barbequeue';
+        });
+
+        CloudTasksApi::assertTaskCreated(function (Task $task, string $queueName) use ($closureDisplayName): bool {
+            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
+            $command = IncomingTask::fromJson($task->getHttpRequest()->getBody())->command();
+
+            return $decoded['displayName'] === $closureDisplayName
                 && $command['queue'] === 'my-special-queue'
                 && $queueName === 'projects/my-test-project/locations/europe-west6/queues/my-special-queue';
         });

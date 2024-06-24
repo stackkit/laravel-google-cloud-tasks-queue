@@ -33,13 +33,13 @@ class TaskHandlerTest extends TestCase
         CloudTasksApi::fake();
     }
 
-	#[Override]
-	protected function tearDown(): void
-	{
-		parent::tearDown();
+    #[Override]
+    protected function tearDown(): void
+    {
+        parent::tearDown();
 
-		CloudTasksQueue::forgetWorkerOptionsCallback();
-	}
+        CloudTasksQueue::forgetWorkerOptionsCallback();
+    }
 
     #[Test]
     public function it_can_run_a_task()
