@@ -47,6 +47,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
     protected function getEnvironmentSetUp($app)
     {
         $app['config']->set('database.default', 'testbench');
+        $app['config']->set('queue.batching.database', 'testbench');
         $port = env('DB_DRIVER') === 'mysql' ? 3307 : 5432;
         $app['config']->set('database.connections.testbench', [
             'driver' => env('DB_DRIVER', 'mysql'),
