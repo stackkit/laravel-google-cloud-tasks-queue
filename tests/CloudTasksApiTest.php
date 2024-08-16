@@ -43,6 +43,24 @@ class CloudTasksApiTest extends TestCase
     }
 
     #[Test]
+    public function custom_client_options_can_be_added()
+    {
+        // Arrange
+        config()->set('cloud-tasks.client_options', [
+            'credentials' => __DIR__.'/Support/gcloud-key-dummy.json',
+        ]);
+
+        // Act
+        $export = var_export(app(CloudTasksClient::class), true);
+
+        // Assert
+
+        // CloudTasksClient makes it a bit difficult to read its properties, so this will have to do...
+        $this->assertStringContainsString('info@stackkit.io', $export);
+        $this->assertStringContainsString('PRIVATE KEY', $export);
+    }
+
+    #[Test]
     public function test_create_task()
     {
         // Arrange
