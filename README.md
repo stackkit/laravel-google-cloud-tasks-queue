@@ -145,6 +145,27 @@ CloudTasksQueue::configureWorkerOptionsUsing(function (IncomingTask $task) {
 });
 ```
 
+#### Use a custom credentials file
+
+Modify (or add) the `client_options` key in the `config/cloud-tasks.php` file:
+
+```php
+'client_options' => [
+    'credentials' => '/path/to/credentials.json',
+]
+```
+
+
+#### Modify CloudTasksClient options
+
+Modify (or add) the `client_options` key in the `config/cloud-tasks.php` file:
+
+```php
+'client_options' => [
+    // custom options here
+]
+```
+
 ### How it works and differences
 
 Using Cloud Tasks as a Laravel queue driver is fundamentally different than other Laravel queue drivers, like Redis.

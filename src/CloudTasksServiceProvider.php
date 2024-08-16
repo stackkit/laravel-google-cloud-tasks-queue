@@ -26,7 +26,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     private function registerClient(): void
     {
         $this->app->singleton(CloudTasksClient::class, function () {
-            return new CloudTasksClient();
+            return new CloudTasksClient(config('cloud-tasks.client_options', []));
         });
 
         $this->app->singleton('cloud-tasks.worker', function (Application $app) {
