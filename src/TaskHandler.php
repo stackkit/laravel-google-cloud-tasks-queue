@@ -41,7 +41,7 @@ class TaskHandler
         // is returned. Because we manually manage retries by releaseing jobs,
         // we never want to return a 5xx status as that will result in duplicate
         // job attempts.
-        rescue(fn () => $this->run($task), report: false);
+        rescue(fn () => $this->run($task));
     }
 
     private function run(IncomingTask $task): void
