@@ -29,12 +29,6 @@ Require the package using Composer
 composer require stackkit/laravel-google-cloud-tasks-queue
 ```
 
-Publish the service provider:
-
-```console
-php artisan vendor:publish --provider=cloud-tasks
-```
-
 Add a new queue connection to `config/queue.php`
 
 ```php
@@ -54,12 +48,6 @@ Add a new queue connection to `config/queue.php`
   
   'backoff' => 0,
 ],
-```
-
-If you are using separate services for dispatching and handling tasks, and your application only dispatches jobs and should not be able to handle jobs, you may disable the task handler from `config/cloud-tasks.php`:
-
-```php
-'disable_task_handler' => env('CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
 ```
 
 Finally, change the `QUEUE_CONNECTION` to the newly defined connection.
@@ -85,6 +73,18 @@ Please check the table below on what the values mean and what their value should
 | `CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. | `https://<your website>.com`                     
 
 </details>
+
+Optionally, you may publish the config file:
+
+```console
+php artisan vendor:publish --tag=cloud-tasks
+```
+
+If you are using separate services for dispatching and handling tasks, and your application only dispatches jobs and should not be able to handle jobs, you may disable the task handler from `config/cloud-tasks.php`:
+
+```php
+'disable_task_handler' => env('CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
+```
 
 ### How to
 
@@ -196,3 +196,9 @@ works:
 ### Upgrading
 
 Read [UPGRADING.MD](UPGRADING.md) on how to update versions.
+
+### Troubleshooting
+
+#### HttpRequest.url must start with 'https://'
+
+This can happen when your application runs behind a reverse proxy. To fix this, add the application domain to Laravel's [trusted proxies](https://laravel.com/docs/11.x/requests#trusting-all-proxies). You may need to add the wildcard `*` as trusted proxy.
