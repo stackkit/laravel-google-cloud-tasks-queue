@@ -48,7 +48,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Act
-        $this->dispatch(new SimpleJob())->run();
+        $this->dispatch(new SimpleJob)->run();
 
         // Assert
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'SimpleJob:success');
@@ -63,7 +63,7 @@ class TaskHandlerTest extends TestCase
         $this->app['config']->set('queue.default', 'non-existing-connection');
 
         // Act
-        $job = new SimpleJob();
+        $job = new SimpleJob;
         $job->connection = 'my-cloudtasks-connection';
         $this->dispatch($job)->run();
 
@@ -75,7 +75,7 @@ class TaskHandlerTest extends TestCase
     public function after_max_attempts_it_will_log_to_failed_table()
     {
         // Arrange
-        $job = $this->dispatch(new FailingJobWithMaxTries());
+        $job = $this->dispatch(new FailingJobWithMaxTries);
 
         // Act & Assert
         $this->assertDatabaseCount('failed_jobs', 0);
@@ -103,7 +103,7 @@ class TaskHandlerTest extends TestCase
             return new WorkerOptions(maxTries: $queueTries[$task->queue()] ?? 1);
         });
 
-        $job = $this->dispatch(tap(new FailingJobWithNoMaxTries(), fn ($job) => $job->queue = 'high'));
+        $job = $this->dispatch(tap(new FailingJobWithNoMaxTries, fn ($job) => $job->queue = 'high'));
 
         // Act & Assert
         $this->assertDatabaseCount('failed_jobs', 0);
@@ -127,7 +127,7 @@ class TaskHandlerTest extends TestCase
     {
         // Arrange
         Event::fake([JobOutput::class]);
-        $job = $this->dispatch(new FailingJob());
+        $job = $this->dispatch(new FailingJob);
 
         // Act & Assert
         $releasedJob = $job->runAndGetReleasedJob();
@@ -152,7 +152,7 @@ class TaskHandlerTest extends TestCase
         // Arrange
         $this->travelTo($args['now']);
 
-        $job = $this->dispatch(new FailingJobWithRetryUntil());
+        $job = $this->dispatch(new FailingJobWithRetryUntil);
 
         // Act
         $releasedJob = $job->runAndGetReleasedJob();
@@ -175,7 +175,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Act
-        $job = $this->dispatch(new FailingJobWithUnlimitedTries());
+        $job = $this->dispatch(new FailingJobWithUnlimitedTries);
 
         foreach (range(0, 50) as $attempt) {
             usleep(1000);
@@ -191,7 +191,7 @@ class TaskHandlerTest extends TestCase
         // Arrange
         $this->travelTo('2020-01-01 00:00:00');
 
-        $job = $this->dispatch(new FailingJobWithMaxTriesAndRetryUntil());
+        $job = $this->dispatch(new FailingJobWithMaxTriesAndRetryUntil);
 
         // When retryUntil is specified, the maxAttempts is ignored.
 
@@ -220,7 +220,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Act
-        $job = $this->dispatch(new EncryptedJob());
+        $job = $this->dispatch(new EncryptedJob);
         $job->run();
 
         // Assert
@@ -234,7 +234,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobReleasedAfterException::class);
 
         // Act
-        $job = $this->dispatch(new FailingJob());
+        $job = $this->dispatch(new FailingJob);
 
         CloudTasksApi::assertDeletedTaskCount(0);
         CloudTasksApi::assertCreatedTaskCount(1);
@@ -255,7 +255,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobReleasedAfterException::class);
 
         // Act & Assert
-        $job = $this->dispatch(new FailingJob());
+        $job = $this->dispatch(new FailingJob);
 
         $released = $job->runAndGetReleasedJob();
 
@@ -281,7 +281,7 @@ class TaskHandlerTest extends TestCase
 
         // Act & Assert
         $this->assertCount(0, $this->createdTasks);
-        $this->dispatch(new FailingJob())->runAndGetReleasedJob();
+        $this->dispatch(new FailingJob)->runAndGetReleasedJob();
         $this->assertCount(2, $this->createdTasks);
         $this->assertNotEquals($this->createdTasks[0]->getName(), $this->createdTasks[1]->getName());
     }
@@ -293,7 +293,7 @@ class TaskHandlerTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Act
-        $this->dispatch(new SimpleJobWithTimeout())->run();
+        $this->dispatch(new SimpleJobWithTimeout)->run();
 
         // Assert
         $events = Event::dispatched(JobOutput::class)->map(fn ($event) => $event[0]->output)->toArray();

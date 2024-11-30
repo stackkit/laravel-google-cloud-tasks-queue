@@ -20,7 +20,7 @@ class ConfigHandlerTest extends TestCase
 
         $this->setConfigValue('handler', $handler);
 
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         CloudTasksApi::assertTaskCreated(function (Task $task) use ($expectedHandler) {
             return $task->getHttpRequest()->getUrl() === $expectedHandler;
@@ -34,7 +34,7 @@ class ConfigHandlerTest extends TestCase
 
         $this->app['config']->set('cloud-tasks.uri', 'my-custom-route');
 
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             return $task->getHttpRequest()->getUrl() === 'https://docker.for.mac.localhost:8080/my-custom-route';
@@ -49,7 +49,7 @@ class ConfigHandlerTest extends TestCase
         $this->setConfigValue('handler', 'https://example.com/api');
         $this->app['config']->set('cloud-tasks.uri', 'my-custom-route');
 
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         CloudTasksApi::assertTaskCreated(function (Task $task) {
             return $task->getHttpRequest()->getUrl() === 'https://example.com/api/my-custom-route';

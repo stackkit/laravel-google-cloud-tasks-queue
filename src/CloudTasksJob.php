@@ -41,7 +41,7 @@ class CloudTasksJob extends LaravelJob implements JobContract
 
     public function getJobId(): string
     {
-        return $this->uuid() ?? throw new Exception();
+        return $this->uuid() ?? throw new Exception;
     }
 
     /**

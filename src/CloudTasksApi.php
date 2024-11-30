@@ -22,6 +22,6 @@ class CloudTasksApi extends Facade
 
     public static function fake(): void
     {
-        self::swap(new CloudTasksApiFake());
+        self::swap(new CloudTasksApiFake);
     }
 }

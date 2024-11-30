@@ -165,7 +165,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
-        $task = tap(new Task())->setName($this->taskName($queue, $payload['displayName']));
+        $task = tap(new Task)->setName($this->taskName($queue, $payload['displayName']));
 
         $payload = $this->enrichPayloadWithAttempts($payload);
 
@@ -217,21 +217,21 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
 
-            $appEngineRequest = new AppEngineHttpRequest();
+            $appEngineRequest = new AppEngineHttpRequest;
             $appEngineRequest->setRelativeUri($path);
             $appEngineRequest->setHttpMethod(HttpMethod::POST);
             $appEngineRequest->setBody(json_encode($payload));
             $appEngineRequest->setHeaders($headers);
 
             if (! empty($service = $this->config['app_engine_service'])) {
-                $routing = new AppEngineRouting();
+                $routing = new AppEngineRouting;
                 $routing->setService($service);
                 $appEngineRequest->setAppEngineRouting($routing);
             }
 
             $task->setAppEngineHttpRequest($appEngineRequest);
         } else {
-            $httpRequest = new HttpRequest();
+            $httpRequest = new HttpRequest;
             $httpRequest->setUrl($this->getHandler($job));
             $httpRequest->setBody(json_encode($payload));
             $httpRequest->setHttpMethod(HttpMethod::POST);
