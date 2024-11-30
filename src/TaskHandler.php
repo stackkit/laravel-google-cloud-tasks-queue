@@ -67,7 +67,7 @@ class TaskHandler
 
     public function getWorkerOptions(): WorkerOptions
     {
-        $options = new WorkerOptions();
+        $options = new WorkerOptions;
 
         if (isset($this->config['backoff'])) {
             $options->backoff = $this->config['backoff'];

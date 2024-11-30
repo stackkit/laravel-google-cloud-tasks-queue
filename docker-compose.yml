@@ -1,4 +1,13 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - .:/var/www/html
+      - ${CI_SERVICE_ACCOUNT_JSON_KEY}:/var/www/html/tests/Support/gcloud-key-valid.json
   mysql:
     image: mysql:8
     ports:

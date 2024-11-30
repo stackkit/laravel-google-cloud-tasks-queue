@@ -38,7 +38,7 @@ class CloudTasksApiTest extends TestCase
         $this->setConfigValue('location', env('CI_CLOUD_TASKS_LOCATION'));
         $this->setConfigValue('service_account_email', env('CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL'));
 
-        $this->client = new CloudTasksClient();
+        $this->client = new CloudTasksClient;
 
     }
 
@@ -64,11 +64,11 @@ class CloudTasksApiTest extends TestCase
     public function test_create_task()
     {
         // Arrange
-        $httpRequest = new HttpRequest();
+        $httpRequest = new HttpRequest;
         $httpRequest->setHttpMethod(HttpMethod::GET);
         $httpRequest->setUrl('https://example.com');
 
-        $cloudTask = new Task();
+        $cloudTask = new Task;
         $cloudTask->setHttpRequest($httpRequest);
 
         // Act
@@ -112,11 +112,11 @@ class CloudTasksApiTest extends TestCase
     public function test_delete_task()
     {
         // Arrange
-        $httpRequest = new HttpRequest();
+        $httpRequest = new HttpRequest;
         $httpRequest->setHttpMethod(HttpMethod::GET);
         $httpRequest->setUrl('https://example.com');
 
-        $cloudTask = new Task();
+        $cloudTask = new Task;
         $cloudTask->setHttpRequest($httpRequest);
         $cloudTask->setScheduleTime(new Timestamp(['seconds' => time() + 10]));
 

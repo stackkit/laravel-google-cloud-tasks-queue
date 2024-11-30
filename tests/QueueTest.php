@@ -50,7 +50,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -65,7 +65,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -81,7 +81,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -98,7 +98,7 @@ class QueueTest extends TestCase
         CloudTasksQueue::configureHandlerUrlUsing(static fn (SimpleJob $job) => 'https://example.com/api/my-custom-route?job='.$job->id);
 
         // Act
-        $job = new SimpleJob();
+        $job = new SimpleJob;
         $job->id = 1;
         $this->dispatch($job);
 
@@ -115,7 +115,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch($job = new SimpleJob());
+        $this->dispatch($job = new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task) use ($job): bool {
@@ -135,7 +135,7 @@ class QueueTest extends TestCase
 
         // Act
         $inFiveMinutes = now()->addMinutes(5);
-        $this->dispatch((new SimpleJob())->delay($inFiveMinutes));
+        $this->dispatch((new SimpleJob)->delay($inFiveMinutes));
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task) use ($inFiveMinutes): bool {
@@ -153,8 +153,8 @@ class QueueTest extends TestCase
         $closureDisplayName = CallQueuedClosure::create($closure)->displayName();
 
         // Act
-        $this->dispatch((new SimpleJob()));
-        $this->dispatch((new FailingJob())->onQueue('my-special-queue'));
+        $this->dispatch((new SimpleJob));
+        $this->dispatch((new FailingJob)->onQueue('my-special-queue'));
         $this->dispatch($closure);
         $this->dispatch($closure, 'my-special-queue');
 
@@ -248,7 +248,7 @@ class QueueTest extends TestCase
         ]);
 
         // Act
-        $this->dispatch(new JobThatWillBeReleased())
+        $this->dispatch(new JobThatWillBeReleased)
             ->runAndGetReleasedJob()
             ->run();
 
@@ -305,7 +305,7 @@ class QueueTest extends TestCase
         Event::fake(JobReleasedAfterException::class);
 
         // Act
-        $this->dispatch(new FailingJob())->run();
+        $this->dispatch(new FailingJob)->run();
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task) {
@@ -323,7 +323,7 @@ class QueueTest extends TestCase
         Event::fake(JobReleasedAfterException::class);
 
         // Act
-        $this->dispatch(new FailingJob())->run();
+        $this->dispatch(new FailingJob)->run();
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task) {
@@ -341,7 +341,7 @@ class QueueTest extends TestCase
         Event::fake(JobReleasedAfterException::class);
 
         // Act
-        $failingJob = new FailingJob();
+        $failingJob = new FailingJob;
         $failingJob->backoff = 123;
         $this->dispatch($failingJob)->run();
 
@@ -360,7 +360,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $releasedJob = $this->dispatch(new FailingJobWithExponentialBackoff())
+        $releasedJob = $this->dispatch(new FailingJobWithExponentialBackoff)
             ->runAndGetReleasedJob();
         $releasedJob = $releasedJob->runAndGetReleasedJob();
         $releasedJob->run();
@@ -388,7 +388,7 @@ class QueueTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Act
-        $this->dispatch(new FailingJob())
+        $this->dispatch(new FailingJob)
             ->runAndGetReleasedJob()
             ->runAndGetReleasedJob()
             ->runAndGetReleasedJob();
@@ -411,7 +411,7 @@ class QueueTest extends TestCase
         Queue::after(function (JobProcessed $event) {
             event(new JobOutput('Queue::after:'.$event->job->payload()['data']['commandName']));
         });
-        $this->dispatch(new SimpleJob())->run();
+        $this->dispatch(new SimpleJob)->run();
 
         // Assert
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'Queue::before:Tests\Support\SimpleJob');
@@ -429,7 +429,7 @@ class QueueTest extends TestCase
         Queue::looping(function () {
             event(new JobOutput('Queue::looping'));
         });
-        $this->dispatch(new SimpleJob())->run();
+        $this->dispatch(new SimpleJob)->run();
 
         // Assert
         Event::assertDispatchedTimes(JobOutput::class, times: 1);
@@ -475,7 +475,7 @@ class QueueTest extends TestCase
         Str::createUlidsUsingSequence(['01HSR4V9QE2F4T0K8RBAYQ88KE']);
 
         // Act
-        $this->dispatch((new SimpleJob()));
+        $this->dispatch((new SimpleJob));
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -494,7 +494,7 @@ class QueueTest extends TestCase
             'X-MyHeader' => 'MyValue',
         ]);
 
-        $this->dispatch((new SimpleJob()));
+        $this->dispatch((new SimpleJob));
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -513,7 +513,7 @@ class QueueTest extends TestCase
             'X-MyHeader' => $payload['displayName'],
         ]);
 
-        $this->dispatch((new SimpleJob()));
+        $this->dispatch((new SimpleJob));
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -529,10 +529,10 @@ class QueueTest extends TestCase
 
         // Act
         $this->dispatch(Bus::batch([
-            tap(new SimpleJob(), function (SimpleJob $job) {
+            tap(new SimpleJob, function (SimpleJob $job) {
                 $job->queue = 'my-queue1';
             }),
-            tap(new SimpleJobWithTimeout(), function (SimpleJob $job) {
+            tap(new SimpleJobWithTimeout, function (SimpleJob $job) {
                 $job->queue = 'my-queue2';
             }),
         ])->onQueue('my-batch-queue'));

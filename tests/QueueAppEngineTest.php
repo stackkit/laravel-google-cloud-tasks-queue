@@ -25,7 +25,7 @@ class QueueAppEngineTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -40,7 +40,7 @@ class QueueAppEngineTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -55,7 +55,7 @@ class QueueAppEngineTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch($job = new SimpleJob());
+        $this->dispatch($job = new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task) use ($job): bool {
