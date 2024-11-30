@@ -103,6 +103,7 @@ jobs:
       - name: Execute tests
         env:
           DB_DRIVER: ${{ matrix.db }}
+          DB_HOST: 127.0.0.1
           CI_CLOUD_TASKS_PROJECT_ID: ${{ secrets.CI_CLOUD_TASKS_PROJECT_ID }}
           CI_CLOUD_TASKS_QUEUE: ${{ secrets.CI_CLOUD_TASKS_QUEUE }}
           CI_CLOUD_TASKS_LOCATION: ${{ secrets.CI_CLOUD_TASKS_LOCATION }}
