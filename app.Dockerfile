@@ -1,4 +1,4 @@
-FROM serversideup/php:8.3-fpm
+FROM serversideup/php:8.4-fpm
 
 USER root
 RUN install-php-extensions bcmath
