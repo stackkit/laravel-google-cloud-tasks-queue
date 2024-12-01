@@ -202,3 +202,13 @@ Read [UPGRADING.MD](UPGRADING.md) on how to update versions.
 #### HttpRequest.url must start with 'https://'
 
 This can happen when your application runs behind a reverse proxy. To fix this, add the application domain to Laravel's [trusted proxies](https://laravel.com/docs/11.x/requests#trusting-all-proxies). You may need to add the wildcard `*` as trusted proxy.
+
+### Contributing
+
+You can use the services defined in `docker-compose.yml` to start running the package.
+
+Inside the container, run `composer install`. 
+
+Set up the environment: `cp .env.example .env`
+
+Some tests hit the Cloud Tasks API and need a project and key to be able to hit it. See the variables in `.env`

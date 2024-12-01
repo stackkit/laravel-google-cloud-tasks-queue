@@ -91,6 +91,7 @@ jobs:
         env:
           CI_SERVICE_ACCOUNT_JSON_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_JSON_KEY }}
         run: |
+          touch .env
           MYSQL_PORT=3307 POSTGRES_PORT=5432 docker compose up ${{ matrix.db }} -d
       - name: Install dependencies
         run: |
