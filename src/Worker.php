@@ -25,7 +25,7 @@ use Illuminate\Queue\WorkerOptions;
  */
 class Worker extends LaravelWorker
 {
-    public function process($connectionName, $job, WorkerOptions $options)
+    public function process($connectionName, $job, WorkerOptions $options): void
     {
         if ($this->supportsAsyncSignals()) {
             $this->listenForSignals();
@@ -33,7 +33,7 @@ class Worker extends LaravelWorker
             $this->registerTimeoutHandler($job, $options);
         }
 
-        return parent::process($connectionName, $job, $options);
+        parent::process($connectionName, $job, $options);
     }
 
     public function kill($status = 0, $options = null): void
@@ -43,10 +43,9 @@ class Worker extends LaravelWorker
         // When running tests, we cannot run exit because it will kill the PHPunit process.
         // So, to still test that the application has exited, we will simply rely on the
         // WorkerStopped event that is fired when the worker is stopped.
-        if (app()->runningUnitTests()) {
-            return;
+        if (! app()->runningUnitTests()) {
+            exit($status);
         }
 
-        exit($status);
     }
 }
