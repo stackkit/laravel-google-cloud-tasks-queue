@@ -24,7 +24,6 @@ class CloudTasksApiTest extends TestCase
             'CI_CLOUD_TASKS_QUEUE',
             'CI_CLOUD_TASKS_LOCATION',
             'CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL',
-            'CI_SERVICE_ACCOUNT_JSON_KEY',
         ];
 
         foreach ($requiredEnvs as $env) {

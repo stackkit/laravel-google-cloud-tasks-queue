@@ -7,7 +7,7 @@ services:
       - .env
     volumes:
       - .:/var/www/html
-      - ${CI_SERVICE_ACCOUNT_JSON_KEY}:/var/www/html/tests/Support/gcloud-key-valid.json
+      - ${CI_SERVICE_ACCOUNT_JSON_KEY_PATH-./tests/Support/gcloud-key-valid.json}:/var/www/html/tests/Support/gcloud-key-valid.json
   mysql:
     image: mysql:8
     ports:
