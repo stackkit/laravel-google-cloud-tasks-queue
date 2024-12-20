@@ -113,6 +113,23 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         );
     }
 
+    protected function createPayloadArray($job, $queue, $data = '')
+    {
+        $payload = parent::createPayloadArray($job, $queue, $data);
+
+        $cloudTaskId = $this->getCloudTaskId($job);
+        if (!empty($cloudTaskId)) {
+            $payload['cloudTaskId'] = $cloudTaskId;
+        }
+
+        return $payload;
+    }
+
+    protected function getCloudTaskId($job)
+    {
+        return property_exists($job, 'cloudTaskId') ? $job->cloudTaskId : null;
+    }
+
     /**
      * Push a raw payload onto the queue.
      *
@@ -165,7 +182,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
-        $task = tap(new Task)->setName($this->taskName($queue, $payload['displayName']));
+        if (isset($payload['cloudTaskId'])) {
+            $task = tap(new Task())->setName($this->taskNameWithId($queue, $payload['cloudTaskId']));
+        } else {
+            $task = tap(new Task())->setName($this->taskName($queue, $payload['displayName']));
+        }
 
         $payload = $this->enrichPayloadWithAttempts($payload);
 
@@ -196,6 +217,16 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
                 ->replaceMatches('![-\s]+!u', '-')
                 ->prepend((string) Str::ulid(), '-')
                 ->toString(),
+        );
+    }
+
+    private function taskNameWithId(string $queueName, string $taskId): string
+    {
+        return CloudTasksClient::taskName(
+            $this->config['project'],
+            $this->config['location'],
+            $queueName,
+            $taskId,
         );
     }
 
