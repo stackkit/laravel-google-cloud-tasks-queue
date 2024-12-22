@@ -203,6 +203,16 @@ Read [UPGRADING.MD](UPGRADING.md) on how to update versions.
 
 This can happen when your application runs behind a reverse proxy. To fix this, add the application domain to Laravel's [trusted proxies](https://laravel.com/docs/11.x/requests#trusting-all-proxies). You may need to add the wildcard `*` as trusted proxy.
 
+#### Maximum call stack size (zend.max_allowed_stack_size - zend.reserved_stack_size) reached. Infinite recursion?
+
+This currently seems to be a bug with PHP 8.3 and `googleapis/gax-php`. See [this issue](https://github.com/googleapis/gax-php/issues/584) for more information.
+
+A potential workaround is to disable PHP 8.3 call stack limit by setting this value in `php.ini`:
+
+```ini
+zend.max_allowed_stack_size: -1
+```
+
 ### Contributing
 
 You can use the services defined in `docker-compose.yml` to start running the package.
