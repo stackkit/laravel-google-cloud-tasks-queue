@@ -34,6 +34,10 @@ class Worker extends LaravelWorker
         }
 
         parent::process($connectionName, $job, $options);
+
+        if ($this->supportsAsyncSignals()) {
+            $this->resetTimeoutHandler();
+        }
     }
 
     public function kill($status = 0, $options = null): void
