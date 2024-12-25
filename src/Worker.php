@@ -52,6 +52,10 @@ class Worker extends LaravelWorker
         // So, to still test that the application has exited, we will simply rely on the
         // WorkerStopped event that is fired when the worker is stopped.
         if (! app()->runningUnitTests()) {
+            if (extension_loaded('posix') && extension_loaded('pcntl')) {
+                posix_kill(getmypid(), SIGKILL);
+            }
+
             exit($status);
         }
 
