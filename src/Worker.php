@@ -42,6 +42,10 @@ class Worker extends LaravelWorker
 
     public function kill($status = 0, $options = null): void
     {
+        if ($this->supportsAsyncSignals()) {
+            $this->resetTimeoutHandler();
+        }
+
         parent::stop($status, $options);
 
         // When running tests, we cannot run exit because it will kill the PHPunit process.
