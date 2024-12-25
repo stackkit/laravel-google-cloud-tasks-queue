@@ -30,6 +30,8 @@ class Worker extends LaravelWorker
         if ($this->supportsAsyncSignals()) {
             $this->listenForSignals();
 
+            pcntl_signal(SIGSEGV, fn () => $this->shouldQuit = true);
+
             $this->registerTimeoutHandler($job, $options);
         }
 
