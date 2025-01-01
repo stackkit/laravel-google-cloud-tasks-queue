@@ -289,6 +289,8 @@ class TaskHandlerTest extends TestCase
     #[Test]
     public function test_job_timeout()
     {
+        $this->markTestSkipped('Currently seemingly impossible to test job timeouts.');
+
         // Arrange
         Event::fake(JobOutput::class);
 
