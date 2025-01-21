@@ -11,7 +11,7 @@
         "php": "^8.1",
         "ext-json": "*",
         "phpseclib/phpseclib": "^3.0",
-        "google/cloud-tasks": "^1.10",
+        "google/cloud-tasks": "^1.15|^2.0",
         "thecodingmachine/safe": "^1.0|^2.0"
     },
     "require-dev": {
