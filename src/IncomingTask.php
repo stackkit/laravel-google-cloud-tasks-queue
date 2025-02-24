@@ -21,7 +21,7 @@ class IncomingTask
     public static function fromJson(string $payload): self
     {
         try {
-            $decode = json_decode($payload, assoc: true);
+            $decode = json_decode($payload, true);
 
             return new self(is_array($decode) ? $decode : []);
         } catch (JsonException) {
