@@ -10,16 +10,15 @@
     "require": {
         "php": "^8.1",
         "ext-json": "*",
-        "phpseclib/phpseclib": "^3.0",
-        "google/cloud-tasks": "^1.15|^2.0",
-        "thecodingmachine/safe": "^1.0|^2.0|^3.0"
+        "google/cloud-tasks": "^2.0",
+        "thecodingmachine/safe": "^3.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^8.0",
+        "orchestra/testbench": "^10.0",
         "thecodingmachine/phpstan-safe-rule": "^1.2",
         "laravel/legacy-factories": "^1.3",
         "laravel/pint": "^1.13",
-        "larastan/larastan": "^2.9"
+        "larastan/larastan": "^3.0"
     },
     "autoload": {
         "psr-4": {
