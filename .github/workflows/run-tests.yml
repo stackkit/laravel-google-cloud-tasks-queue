@@ -99,7 +99,7 @@ jobs:
           touch .env
           if [ "${{ matrix.db }}" = "mysql" ]; then
             MYSQL_PORT=3307 MYSQL_VERSION=${{ matrix.db.version }} docker compose up ${{ matrix.db.driver }} -d
-          elif [ "${DB}" = "pgsql" ]; then
+          elif [ "${{ matrix.db }}" = "pgsql" ]; then
             POSTGRES_PORT=5432 PGSQL_VERSION=${{ matrix.db.version }} docker compose up ${{ matrix.db.driver }} -d
           fi
       - name: Install dependencies
