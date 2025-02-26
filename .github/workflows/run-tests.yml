@@ -62,7 +62,13 @@ jobs:
     needs: access_check
     strategy:
       matrix:
-        db: [ 'mysql', 'pgsql' ]
+        db:
+          - { driver: 'mysql', version: '8.0' }
+          - { driver: 'mysql', version: '8.4' }
+          - { driver: 'pgsql', version: '14' }
+          - { driver: 'pgsql', version: '15' }
+          - { driver: 'pgsql', version: '16' }
+          - { driver: 'pgsql', version: '17' }
         payload:
           - { queue: 'github-actions-laravel11-php82', laravel: '11.*', php: '8.2', 'testbench': '9.*' }
           - { queue: 'github-actions-laravel11-php83', laravel: '11.*', php: '8.3', 'testbench': '9.*' }
@@ -71,7 +77,7 @@ jobs:
           - { queue: 'github-actions-laravel12-php83', laravel: '12.*', php: '8.3', 'testbench': '10.*' }
           - { queue: 'github-actions-laravel12-php84', laravel: '12.*', php: '8.4', 'testbench': '10.*' }
 
-    name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db }}
+    name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db.driver }} ${{ matrix.db.version }}
 
     steps:
       - name: Checkout code
@@ -91,12 +97,16 @@ jobs:
           CI_SERVICE_ACCOUNT_JSON_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_JSON_KEY }}
         run: |
           touch .env
-          MYSQL_PORT=3307 POSTGRES_PORT=5432 docker compose up ${{ matrix.db }} -d
+          if [ "${{ matrix.db }}" = "mysql" ]; then
+            MYSQL_PORT=3307 MYSQL_VERSION=${{ matrix.db.version }} docker compose up ${{ matrix.db.driver }} -d
+          elif [ "${DB}" = "pgsql" ]; then
+            POSTGRES_PORT=5432 PGSQL_VERSION=${{ matrix.db.version }} docker compose up ${{ matrix.db.driver }} -d
+          fi
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.payload.laravel }}" "orchestra/testbench:${{ matrix.payload.testbench }}" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction
-          if [ "${{ matrix.db }}" = "mysql" ]; then
+          if [ "${{ matrix.db.driver }}" = "mysql" ]; then
             while ! mysqladmin ping --host=127.0.0.1 --user=cloudtasks --port=3307 --password=cloudtasks --silent; do
               echo "Waiting for MySQL..."
               sleep 1
@@ -106,7 +116,7 @@ jobs:
           fi
       - name: Execute tests
         env:
-          DB_DRIVER: ${{ matrix.db }}
+          DB_DRIVER: ${{ matrix.db.driver }}
           DB_HOST: 127.0.0.1
           CI_CLOUD_TASKS_PROJECT_ID: ${{ secrets.CI_CLOUD_TASKS_PROJECT_ID }}
           CI_CLOUD_TASKS_QUEUE: ${{ secrets.CI_CLOUD_TASKS_QUEUE }}
