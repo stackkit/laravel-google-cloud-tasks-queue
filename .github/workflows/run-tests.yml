@@ -2,7 +2,7 @@ name: Run tests
 
 on:
   pull_request_target:
-    types: [opened, synchronize, labeled]
+    types: [ opened, synchronize, labeled ]
   schedule:
     - cron: '0 0 * * *'
 
@@ -62,15 +62,14 @@ jobs:
     needs: access_check
     strategy:
       matrix:
-        db: ['mysql', 'pgsql']
+        db: [ 'mysql', 'pgsql' ]
         payload:
-          - { queue: 'github-actions-laravel10-php84', laravel: '10.*', php: '8.4', 'testbench': '8.*'}
-          - { queue: 'github-actions-laravel10-php83', laravel: '10.*', php: '8.3', 'testbench': '8.*'}
-          - { queue: 'github-actions-laravel10-php82', laravel: '10.*', php: '8.2', 'testbench': '8.*'}
-          - { queue: 'github-actions-laravel10-php81', laravel: '10.*', php: '8.1', 'testbench': '8.*'}
           - { queue: 'github-actions-laravel11-php82', laravel: '11.*', php: '8.2', 'testbench': '9.*' }
           - { queue: 'github-actions-laravel11-php83', laravel: '11.*', php: '8.3', 'testbench': '9.*' }
           - { queue: 'github-actions-laravel11-php84', laravel: '11.*', php: '8.4', 'testbench': '9.*' }
+          - { queue: 'github-actions-laravel12-php82', laravel: '12.*', php: '8.2', 'testbench': '10.*' }
+          - { queue: 'github-actions-laravel12-php83', laravel: '12.*', php: '8.3', 'testbench': '10.*' }
+          - { queue: 'github-actions-laravel12-php84', laravel: '12.*', php: '8.4', 'testbench': '10.*' }
 
     name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db }}
 
