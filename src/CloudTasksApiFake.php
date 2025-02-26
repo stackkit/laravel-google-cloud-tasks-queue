@@ -28,8 +28,7 @@ class CloudTasksApiFake implements CloudTasksApiContract
 
     public function getTask(string $taskName): Task
     {
-        return (new Task)
-            ->setName($taskName);
+        return (new Task)->setName($taskName);
     }
 
     public function exists(string $taskName): bool
