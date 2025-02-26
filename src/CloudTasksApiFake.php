@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Closure;
-use Google\Cloud\Tasks\V2\Task;
 use PHPUnit\Framework\Assert;
+use Google\Cloud\Tasks\V2\Task;
 
 class CloudTasksApiFake implements CloudTasksApiContract
 {

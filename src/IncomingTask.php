@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Error;
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
-use Illuminate\Contracts\Encryption\Encrypter;
-use Safe\Exceptions\JsonException;
 
 use function Safe\json_decode;
+
+use Safe\Exceptions\JsonException;
+use Illuminate\Contracts\Encryption\Encrypter;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 
 class IncomingTask
 {

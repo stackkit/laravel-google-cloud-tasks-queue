@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Queue\WorkerOptions;
 use Illuminate\Queue\Events\JobTimedOut;
 use Illuminate\Queue\Worker as LaravelWorker;
-use Illuminate\Queue\WorkerOptions;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Symfony\Component\ErrorHandler\Error\FatalError;
 
 /**

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 use Error;
-use Google\Cloud\Tasks\V2\Task;
 use Tests\TestCase;
+use Google\Cloud\Tasks\V2\Task;
 
 class DispatchedJob
 {

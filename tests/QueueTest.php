@@ -4,33 +4,33 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Google\Cloud\Tasks\V2\HttpMethod;
-use Google\Cloud\Tasks\V2\Task;
-use Illuminate\Queue\CallQueuedClosure;
-use Illuminate\Queue\Events\JobProcessed;
-use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Queue\Events\JobQueued;
-use Illuminate\Queue\Events\JobReleasedAfterException;
+use Override;
+use Tests\Support\User;
+use Tests\Support\UserJob;
+use Illuminate\Support\Str;
+use Tests\Support\JobOutput;
+use Tests\Support\SimpleJob;
+use Tests\Support\FailingJob;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Bus;
+use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Bus;
+use Google\Cloud\Tasks\V2\HttpMethod;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Str;
-use Override;
+use Illuminate\Queue\Events\JobQueued;
 use PHPUnit\Framework\Attributes\Test;
+use Illuminate\Queue\CallQueuedClosure;
+use Tests\Support\SimpleJobWithTimeout;
+use Tests\Support\JobThatWillBeReleased;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use Tests\Support\FailingJobWithExponentialBackoff;
+use Illuminate\Queue\Events\JobReleasedAfterException;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
-use Tests\Support\FailingJob;
-use Tests\Support\FailingJobWithExponentialBackoff;
-use Tests\Support\JobOutput;
-use Tests\Support\JobThatWillBeReleased;
-use Tests\Support\SimpleJob;
-use Tests\Support\SimpleJobWithTimeout;
-use Tests\Support\User;
-use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
