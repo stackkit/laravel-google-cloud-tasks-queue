@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use Illuminate\Queue\Events\WorkerStopping;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Queue\Events\WorkerStopping;
 
 class SimpleJobWithTimeout extends SimpleJob
 {

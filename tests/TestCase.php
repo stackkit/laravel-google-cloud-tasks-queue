@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Bus\PendingBatch;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Event;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksServiceProvider;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use Tests\Support\DispatchedJob;
+use Illuminate\Support\Facades\Event;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksServiceProvider;
 
 class TestCase extends \Orchestra\Testbench\TestCase
 {

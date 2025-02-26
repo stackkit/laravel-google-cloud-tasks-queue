@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Illuminate\Queue\Events\JobReleasedAfterException;
+use Override;
+use Tests\Support\JobOutput;
+use Tests\Support\SimpleJob;
+use Tests\Support\FailingJob;
+use Tests\Support\EncryptedJob;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Event;
-use Override;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\TestWith;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
-use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
-use Tests\Support\EncryptedJob;
-use Tests\Support\FailingJob;
+use Tests\Support\SimpleJobWithTimeout;
 use Tests\Support\FailingJobWithMaxTries;
-use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\Support\FailingJobWithNoMaxTries;
 use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\FailingJobWithUnlimitedTries;
-use Tests\Support\JobOutput;
-use Tests\Support\SimpleJob;
-use Tests\Support\SimpleJobWithTimeout;
+use Illuminate\Queue\Events\JobReleasedAfterException;
+use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 
 class TaskHandlerTest extends TestCase
 {

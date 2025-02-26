@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Exception;
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Queue\Job as JobContract;
-use Illuminate\Queue\Jobs\Job as LaravelJob;
-use Safe\Exceptions\JsonException;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 
 use function Safe\json_encode;
+
+use Safe\Exceptions\JsonException;
+use Illuminate\Container\Container;
+use Illuminate\Queue\Jobs\Job as LaravelJob;
+use Illuminate\Contracts\Queue\Job as JobContract;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 
 class CloudTasksJob extends LaravelJob implements JobContract
 {

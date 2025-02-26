@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Illuminate\Container\Container;
 use Illuminate\Queue\WorkerOptions;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskIncoming;
 
 class TaskHandler
