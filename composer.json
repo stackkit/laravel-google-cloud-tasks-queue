@@ -41,8 +41,12 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "scripts": {
-        "l10": [
-            "composer require laravel/framework:10.* orchestra/testbench:8.* --no-interaction --no-update",
+        "l11": [
+            "composer require laravel/framework:11.* orchestra/testbench:9.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction"
+        ],
+        "l12": [
+            "composer require laravel/framework:12.* orchestra/testbench:10.* --no-interaction --no-update",
             "composer update --prefer-stable --prefer-dist --no-interaction"
         ],
         "pint": [
