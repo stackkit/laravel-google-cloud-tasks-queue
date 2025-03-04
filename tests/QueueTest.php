@@ -550,4 +550,20 @@ class QueueTest extends TestCase
                 && str_contains($task->getName(), 'my-batch-queue');
         });
     }
+
+    #[Test]
+    public function it_can_dispatch_closures(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        Event::fake(JobOutput::class);
+
+        // Act
+        $this->dispatch(function () {
+            event(new JobOutput('ClosureJob:success'));
+        })->run();
+
+        // Assert
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'ClosureJob:success');
+    }
 }

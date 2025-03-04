@@ -10,8 +10,17 @@ use Google\Cloud\Tasks\V2\Task;
 
 class CloudTasksApiFake implements CloudTasksApiContract
 {
+    /**
+     * @var array<int, array{
+     *     queueName: string,
+     *     task: Task
+     * }>
+     */
     public array $createdTasks = [];
 
+    /**
+     * @var array<int, string>
+     */
     public array $deletedTasks = [];
 
     public function createTask(string $queueName, Task $task): Task

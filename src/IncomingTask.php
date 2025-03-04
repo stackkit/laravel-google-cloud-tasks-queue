@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Error;
+use Exception;
 
 use function Safe\json_decode;
 
@@ -12,8 +13,20 @@ use Safe\Exceptions\JsonException;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 
+/**
+ * @phpstan-import-type JobShape from CloudTasksJob
+ * @phpstan-import-type QueueConfig from CloudTasksConnector
+ *
+ * @phpstan-type JobCommand array{
+ *     queue?: ?string,
+ *     connection?: ?string
+ * }
+ */
 class IncomingTask
 {
+    /**
+     * @param  JobShape  $task
+     */
     private function __construct(private readonly array $task)
     {
         //
@@ -24,33 +37,31 @@ class IncomingTask
         try {
             $decode = json_decode($payload, true);
 
-            return new self(is_array($decode) ? $decode : []);
-        } catch (JsonException) {
-            return new self([]);
-        }
-    }
+            if (! is_array($decode)) {
+                throw new Exception('Invalid task payload.');
+            }
 
-    public function isInvalid(): bool
-    {
-        return $this->task === [];
+            /** @var JobShape $decode */
+            return new self($decode);
+        } catch (JsonException) {
+            throw new Exception('Invalid task payload.');
+        }
     }
 
     public function connection(): string
     {
-        if ($connection = data_get($this->command(), 'connection')) {
-            return $connection;
-        }
+        $command = $this->command();
 
-        return config('queue.default');
+        return $command['connection']
+            ?? config()->string('queue.default');
     }
 
     public function queue(): string
     {
-        if ($queue = data_get($this->command(), 'queue')) {
-            return $queue;
-        }
+        $command = $this->command();
 
-        return config('queue.connections.'.$this->connection().'.queue');
+        return $command['queue']
+            ?? config()->string('queue.connections.'.$this->connection().'.queue');
     }
 
     public function shortTaskName(): string
@@ -62,6 +73,7 @@ class IncomingTask
 
     public function fullyQualifiedTaskName(): string
     {
+        /** @var QueueConfig $config */
         $config = config('queue.connections.'.$this->connection());
 
         return CloudTasksClient::taskName(
@@ -72,21 +84,29 @@ class IncomingTask
         );
     }
 
+    /**
+     * @return JobCommand
+     */
     public function command(): array
     {
         $command = $this->task['data']['command'];
 
         if (str_starts_with($command, 'O:')) {
+            // @phpstan-ignore-next-line
             return (array) unserialize($command, ['allowed_classes' => false]);
         }
 
         if (app()->bound(Encrypter::class)) {
+            // @phpstan-ignore-next-line
             return (array) unserialize(app(Encrypter::class)->decrypt($command));
         }
 
         return [];
     }
 
+    /**
+     * @return JobShape
+     */
     public function toArray(): array
     {
         return $this->task;

@@ -127,10 +127,10 @@ class IncomingTaskTest extends TestCase
     #[Test]
     public function test_invalid_function()
     {
-        // Act
-        $incomingTask = IncomingTask::fromJson('{ invalid json }');
+        // Assert
+        $this->expectExceptionMessage('Invalid task payload.');
 
         // Act
-        $this->assertTrue($incomingTask->isInvalid());
+        IncomingTask::fromJson('{ invalid json }');
     }
 }

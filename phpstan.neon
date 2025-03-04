@@ -5,3 +5,5 @@ parameters:
     paths:
         - src
     level: 9
+    ignoreErrors:
+        - "/dispatchAfterCommit with no type specified/"

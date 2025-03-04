@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Exception;
 use Illuminate\Container\Container;
 use Illuminate\Queue\WorkerOptions;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskIncoming;
 
+/**
+ * @phpstan-import-type QueueConfig from CloudTasksConnector
+ */
 class TaskHandler
 {
+    /**
+     * @var QueueConfig
+     */
     private array $config;
 
     public function __construct(private readonly CloudTasksClient $client)
@@ -20,21 +27,22 @@ class TaskHandler
 
     public function handle(?string $task = null): void
     {
-        $task = IncomingTask::fromJson($task ?: request()->getContent());
+        try {
+            $task = IncomingTask::fromJson($task ?: request()->getContent());
+        } catch (Exception $e) {
+            abort(422, $e->getMessage());
+        }
 
         event(new TaskIncoming($task));
-
-        if ($task->isInvalid()) {
-            abort(422, 'Invalid task payload');
-        }
 
         if (! CloudTasksApi::exists($task->fullyQualifiedTaskName())) {
             abort(404);
         }
 
+        /** @var QueueConfig $config */
         $config = config('queue.connections.'.$task->connection());
 
-        $this->config = is_array($config) ? $config : [];
+        $this->config = $config;
 
         // We want to catch any errors so we have more fine-grained control over
         // how tasks are retried. Cloud Tasks will retry the task if a 5xx status
@@ -58,11 +66,14 @@ class TaskHandler
 
         $job->setAttempts($job->attempts() + 1);
 
-        tap(app('cloud-tasks.worker'), fn (Worker $worker) => $worker->process(
+        /** @var Worker $worker */
+        $worker = app('cloud-tasks.worker');
+
+        $worker->process(
             connectionName: $job->getConnectionName(),
             job: $job,
             options: CloudTasksQueue::getWorkerOptionsCallback() ? (CloudTasksQueue::getWorkerOptionsCallback())($task) : $this->getWorkerOptions()
-        ));
+        );
     }
 
     public function getWorkerOptions(): WorkerOptions
