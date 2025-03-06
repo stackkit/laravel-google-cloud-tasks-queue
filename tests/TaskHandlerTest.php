@@ -289,23 +289,13 @@ class TaskHandlerTest extends TestCase
     #[Test]
     public function test_job_timeout()
     {
-        $this->markTestSkipped('Currently seemingly impossible to test job timeouts.');
-
         // Arrange
-        Event::fake(JobOutput::class);
+        Event::fake(JobReleasedAfterException::class);
 
         // Act
         $this->dispatch(new SimpleJobWithTimeout)->run();
 
         // Assert
-        $events = Event::dispatched(JobOutput::class)->map(fn ($event) => $event[0]->output)->toArray();
-        $this->assertEquals([
-            'SimpleJobWithTimeout:1',
-            'SimpleJobWithTimeout:2',
-            'SimpleJobWithTimeout:3',
-            'SimpleJobWithTimeout:worker-stopping',
-            'SimpleJobWithTimeout:4',
-            'SimpleJobWithTimeout:5',
-        ], $events);
+        Event::assertDispatched(JobReleasedAfterException::class);
     }
 }
