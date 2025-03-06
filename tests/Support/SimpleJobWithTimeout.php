@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use Error;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Queue\Events\WorkerStopping;
 use Symfony\Component\ErrorHandler\Error\FatalError;
 
 class SimpleJobWithTimeout extends SimpleJob
