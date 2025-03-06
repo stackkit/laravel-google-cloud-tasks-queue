@@ -5,34 +5,53 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Closure;
-use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
-use Google\Cloud\Tasks\V2\AppEngineRouting;
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
-use Google\Cloud\Tasks\V2\HttpMethod;
-use Google\Cloud\Tasks\V2\HttpRequest;
-use Google\Cloud\Tasks\V2\OidcToken;
-use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Timestamp;
-use Illuminate\Contracts\Queue\Queue as QueueContract;
-use Illuminate\Queue\Queue as LaravelQueue;
-use Illuminate\Queue\WorkerOptions;
+use Exception;
 use Illuminate\Support\Str;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 
 use function Safe\json_decode;
 use function Safe\json_encode;
 
+use Google\Protobuf\Timestamp;
+use Google\Cloud\Tasks\V2\Task;
+use Illuminate\Queue\WorkerOptions;
+use Google\Cloud\Tasks\V2\OidcToken;
+use Google\Cloud\Tasks\V2\HttpMethod;
+use Google\Cloud\Tasks\V2\HttpRequest;
+use Google\Cloud\Tasks\V2\AppEngineRouting;
+use Illuminate\Queue\Queue as LaravelQueue;
+use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
+use Illuminate\Contracts\Queue\Queue as QueueContract;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
+
+/**
+ * @phpstan-import-type QueueConfig from CloudTasksConnector
+ * @phpstan-import-type JobShape from CloudTasksJob
+ * @phpstan-import-type JobBeforeDispatch from CloudTasksJob
+ *
+ * @phpstan-type JobOptions array{
+ *     job?: Closure|string|object,
+ *     delay?: ?int
+ * }
+ */
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
-    private static ?Closure $handlerUrlCallback = null;
+    protected static ?Closure $handlerUrlCallback = null;
 
-    private static ?Closure $taskHeadersCallback = null;
+    protected static ?Closure $taskHeadersCallback = null;
 
     /** @var (Closure(IncomingTask): WorkerOptions)|null */
-    private static ?Closure $workerOptionsCallback = null;
+    protected static ?Closure $workerOptionsCallback = null;
 
-    public function __construct(public array $config, public CloudTasksClient $client, public $dispatchAfterCommit = false)
-    {
+    /**
+     * @param  QueueConfig  $config
+     */
+    public function __construct(
+        public array $config,
+        public CloudTasksClient $client,
+        // @phpstan-ignore-next-line
+        public $dispatchAfterCommit = false,
+    ) {
         //
     }
 
@@ -91,15 +110,20 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     /**
      * Push a new job onto the queue.
      *
-     * @param  string|object  $job
+     * @param  string|Closure|JobBeforeDispatch  $job
      * @param  mixed  $data
      * @param  string|null  $queue
-     * @return void
+     * @return mixed
      */
     public function push($job, $data = '', $queue = null)
     {
-        if (! ($job instanceof Closure)) {
-            $job->queue = $queue ?? $job->queue ?? $this->config['queue'];
+        if (! $queue) {
+            $queue = $this->getQueueForJob($job);
+        }
+
+        if (is_object($job) && ! $job instanceof Closure) {
+            /** @var JobBeforeDispatch $job */
+            $job->queue = $queue;
         }
 
         return $this->enqueueUsing(
@@ -118,6 +142,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      *
      * @param  string  $payload
      * @param  string|null  $queue
+     * @param  JobOptions  $options
      * @return string
      */
     public function pushRaw($payload, $queue = null, array $options = [])
@@ -132,13 +157,18 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * Push a new job onto the queue after a delay.
      *
      * @param  \DateTimeInterface|\DateInterval|int  $delay
-     * @param  string|object  $job
+     * @param  Closure|string|JobBeforeDispatch  $job
      * @param  mixed  $data
      * @param  string|null  $queue
-     * @return void
+     * @return mixed
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
+        // Laravel pls fix your typehints
+        if (! $queue) {
+            $queue = $this->getQueueForJob($job);
+        }
+
         return $this->enqueueUsing(
             $job,
             $this->createPayload($job, $queue, $data),
@@ -156,7 +186,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * @param  string|null  $queue
      * @param  string  $payload
      * @param  \DateTimeInterface|\DateInterval|int  $delay
-     * @param  string|object  $job
+     * @param  Closure|string|object|null  $job
      * @return string
      */
     protected function pushToCloudTasks($queue, $payload, $delay, mixed $job)
@@ -165,6 +195,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $payload = (array) json_decode($payload, true);
 
+        /** @var JobShape $payload */
         $task = tap(new Task)->setName($this->taskName($queue, $payload['displayName']));
 
         $payload = $this->enrichPayloadWithAttempts($payload);
@@ -199,9 +230,12 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         );
     }
 
-    private function enrichPayloadWithAttempts(
-        array $payload,
-    ): array {
+    /**
+     * @param  JobShape  $payload
+     * @return JobShape
+     */
+    private function enrichPayloadWithAttempts(array $payload): array
+    {
         $payload['internal'] = [
             'attempts' => $payload['internal']['attempts'] ?? 0,
         ];
@@ -209,13 +243,20 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return $payload;
     }
 
-    /** @param string|object $job */
-    public function addPayloadToTask(array $payload, Task $task, mixed $job): Task
+    /**
+     * @param  Closure|string|object|null  $job
+     * @param  JobShape  $payload
+     */
+    public function addPayloadToTask(array $payload, Task $task, $job): Task
     {
         $headers = $this->headers($payload);
 
         if (! empty($this->config['app_engine'])) {
             $path = \Safe\parse_url(route('cloud-tasks.handle-task'), PHP_URL_PATH);
+
+            if (! is_string($path)) {
+                throw new Exception('Something went wrong parsing the route.');
+            }
 
             $appEngineRequest = new AppEngineHttpRequest;
             $appEngineRequest->setRelativeUri($path);
@@ -223,9 +264,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $appEngineRequest->setBody(json_encode($payload));
             $appEngineRequest->setHeaders($headers);
 
-            if (! empty($service = $this->config['app_engine_service'])) {
+            if (! empty($this->config['app_engine_service'])) {
                 $routing = new AppEngineRouting;
-                $routing->setService($service);
+                $routing->setService($this->config['app_engine_service']);
                 $appEngineRequest->setAppEngineRouting($routing);
             }
 
@@ -238,7 +279,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $httpRequest->setHeaders($headers);
 
             $token = new OidcToken;
-            $token->setServiceAccountEmail($this->config['service_account_email']);
+            $token->setServiceAccountEmail($this->config['service_account_email'] ?? '');
             $httpRequest->setOidcToken($token);
             $task->setHttpRequest($httpRequest);
         }
@@ -266,7 +307,9 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         );
     }
 
-    /** @param string|object $job */
+    /**
+     * @param  Closure|string|object|null  $job
+     */
     public function getHandler(mixed $job): string
     {
         if (static::$handlerUrlCallback) {
@@ -279,11 +322,11 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
         $handler = rtrim($this->config['handler'], '/');
 
-        if (str_ends_with($handler, '/'.config('cloud-tasks.uri'))) {
+        if (str_ends_with($handler, '/'.config()->string('cloud-tasks.uri'))) {
             return $handler;
         }
 
-        return $handler.'/'.config('cloud-tasks.uri');
+        return $handler.'/'.config()->string('cloud-tasks.uri');
     }
 
     /**
@@ -297,5 +340,20 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         }
 
         return (static::$taskHeadersCallback)($payload);
+    }
+
+    /**
+     * @param  Closure|string|JobBeforeDispatch  $job
+     */
+    private function getQueueForJob(mixed $job): string
+    {
+        if (is_object($job) && ! $job instanceof Closure) {
+            /** @var JobBeforeDispatch $job */
+            if (! empty($job->queue)) {
+                return $job->queue;
+            }
+        }
+
+        return $this->config['queue'];
     }
 }

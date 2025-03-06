@@ -10,16 +10,14 @@
     "require": {
         "php": "^8.1",
         "ext-json": "*",
-        "phpseclib/phpseclib": "^3.0",
-        "google/cloud-tasks": "^1.15|^2.0",
-        "thecodingmachine/safe": "^1.0|^2.0|^3.0"
+        "google/cloud-tasks": "^2.0",
+        "thecodingmachine/safe": "^3.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^8.0",
+        "orchestra/testbench": "^10.0",
         "thecodingmachine/phpstan-safe-rule": "^1.2",
-        "laravel/legacy-factories": "^1.3",
         "laravel/pint": "^1.13",
-        "larastan/larastan": "^2.9"
+        "larastan/larastan": "^3.0"
     },
     "autoload": {
         "psr-4": {
@@ -28,8 +26,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/",
-            "Factories\\": "factories/"
+            "Tests\\": "tests/"
         }
     },
     "extra": {
@@ -42,8 +39,12 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "scripts": {
-        "l10": [
-            "composer require laravel/framework:10.* orchestra/testbench:8.* --no-interaction --no-update",
+        "l11": [
+            "composer require laravel/framework:11.* orchestra/testbench:9.* --no-interaction --no-update",
+            "composer update --prefer-stable --prefer-dist --no-interaction"
+        ],
+        "l12": [
+            "composer require laravel/framework:12.* orchestra/testbench:10.* --no-interaction --no-update",
             "composer update --prefer-stable --prefer-dist --no-interaction"
         ],
         "pint": [

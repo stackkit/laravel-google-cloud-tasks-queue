@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
-use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Routing\Router;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Queue\QueueManager;
 use Illuminate\Foundation\Application;
-use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 
 class CloudTasksServiceProvider extends LaravelServiceProvider
 {
@@ -26,7 +29,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
     private function registerClient(): void
     {
         $this->app->singleton(CloudTasksClient::class, function () {
-            return new CloudTasksClient(config('cloud-tasks.client_options', []));
+            return new CloudTasksClient(config()->array('cloud-tasks.client_options', []));
         });
 
         $this->app->singleton('cloud-tasks.worker', function (Application $app) {
@@ -43,13 +46,10 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
 
     private function registerConnector(): void
     {
-        /**
-         * @var \Illuminate\Queue\QueueManager $queue
-         */
-        $queue = $this->app['queue'];
-
-        $queue->addConnector('cloudtasks', function () {
-            return new CloudTasksConnector;
+        with(resolve('queue'), function (QueueManager $queue) {
+            $queue->addConnector('cloudtasks', function () {
+                return new CloudTasksConnector;
+            });
         });
     }
 
@@ -68,17 +68,16 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             return;
         }
 
-        /**
-         * @var \Illuminate\Routing\Router $router
-         */
-        $router = $this->app['router'];
-
-        $router->post(config('cloud-tasks.uri'), [TaskHandler::class, 'handle'])->name('cloud-tasks.handle-task');
+        with(resolve('router'), function (Router $router) {
+            $router->post(config()->string('cloud-tasks.uri'), [TaskHandler::class, 'handle'])
+                ->name('cloud-tasks.handle-task');
+        });
     }
 
     private function registerEvents(): void
     {
-        $events = $this->app['events'];
+        /** @var Dispatcher $events */
+        $events = app('events');
 
         $events->listen(JobFailed::class, function (JobFailed $event) {
             if (! $event->job instanceof CloudTasksJob) {
@@ -98,7 +97,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 return;
             }
 
-            data_set($event->job->job, 'internal.errored', true);
+            $event->job->job['internal']['errored'] = true;
         });
 
         $events->listen(JobFailed::class, function ($event) {

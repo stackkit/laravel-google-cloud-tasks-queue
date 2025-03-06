@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
+use Google\Cloud\Tasks\V2\Task;
 use Google\ApiCore\ApiException;
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
+use Google\Cloud\Tasks\V2\GetTaskRequest;
 use Google\Cloud\Tasks\V2\CreateTaskRequest;
 use Google\Cloud\Tasks\V2\DeleteTaskRequest;
-use Google\Cloud\Tasks\V2\GetTaskRequest;
-use Google\Cloud\Tasks\V2\Task;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 
 class CloudTasksApiConcrete implements CloudTasksApiContract
 {

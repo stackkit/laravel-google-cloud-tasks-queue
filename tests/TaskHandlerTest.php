@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Illuminate\Queue\Events\JobReleasedAfterException;
+use Override;
+use Tests\Support\JobOutput;
+use Tests\Support\SimpleJob;
+use Tests\Support\FailingJob;
+use Tests\Support\EncryptedJob;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Event;
-use Override;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\TestWith;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
-use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
-use Tests\Support\EncryptedJob;
-use Tests\Support\FailingJob;
+use Tests\Support\SimpleJobWithTimeout;
 use Tests\Support\FailingJobWithMaxTries;
-use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\Support\FailingJobWithNoMaxTries;
 use Tests\Support\FailingJobWithRetryUntil;
 use Tests\Support\FailingJobWithUnlimitedTries;
-use Tests\Support\JobOutput;
-use Tests\Support\SimpleJob;
-use Tests\Support\SimpleJobWithTimeout;
+use Illuminate\Queue\Events\JobReleasedAfterException;
+use Tests\Support\FailingJobWithMaxTriesAndRetryUntil;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
+use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 
 class TaskHandlerTest extends TestCase
 {
@@ -289,23 +289,13 @@ class TaskHandlerTest extends TestCase
     #[Test]
     public function test_job_timeout()
     {
-        $this->markTestSkipped('Currently seemingly impossible to test job timeouts.');
-
         // Arrange
-        Event::fake(JobOutput::class);
+        Event::fake(JobReleasedAfterException::class);
 
         // Act
         $this->dispatch(new SimpleJobWithTimeout)->run();
 
         // Assert
-        $events = Event::dispatched(JobOutput::class)->map(fn ($event) => $event[0]->output)->toArray();
-        $this->assertEquals([
-            'SimpleJobWithTimeout:1',
-            'SimpleJobWithTimeout:2',
-            'SimpleJobWithTimeout:3',
-            'SimpleJobWithTimeout:worker-stopping',
-            'SimpleJobWithTimeout:4',
-            'SimpleJobWithTimeout:5',
-        ], $events);
+        Event::assertDispatched(JobReleasedAfterException::class);
     }
 }

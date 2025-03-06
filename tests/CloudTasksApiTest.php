@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Google\Protobuf\Timestamp;
+use Google\Cloud\Tasks\V2\Task;
 use Google\ApiCore\ApiException;
-use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
-use Google\Cloud\Tasks\V2\Task;
-use Google\Protobuf\Timestamp;
 use PHPUnit\Framework\Attributes\Test;
+use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 
 class CloudTasksApiTest extends TestCase

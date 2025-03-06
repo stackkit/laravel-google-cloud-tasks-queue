@@ -45,6 +45,7 @@ Add a new queue connection to `config/queue.php`
   'service_account_email' => env('CLOUD_TASKS_SERVICE_EMAIL', ''),
   
   'backoff' => 0,
+  'after_commit' => false,
 ],
 ```
 
