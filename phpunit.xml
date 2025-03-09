@@ -16,4 +16,9 @@
     <env name="QUEUE_DRIVER" value="cloudtasks"/>
     <env name="DB_DRIVER" value="mysql"/>
   </php>
+  <source>
+    <include>
+      <directory suffix=".php">./src</directory>
+    </include>
+  </source>
 </phpunit>

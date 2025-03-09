@@ -5,26 +5,57 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Exception;
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Queue\Job as JobContract;
-use Illuminate\Queue\Jobs\Job as LaravelJob;
-use Safe\Exceptions\JsonException;
-use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 
 use function Safe\json_encode;
 
+use Safe\Exceptions\JsonException;
+use Illuminate\Container\Container;
+use Illuminate\Queue\Jobs\Job as LaravelJob;
+use Illuminate\Contracts\Queue\Job as JobContract;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
+
+/**
+ * @phpstan-type JobShape array{
+ *      uuid: string,
+ *      displayName: string,
+ *      job: string,
+ *      maxTries: int,
+ *      maxExceptions: int|null,
+ *      failOnTimeout: bool,
+ *      backoff: int|null,
+ *      timeout: int|null,
+ *      retryUntil: int|null,
+ *      data: array{
+ *          commandName: string,
+ *          command: string
+ *      },
+ *      internal?: array{
+ *          attempts: int,
+ *          errored?: bool
+ *      }
+ *  }
+ * @phpstan-type JobBeforeDispatch object{
+ *     queue: ?string
+ * }&\stdClass
+ */
 class CloudTasksJob extends LaravelJob implements JobContract
 {
     protected $container;
 
     private CloudTasksQueue $driver;
 
+    /**
+     * @var JobShape
+     */
     public array $job;
 
     protected $connectionName;
 
     protected $queue;
 
+    /**
+     * @param  JobShape  $job
+     */
     public function __construct(
         Container $container,
         CloudTasksQueue $driver,
@@ -52,9 +83,9 @@ class CloudTasksJob extends LaravelJob implements JobContract
         return json_encode($this->job);
     }
 
-    public function attempts(): ?int
+    public function attempts(): int
     {
-        return $this->job['internal']['attempts'];
+        return $this->job['internal']['attempts'] ?? 0;
     }
 
     public function setAttempts(int $attempts): void

@@ -9,7 +9,7 @@ services:
       - .:/var/www/html
       - ${CI_SERVICE_ACCOUNT_JSON_KEY_PATH-./tests/Support/gcloud-key-valid.json}:/var/www/html/tests/Support/gcloud-key-valid.json
   mysql:
-    image: mysql:8
+    image: 'mysql:${MYSQL_VERSION:-8.0}'
     ports:
       - '${MYSQL_PORT:-3307}:3306'
     environment:
@@ -18,7 +18,7 @@ services:
       MYSQL_DATABASE: 'cloudtasks'
       MYSQL_ROOT_PASSWORD: 'root'
   pgsql:
-    image: postgres:14
+    image: 'postgres:${PGSQL_VERSION:-14}'
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     environment:

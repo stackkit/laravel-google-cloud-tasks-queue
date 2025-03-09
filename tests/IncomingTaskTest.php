@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Tests\Support\SimpleJob;
+use Tests\Support\EncryptedJob;
+use Illuminate\Support\Facades\Event;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskIncoming;
-use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
-use Tests\Support\EncryptedJob;
-use Tests\Support\SimpleJob;
 
 class IncomingTaskTest extends TestCase
 {
@@ -127,10 +127,10 @@ class IncomingTaskTest extends TestCase
     #[Test]
     public function test_invalid_function()
     {
-        // Act
-        $incomingTask = IncomingTask::fromJson('{ invalid json }');
+        // Assert
+        $this->expectExceptionMessage('Invalid task payload.');
 
         // Act
-        $this->assertTrue($incomingTask->isInvalid());
+        IncomingTask::fromJson('{ invalid json }');
     }
 }

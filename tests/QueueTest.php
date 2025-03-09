@@ -4,33 +4,33 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Google\Cloud\Tasks\V2\HttpMethod;
-use Google\Cloud\Tasks\V2\Task;
-use Illuminate\Queue\CallQueuedClosure;
-use Illuminate\Queue\Events\JobProcessed;
-use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Queue\Events\JobQueued;
-use Illuminate\Queue\Events\JobReleasedAfterException;
+use Override;
+use Tests\Support\User;
+use Tests\Support\UserJob;
+use Illuminate\Support\Str;
+use Tests\Support\JobOutput;
+use Tests\Support\SimpleJob;
+use Tests\Support\FailingJob;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Bus;
+use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Bus;
+use Google\Cloud\Tasks\V2\HttpMethod;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Str;
-use Override;
+use Illuminate\Queue\Events\JobQueued;
 use PHPUnit\Framework\Attributes\Test;
+use Illuminate\Queue\CallQueuedClosure;
+use Tests\Support\SimpleJobWithTimeout;
+use Tests\Support\JobThatWillBeReleased;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use Tests\Support\FailingJobWithExponentialBackoff;
+use Illuminate\Queue\Events\JobReleasedAfterException;
+use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
-use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
-use Tests\Support\FailingJob;
-use Tests\Support\FailingJobWithExponentialBackoff;
-use Tests\Support\JobOutput;
-use Tests\Support\JobThatWillBeReleased;
-use Tests\Support\SimpleJob;
-use Tests\Support\SimpleJobWithTimeout;
-use Tests\Support\User;
-use Tests\Support\UserJob;
 
 class QueueTest extends TestCase
 {
@@ -549,5 +549,21 @@ class QueueTest extends TestCase
             return str_contains($task->getName(), 'SimpleJobWithTimeout')
                 && str_contains($task->getName(), 'my-batch-queue');
         });
+    }
+
+    #[Test]
+    public function it_can_dispatch_closures(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        Event::fake(JobOutput::class);
+
+        // Act
+        $this->dispatch(function () {
+            event(new JobOutput('ClosureJob:success'));
+        })->run();
+
+        // Assert
+        Event::assertDispatched(fn (JobOutput $event) => $event->output === 'ClosureJob:success');
     }
 }
