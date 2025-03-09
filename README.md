@@ -46,13 +46,32 @@ Add a new queue connection to `config/queue.php`
 ],
 ```
 
-Finally, change the `QUEUE_CONNECTION` to the newly defined connection.
+Finally, set the correct environment variables.
 
 ```dotenv
 QUEUE_CONNECTION=cloudtasks
 ```
 
-Now that the package is installed, the final step is to set the correct environment variables.
+If you're using Cloud Run:
+
+```dotenv
+CLOUD_TASKS_PROJECT=my-project
+CLOUD_TASKS_LOCATION=europe-west6
+CLOUD_TASKS_QUEUE=barbequeue
+CLOUD_TASKS_SERVICE_EMAIL=my-service-account@appspot.gserviceaccount.com
+# Optionally (when using a separate task handler):
+CLOUD_TASKS_SERVICE_HANDLER=
+```
+
+If you're using App Engine:
+
+```dotenv
+CLOUD_TASKS_PROJECT=my-project
+CLOUD_TASKS_LOCATION=europe-west6
+CLOUD_TASKS_QUEUE=barbequeue
+APP_ENGINE_TASK=true
+APP_ENGINE_SERVICE=my-service
+```
 
 Please check the table below on what the values mean and what their value should be.
 
