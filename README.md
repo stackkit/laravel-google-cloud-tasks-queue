@@ -1,29 +1,26 @@
-
-<img src="/assets/logo.png" width="400">
+# Cloud Tasks queue driver for Laravel
 
 [![Run tests](https://github.com/stackkit/laravel-google-cloud-tasks-queue/actions/workflows/run-tests.yml/badge.svg)](https://github.com/stackkit/laravel-google-cloud-tasks-queue/actions/workflows/run-tests.yml)
 <a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/v/stable.svg" alt="Latest Stable Version"></a>
 <a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/downloads.svg" alt="Downloads"></a>
 
-<sub>Companion packages: <a href="https://github.com/stackkit/laravel-google-cloud-scheduler">Cloud Scheduler</a>, <a href="https://github.com/marickvantuil/laravel-google-cloud-logging">Cloud Logging</a></sub>
-
-# Introduction
-
 This package allows Google Cloud Tasks to be used as the queue driver.
 
-<p align="center">
-<img src="/assets/cloud-tasks-home.png" width="100%">
-</p>
+<sub>Companion packages: <a href="https://github.com/stackkit/laravel-google-cloud-scheduler">Cloud Scheduler</a>, <a href="https://github.com/marickvantuil/laravel-google-cloud-logging">Cloud Logging</a></sub>
+
+![Image](https://github.com/user-attachments/assets/d9af0938-43b7-407b-8791-83419420a62b)
+
+
 
 ### Requirements
 
-This package requires Laravel 10 or 11.
+This package requires Laravel 11 or 12.
 
 ### Installation
 
 Require the package using Composer
 
-```console
+```shell
 composer require stackkit/laravel-google-cloud-tasks-queue
 ```
 
@@ -178,10 +175,6 @@ your application with the job payload. There is no need to run a `queue:work/lis
 Cloud Tasks has it's own retry configuration options: maximum number of attempts, retry duration, min/max backoff and max doublings. All of these options are ignored by this package. Instead, you may configure max attempts, retry duration and backoff strategy right from Laravel.
 
 ### Authentication
-
-Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with a path to the credentials file.
-
-More info: https://cloud.google.com/docs/authentication/production
 
 If you're not using your master service account (which has all abilities), you must add the following roles to make it
 works:
