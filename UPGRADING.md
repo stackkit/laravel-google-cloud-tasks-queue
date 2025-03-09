@@ -1,3 +1,15 @@
+# From 4.x to 5.x
+
+The package drops support for Laravel 10 and adds support for Laravel 12.
+
+## Configuration type strictness (Impact: low)
+
+The package now uses `config()->string()` and `config()->array()` to enforce receiving the correct types from the Laravel configuration file.
+
+This should not give any problems but you should verify the configuration settings.
+
+There are no other breaking changes.
+
 # From 3.x to 4.x
 
 ## Renamed environment names (Impact: high)
