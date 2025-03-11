@@ -1,5 +1,7 @@
 {
     "name": "stackkit/laravel-google-cloud-tasks-queue",
+    "description": "Google Cloud Tasks queue driver for Laravel",
+    "keywords": ["laravel", "queue", "queues", "google", "cloudtasks", "cloud", "run"],
     "license": "MIT",
     "authors": [
         {
