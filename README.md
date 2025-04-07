@@ -43,6 +43,8 @@ Add a new queue connection to `config/queue.php`
   
   'backoff' => 0,
   'after_commit' => false,
+  // enable this if you want to set a non-default Google Cloud Tasks dispatch timeout
+  //'dispatch_deadline' => 1800, // in seconds
 ],
 ```
 
