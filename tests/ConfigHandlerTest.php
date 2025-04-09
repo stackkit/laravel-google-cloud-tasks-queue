@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\SimpleJob;
 use Google\Cloud\Tasks\V2\Task;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 
 class ConfigHandlerTest extends TestCase
