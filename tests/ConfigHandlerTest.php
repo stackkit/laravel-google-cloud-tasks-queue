@@ -7,13 +7,12 @@ namespace Tests;
 use Tests\Support\SimpleJob;
 use Google\Cloud\Tasks\V2\Task;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 
 class ConfigHandlerTest extends TestCase
 {
-    /**
-     * @dataProvider handlerDataProvider
-     */
+    #[DataProvider('handlerDataProvider')]
     public function test_it_allows_a_handler_url_to_contain_path(string $handler, string $expectedHandler): void
     {
         CloudTasksApi::fake();
