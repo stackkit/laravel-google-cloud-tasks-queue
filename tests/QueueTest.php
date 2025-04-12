@@ -566,4 +566,51 @@ class QueueTest extends TestCase
         // Assert
         Event::assertDispatched(fn (JobOutput $event) => $event->output === 'ClosureJob:success');
     }
+
+    #[Test]
+    public function task_has_no_dispatch_deadline_by_default(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getDispatchDeadline() === null;
+        });
+    }
+
+    #[Test]
+    public function task_has_no_dispatch_deadline_if_config_is_empty(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        $this->setConfigValue('dispatch_deadline', null);
+
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getDispatchDeadline() === null;
+        });
+    }
+
+    #[Test]
+    public function task_has_configured_dispatch_deadline(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        $this->setConfigValue('dispatch_deadline', 1800);
+
+        // Act
+        $this->dispatch(new SimpleJob());
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getDispatchDeadline()->getSeconds() === 1800;
+        });
+    }
 }
