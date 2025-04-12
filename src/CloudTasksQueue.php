@@ -6,8 +6,8 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Closure;
 use Exception;
-use Google\Protobuf\Duration;
 use Illuminate\Support\Str;
+use Google\Protobuf\Duration;
 
 use function Safe\json_decode;
 use function Safe\json_encode;
@@ -285,7 +285,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $task->setHttpRequest($httpRequest);
 
             if (! empty($this->config['dispatch_deadline'])) {
-                $task->setDispatchDeadline((new Duration())->setSeconds($this->config['dispatch_deadline']));
+                $task->setDispatchDeadline((new Duration)->setSeconds($this->config['dispatch_deadline']));
             }
         }
 

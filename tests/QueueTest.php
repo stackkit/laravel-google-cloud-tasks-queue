@@ -574,7 +574,7 @@ class QueueTest extends TestCase
         CloudTasksApi::fake();
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -590,7 +590,7 @@ class QueueTest extends TestCase
         $this->setConfigValue('dispatch_deadline', null);
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -606,7 +606,7 @@ class QueueTest extends TestCase
         $this->setConfigValue('dispatch_deadline', 1800);
 
         // Act
-        $this->dispatch(new SimpleJob());
+        $this->dispatch(new SimpleJob);
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
