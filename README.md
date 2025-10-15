@@ -1,10 +1,10 @@
-# Cloud Tasks queue driver for Laravel
+# Cloud Tasks Queue Driver for Laravel
 
-[![Run tests](https://github.com/stackkit/laravel-google-cloud-tasks-queue/actions/workflows/run-tests.yml/badge.svg)](https://github.com/stackkit/laravel-google-cloud-tasks-queue/actions/workflows/run-tests.yml)
-<a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/v/stable.svg" alt="Latest Stable Version"></a>
+[![Run tests](https://github.com/stackkit/laravel-google-cloud-tasks-queue/actions/workflows/run-tests.yml/badge.svg)](https://github.com/stackkit/laravel-google-cloud-tasks-queue/actions/workflows/run-tests.yml)  
+<a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/v/stable.svg" alt="Latest Stable Version"></a>  
 <a href="https://packagist.org/packages/stackkit/laravel-google-cloud-tasks-queue"><img src="https://poser.pugx.org/stackkit/laravel-google-cloud-tasks-queue/downloads.svg" alt="Downloads"></a>
 
-This package allows Google Cloud Tasks to be used as the queue driver.
+This package allows you to use Google Cloud Tasks as the queue driver in your Laravel application.
 
 <sub>Companion packages: <a href="https://github.com/stackkit/laravel-google-cloud-scheduler">Cloud Scheduler</a>, <a href="https://github.com/marickvantuil/laravel-google-cloud-logging">Cloud Logging</a></sub>
 
@@ -18,13 +18,13 @@ This package requires Laravel 11 or 12.
 
 ### Installation
 
-Require the package using Composer
+Require the package via Composer:
 
 ```shell
 composer require stackkit/laravel-google-cloud-tasks-queue
 ```
 
-Add a new queue connection to `config/queue.php`
+Add a new queue connection to `config/queue.php`:
 
 ```php
 'cloudtasks' => [
@@ -32,23 +32,23 @@ Add a new queue connection to `config/queue.php`
   'project' => env('CLOUD_TASKS_PROJECT', ''),
   'location' => env('CLOUD_TASKS_LOCATION', ''),
   'queue' => env('CLOUD_TASKS_QUEUE', 'default'),
-  
-  // Required when using AppEngine
+
+  // Required when using App Engine
   'app_engine'            => env('APP_ENGINE_TASK', false),
   'app_engine_service'    => env('APP_ENGINE_SERVICE', ''),
-  
-  // Required when not using AppEngine
+
+  // Required when not using App Engine
   'handler'               => env('CLOUD_TASKS_HANDLER', ''),
   'service_account_email' => env('CLOUD_TASKS_SERVICE_EMAIL', ''),
-  
+
   'backoff' => 0,
   'after_commit' => false,
-  // enable this if you want to set a non-default Google Cloud Tasks dispatch timeout
+  // Enable this if you want to set a non-default Google Cloud Tasks dispatch timeout
   //'dispatch_deadline' => 1800, // in seconds
 ],
 ```
 
-Finally, set the correct environment variables.
+Set the appropriate environment variables:
 
 ```dotenv
 QUEUE_CONNECTION=cloudtasks
@@ -61,7 +61,7 @@ CLOUD_TASKS_PROJECT=my-project
 CLOUD_TASKS_LOCATION=europe-west6
 CLOUD_TASKS_QUEUE=barbequeue
 CLOUD_TASKS_SERVICE_EMAIL=my-service-account@appspot.gserviceaccount.com
-# Optionally (when using a separate task handler):
+# Optional (when using a separate task handler):
 CLOUD_TASKS_SERVICE_HANDLER=
 ```
 
@@ -75,21 +75,21 @@ APP_ENGINE_TASK=true
 APP_ENGINE_SERVICE=my-service
 ```
 
-Please check the table below on what the values mean and what their value should be.
+Refer to the table below for descriptions of each value:
 
-| Environment variable                              | Description                                                                                                                                              | Example                                          
----------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------
-| `CLOUD_TASKS_PROJECT`                    | The project your queue belongs to.                                                                                                                       | `my-project`                                     
-| `CLOUD_TASKS_LOCATION`                   | The region where the project is hosted.                                                                                                                  | `europe-west6`                                   
-| `CLOUD_TASKS_QUEUE`                      | The default queue a job will be added to.                                                                                                                | `emails`                                         
-| **App Engine**                                    
-| `APP_ENGINE_TASK` (optional)             | Set to true to use App Engine task (else a Http task will be used). Defaults to false.                                                                   | `true`                                           
-| `APP_ENGINE_SERVICE` (optional)          | The App Engine service to handle the task (only if using App Engine task).                                                                               | `api`                                            
-| **Non- App Engine apps**                          
-| `CLOUD_TASKS_SERVICE_EMAIL`   (optional) | The email address of the service account. Important, it should have the correct roles. See the section below which roles.                                | `my-service-account@appspot.gserviceaccount.com` 
-| `CLOUD_TASKS_HANDLER` (optional)         | The URL that Cloud Tasks will call to process a job. This should be the URL to your Laravel app. By default we will use the URL that dispatched the job. | `https://<your website>.com`                     
+| Environment Variable                  | Description                                                                                                                                              | Example                                           |
+|--------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| `CLOUD_TASKS_PROJECT`                | The project your queue belongs to.                                                                                                                       | `my-project`                                     |
+| `CLOUD_TASKS_LOCATION`               | The region where the project is hosted.                                                                                                                  | `europe-west6`                                   |
+| `CLOUD_TASKS_QUEUE`                  | The default queue to which a job will be added.                                                                                                          | `emails`                                         |
+| **App Engine**                       |                                                                                                                                                          |                                                  |
+| `APP_ENGINE_TASK` (optional)         | Set to true to use an App Engine task (otherwise an HTTP task will be used). Defaults to false.                                                         | `true`                                           |
+| `APP_ENGINE_SERVICE` (optional)      | The App Engine service that will handle the task (only if using App Engine tasks).                                                                      | `api`                                            |
+| **Non-App Engine Apps**              |                                                                                                                                                          |                                                  |
+| `CLOUD_TASKS_SERVICE_EMAIL` (optional) | The service account's email address. It must have the required roles (see below).                                                                       | `my-service-account@appspot.gserviceaccount.com` |
+| `CLOUD_TASKS_HANDLER` (optional)     | The URL that Cloud Tasks will call to process a job. Should point to your Laravel app. Defaults to the URL that dispatched the job.                     | `https://<your-website>.com`                     |
 
-</details>
+---
 
 Optionally, you may publish the config file:
 
@@ -97,17 +97,17 @@ Optionally, you may publish the config file:
 php artisan vendor:publish --tag=cloud-tasks
 ```
 
-If you are using separate services for dispatching and handling tasks, and your application only dispatches jobs and should not be able to handle jobs, you may disable the task handler from `config/cloud-tasks.php`:
+If you're using separate services for dispatching and handling tasks, and your app should only dispatch jobs (not handle them), you may disable the task handler in `config/cloud-tasks.php`:
 
 ```php
 'disable_task_handler' => env('CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
 ```
 
-### How to
+### How-To
 
-#### Passing headers to a task
+#### Pass headers to a task
 
-You can pass headers to a task by using the `setTaskHeadersUsing` method on the `CloudTasksQueue` class.
+You can pass headers to a task using the `setTaskHeadersUsing` method on the `CloudTasksQueue` class:
 
 ```php
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
@@ -117,37 +117,31 @@ CloudTasksQueue::setTaskHeadersUsing(static fn() => [
 ]);
 ```
 
-If necessary, the current payload being dispatched is also available:
+You can also access the payload being dispatched:
 
 ```php
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
-
 CloudTasksQueue::setTaskHeadersUsing(static fn(array $payload) => [
   'X-My-Header' => $payload['displayName'],
 ]);
 ```
 
-#### Configure task handler url
+#### Configure the task handler URL
 
-You can set the handler url for a task by using the `configureHandlerUrlUsing` method on the `CloudTasksQueue` class.
+Set the handler URL for a task using the `configureHandlerUrlUsing` method:
 
 ```php
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
-
 CloudTasksQueue::configureHandlerUrlUsing(static fn() => 'https://example.com/my-url');
 ```
 
-If necessary, the current job being dispatched is also available:
+Or access the job being dispatched:
 
 ```php
-use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
-
 CloudTasksQueue::configureHandlerUrlUsing(static fn(MyJob $job) => 'https://example.com/my-url/' . $job->something());
 ```
 
 #### Configure worker options
 
-You can configure worker options by using the `configureWorkerOptionsUsing` method on the `CloudTasksQueue` class.
+Customize worker options using the `configureWorkerOptionsUsing` method:
 
 ```php
 use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
@@ -164,7 +158,7 @@ CloudTasksQueue::configureWorkerOptionsUsing(function (IncomingTask $task) {
 
 #### Use a custom credentials file
 
-Modify (or add) the `client_options` key in the `config/cloud-tasks.php` file:
+Edit the `client_options` key in `config/cloud-tasks.php`:
 
 ```php
 'client_options' => [
@@ -175,63 +169,74 @@ Modify (or add) the `client_options` key in the `config/cloud-tasks.php` file:
 
 #### Modify CloudTasksClient options
 
-Modify (or add) the `client_options` key in the `config/cloud-tasks.php` file:
+Edit the `client_options` key in `config/cloud-tasks.php`:
 
 ```php
 'client_options' => [
-    // custom options here
+    // Custom options here
 ]
 ```
 
-### How it works and differences
+### How it works & differences
 
-Using Cloud Tasks as a Laravel queue driver is fundamentally different than other Laravel queue drivers, like Redis.
+Using Cloud Tasks as a Laravel queue driver is fundamentally different from other drivers like Redis.
 
-Typically a Laravel queue has a worker that listens to incoming jobs using the `queue:work` / `queue:listen` command.
-With Cloud Tasks, this is not the case. Instead, Cloud Tasks will schedule the job for you and make an HTTP request to
-your application with the job payload. There is no need to run a `queue:work/listen` command.
+With Redis or similar drivers, a worker listens for jobs via `queue:work` or `queue:listen`.  
+With Cloud Tasks, jobs are scheduled and dispatched via HTTP requests to your app.  
+There’s no need to run `queue:work` or `queue:listen`.
 
-#### Good to know
+### Good to Know
 
-Cloud Tasks has it's own retry configuration options: maximum number of attempts, retry duration, min/max backoff and max doublings. All of these options are ignored by this package. Instead, you may configure max attempts, retry duration and backoff strategy right from Laravel.
+Cloud Tasks has its own retry configuration options like:
+
+- Maximum number of attempts  
+- Retry duration  
+- Min/max backoff  
+- Max doublings
+
+These are ignored by this package. Instead, you can configure retry behavior directly in Laravel.
 
 ### Authentication
 
-If you're not using your master service account (which has all abilities), you must add the following roles to make it
-works:
+If you're not using your master service account (which has all abilities), assign the following roles to your service account to make it working:
 
-1. App Engine Viewer
-2. Cloud Tasks Enqueuer
-3. Cloud Tasks Viewer
-4. Cloud Tasks Task Deleter
+1. App Engine Viewer  
+2. Cloud Tasks Enqueuer  
+3. Cloud Tasks Viewer  
+4. Cloud Tasks Task Deleter  
 5. Service Account User
 
 ### Upgrading
 
-Read [UPGRADING.MD](UPGRADING.md) on how to update versions.
+See [UPGRADING.MD](UPGRADING.md) for instructions on updating versions.
 
 ### Troubleshooting
 
-#### HttpRequest.url must start with 'https://'
+#### `HttpRequest.url` must start with `https://`
 
-This can happen when your application runs behind a reverse proxy. To fix this, add the application domain to Laravel's [trusted proxies](https://laravel.com/docs/11.x/requests#trusting-all-proxies). You may need to add the wildcard `*` as trusted proxy.
+This can occur when your application runs behind a reverse proxy.  
+To resolve it, add your app’s domain to Laravel’s [trusted proxies](https://laravel.com/docs/11.x/requests#trusting-all-proxies).  
+You may need to use the wildcard `*`.
 
-#### Maximum call stack size (zend.max_allowed_stack_size - zend.reserved_stack_size) reached. Infinite recursion?
+#### `Maximum call stack size (zend.max_allowed_stack_size - zend.reserved_stack_size) reached. Infinite recursion?`
 
-This currently seems to be a bug with PHP 8.3 and `googleapis/gax-php`. See [this issue](https://github.com/googleapis/gax-php/issues/584) for more information.
+This seems to be a bug in PHP 8.3 and `googleapis/gax-php`.  
+See [this issue](https://github.com/googleapis/gax-php/issues/584) for details.
 
-A potential workaround is to disable PHP 8.3 call stack limit by setting this value in `php.ini`:
+A possible workaround is to disable the PHP 8.3 stack limit in `php.ini`:
 
 ```ini
-zend.max_allowed_stack_size: -1
+zend.max_allowed_stack_size=-1
 ```
 
 ### Contributing
 
-You can use the services defined in `docker-compose.yml` to start running the package.
+You can use the services defined in `docker-compose.yml` to run the package locally.
 
-Inside the container, run `composer install`. 
+Inside the container:
 
-Set up the environment: `cp .env.example .env`
+1. Run `composer install`
+2. Set up the environment: `cp .env.example .env`
 
-Some tests hit the Cloud Tasks API and need a project and key to be able to hit it. See the variables in `.env`
+Some tests use the Cloud Tasks API and require a project and credentials.  
+Set the appropriate variables in your `.env`.
