@@ -48,7 +48,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
      * @param  QueueConfig  $config
      */
     public function __construct(
-        public array $config,
+        protected $config,
         public CloudTasksClient $client,
         // @phpstan-ignore-next-line
         public $dispatchAfterCommit = false,

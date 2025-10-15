@@ -18,6 +18,7 @@ use Illuminate\Queue\Connectors\ConnectorInterface;
  *     handler?: string,
  *     service_account_email?: string,
  *     backoff?: int,
+ *     dispatch_deadline?: int,
  *     after_commit?: bool
  * }
  */
