@@ -133,7 +133,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             $queue,
             null,
             function ($payload, $queue) use ($job) {
-                return $this->pushRaw($payload, $queue, ['job' => $job]);
+                $options = ['job' => $job];
+                
+                if (is_object($job) && property_exists($job, 'delay') && $job->delay !== null) {
+                    $options['delay'] = $job->delay;
+                }
+                
+                return $this->pushRaw($payload, $queue, $options);
             }
         );
     }
