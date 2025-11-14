@@ -25,6 +25,7 @@ use Tests\Support\SimpleJobWithTimeout;
 use Tests\Support\JobThatWillBeReleased;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
+use Tests\Support\SimpleJobWithDelayProperty;
 use Tests\Support\FailingJobWithExponentialBackoff;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
@@ -611,6 +612,41 @@ class QueueTest extends TestCase
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getDispatchDeadline()->getSeconds() === 1800;
+        });
+    }
+
+    #[Test]
+    public function it_will_set_the_scheduled_time_when_job_has_delay_property(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+        Carbon::setTestNow(now()->addDay());
+
+        // Act
+        $this->dispatch(Bus::batch([
+            new SimpleJobWithDelayProperty(500),
+        ]));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getScheduleTime()->getSeconds() === now()->addSeconds(500)->timestamp;
+        });
+    }
+
+    #[Test]
+    public function it_will_not_set_scheduled_time_when_job_delay_property_is_null(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        $this->dispatch(Bus::batch([
+            new SimpleJobWithDelayProperty(null),
+        ]));
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            return $task->getScheduleTime() === null;
         });
     }
 }
