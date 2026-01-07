@@ -103,6 +103,92 @@ If you're using separate services for dispatching and handling tasks, and your a
 'disable_task_handler' => env('CLOUD_TASKS_DISABLE_TASK_HANDLER', false),
 ```
 
+### Cloud Run Jobs
+
+If you want jobs to be processed by Cloud Run Jobs instead of HTTP endpoints, you can configure the queue to trigger Cloud Run Job executions.
+
+#### Why Cloud Run Jobs?
+
+Cloud Run Jobs are ideal for ong-running batch processing that exceeds Cloud Tasks HTTP timeout limits. 
+
+Cloud Run Jobs can run for up to 7 days.
+
+#### Setup
+
+1. **Create a Cloud Run Job** with your Laravel application container, configured to run:
+
+```bash
+php artisan cloud-tasks:work-job
+```
+
+The command reads job data from environment variables passed to the Job by Cloud Run.
+
+2. **Configure your queue connection**:
+
+```php
+'cloudtasks' => [
+    'driver' => 'cloudtasks',
+    'project' => env('CLOUD_TASKS_PROJECT'),
+    'location' => env('CLOUD_TASKS_LOCATION'),
+    'queue' => env('CLOUD_TASKS_QUEUE', 'default'),
+    
+    // Cloud Run Job configuration
+    'cloud_run_job' => env('CLOUD_TASKS_USE_CLOUD_RUN_JOB', false),
+    'cloud_run_job_name' => env('CLOUD_RUN_JOB_NAME'),
+    'cloud_run_job_region' => env('CLOUD_RUN_JOB_REGION'), // defaults to location
+    'service_account_email' => env('CLOUD_TASKS_SERVICE_EMAIL'),
+    
+    // Optional: Store large payloads (>10KB) in filesystem
+    'payload_disk' => env('CLOUD_TASKS_PAYLOAD_DISK'), // Laravel disk name
+    'payload_prefix' => env('CLOUD_TASKS_PAYLOAD_PREFIX', 'cloud-tasks-payloads'),
+    'payload_threshold' => env('CLOUD_TASKS_PAYLOAD_THRESHOLD', 10240), // bytes
+],
+```
+
+> **Note**: The command reads `CLOUD_TASKS_PAYLOAD`, `CLOUD_TASKS_TASK_NAME`, and `CLOUD_TASKS_PAYLOAD_PATH` directly from environment variables at runtime using `getenv()`. These are set automatically by Cloud Tasks via container overrides.
+
+3. **Set environment variables**:
+
+```dotenv
+CLOUD_TASKS_USE_CLOUD_RUN_JOB=true
+CLOUD_RUN_JOB_NAME=my-queue-worker-job
+CLOUD_RUN_JOB_REGION=europe-west1
+```
+
+#### Large Payload Storage
+
+For jobs with payloads exceeding environment variable limits (32KB limit enforced by Cloud Run), configure a Laravel filesystem disk:
+
+```dotenv
+CLOUD_TASKS_PAYLOAD_DISK=gcs
+CLOUD_TASKS_PAYLOAD_PREFIX=cloud-tasks-payloads
+CLOUD_TASKS_PAYLOAD_THRESHOLD=30000
+```
+
+When the payload exceeds the threshold, it's stored in the disk and `CLOUD_TASKS_PAYLOAD_PATH` is used instead.
+
+> **Note**: The payloads will not be cleared up automatically, you can define lifecycle rules for the GCS bucket to delete old payloads.
+
+#### How It Works
+
+When you dispatch a job with Cloud Run Job target enabled:
+
+1. Package creates a Cloud Task with HTTP target pointing to Cloud Run Jobs API
+2. Cloud Tasks calls `run.googleapis.com/v2/.../jobs/{job}:run`
+3. Cloud Run Jobs starts a new execution with environment variables set via container overrides:
+   - `CLOUD_TASKS_PAYLOAD` - Base64-encoded job payload
+   - `CLOUD_TASKS_TASK_NAME` - The task name
+4. The container runs `php artisan cloud-tasks:work-job` which reads the env vars and processes the job
+
+The env var names are config-driven and accessible via Laravel's `config()` function, so they work even with cached config.
+
+All Laravel queue functionality is retained:
+- Job retries and max attempts
+- Failed job handling
+- Job timeouts
+- Encrypted jobs
+- Queue events
+
 ### How-To
 
 #### Pass headers to a task

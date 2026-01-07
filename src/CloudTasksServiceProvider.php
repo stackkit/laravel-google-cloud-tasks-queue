@@ -14,6 +14,7 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\JobReleased;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
+use Stackkit\LaravelGoogleCloudTasksQueue\Commands\WorkCloudRunJob;
 
 class CloudTasksServiceProvider extends LaravelServiceProvider
 {
@@ -24,6 +25,7 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
         $this->registerConfig();
         $this->registerRoutes();
         $this->registerEvents();
+        $this->registerCommands();
     }
 
     private function registerClient(): void
@@ -111,5 +113,14 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 return;
             }
         });
+    }
+
+    private function registerCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                WorkCloudRunJob::class,
+            ]);
+        }
     }
 }
