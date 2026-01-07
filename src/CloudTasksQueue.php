@@ -17,6 +17,7 @@ use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\WorkerOptions;
 use Google\Cloud\Tasks\V2\OidcToken;
 use Google\Cloud\Tasks\V2\HttpMethod;
+use Google\Cloud\Tasks\V2\OAuthToken;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Illuminate\Support\Facades\Storage;
 use Google\Cloud\Tasks\V2\AppEngineRouting;
@@ -309,11 +310,10 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
 
             $httpRequest->setBody(json_encode($executionBody));
 
-            $token = new OidcToken;
+            $token = new OAuthToken;
             $token->setServiceAccountEmail($this->config['service_account_email'] ?? '');
-            // Set audience to the Cloud Run Jobs API
-            $token->setAudience('https://run.googleapis.com');
-            $httpRequest->setOidcToken($token);
+            $token->setScope('https://www.googleapis.com/auth/cloud-platform');
+            $httpRequest->setOAuthToken($token);
             $task->setHttpRequest($httpRequest);
 
             if (! empty($this->config['dispatch_deadline'])) {

@@ -326,7 +326,7 @@ class CloudRunJobTest extends TestCase
     }
 
     #[Test]
-    public function cloud_run_job_target_sets_oidc_token_with_correct_audience(): void
+    public function cloud_run_job_target_sets_oauth_token_with_correct_scope(): void
     {
         // Arrange
         CloudTasksApi::fake();
@@ -338,9 +338,9 @@ class CloudRunJobTest extends TestCase
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            $oidcToken = $task->getHttpRequest()->getOidcToken();
+            $oauthToken = $task->getHttpRequest()->getOAuthToken();
 
-            return $oidcToken->getAudience() === 'https://run.googleapis.com';
+            return $oauthToken->getScope() === 'https://www.googleapis.com/auth/cloud-platform';
         });
     }
 
