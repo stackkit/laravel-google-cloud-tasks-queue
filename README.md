@@ -182,8 +182,6 @@ When you dispatch a job with Cloud Run Job target enabled:
    - `CLOUD_TASKS_TASK_NAME` - The task name
 4. The container runs `php artisan cloud-tasks:work-job` which reads the env vars and processes the job
 
-The env var names are config-driven and accessible via Laravel's `config()` function, so they work even with cached config.
-
 All Laravel queue functionality is retained:
 - Job retries and max attempts
 - Failed job handling
