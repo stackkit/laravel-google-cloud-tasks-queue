@@ -109,9 +109,11 @@ If you want jobs to be processed by Cloud Run Jobs instead of HTTP endpoints, yo
 
 #### Why Cloud Run Jobs?
 
-Cloud Run Jobs are ideal for ong-running batch processing that exceeds Cloud Tasks HTTP timeout limits. 
+Cloud Run Jobs are ideal for long-running batch processing that exceeds Cloud Tasks HTTP timeout limits. 
 
 Cloud Run Jobs can run for up to 7 days.
+
+**Tip**: Use seperate queue connections 
 
 #### Setup
 
@@ -196,30 +198,26 @@ Cloud Run Jobs requires specific IAM permissions. Set these variables first:
 ```bash
 export PROJECT_ID="your-project-id"
 export SA_EMAIL="your-service-account@your-project-id.iam.gserviceaccount.com"
-export TASKS_AGENT="service-XXXXXXXXXXXX@gcp-sa-cloudtasks.iam.gserviceaccount.com"
+export TASKS_AGENT="service-{PROJECT_NUMBER}@gcp-sa-cloudtasks.iam.gserviceaccount.com"
 ```
 
 > **Note**: Find your Cloud Tasks service agent email in the IAM console under "Include Google-provided role grants".
+> **Note**: Project ID and Project Number are different. Project ID is the name of your project, Project Number is the numeric ID of your project.
 
 **Project-Level Permissions:**
 
 ```bash
-# Allow enqueuing tasks (required by PHP app)
+# Allow enqueuing tasks (required by PHP app running as $SA_EMAIL)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SA_EMAIL" \
     --role="roles/cloudtasks.enqueuer"
-
-# Allow listing queues (if your app needs to list queues/tasks)
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$SA_EMAIL" \
-    --role="roles/cloudtasks.viewer"
 
 # Allow executing jobs with overrides (required for container overrides)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SA_EMAIL" \
     --role="roles/run.jobsExecutorWithOverrides"
 
-# Allow invoking Cloud Run Services (if also using HTTP targets)
+# Allow invoking Cloud Run Services (if also using Cloud Run Services as HTTP targets)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SA_EMAIL" \
     --role="roles/run.invoker"
