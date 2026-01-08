@@ -189,6 +189,65 @@ All Laravel queue functionality is retained:
 - Encrypted jobs
 - Queue events
 
+#### Required IAM Permissions
+
+Cloud Run Jobs requires specific IAM permissions. Set these variables first:
+
+```bash
+export PROJECT_ID="your-project-id"
+export SA_EMAIL="your-service-account@your-project-id.iam.gserviceaccount.com"
+export TASKS_AGENT="service-XXXXXXXXXXXX@gcp-sa-cloudtasks.iam.gserviceaccount.com"
+```
+
+> **Note**: Find your Cloud Tasks service agent email in the IAM console under "Include Google-provided role grants".
+
+**Project-Level Permissions:**
+
+```bash
+# Allow enqueuing tasks (required by PHP app)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="roles/cloudtasks.enqueuer"
+
+# Allow listing queues (if your app needs to list queues/tasks)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="roles/cloudtasks.viewer"
+
+# Allow executing jobs with overrides (required for container overrides)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="roles/run.jobsExecutorWithOverrides"
+
+# Allow invoking Cloud Run Services (if also using HTTP targets)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="roles/run.invoker"
+```
+
+**Service Account Permissions:**
+
+```bash
+# Allow the SA to act as itself (required for task creation and execution)
+gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="roles/iam.serviceAccountUser"
+
+# Allow Cloud Tasks to act as the SA (required for OAuth token generation)
+gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
+    --member="serviceAccount:$TASKS_AGENT" \
+    --role="roles/iam.serviceAccountUser"
+```
+
+| Permission | Required By | Purpose |
+|------------|-------------|---------|
+| `cloudtasks.enqueuer` | PHP App | Add tasks to the queue |
+| `cloudtasks.viewer` | Cloud Run Job | List queues/tasks (optional) |
+| `run.jobsExecutorWithOverrides` | Cloud Task | Execute jobs with container overrides |
+| `run.invoker` | Other Workloads | Invoke Cloud Run Services (if using HTTP targets) |
+| `iam.serviceAccountUser` (on SA) | Both | Allow SA to create tasks as itself |
+| `iam.serviceAccountUser` (Tasks Agent) | Google Infrastructure | Generate OAuth tokens for Cloud Run |
+
 ### How-To
 
 #### Pass headers to a task
