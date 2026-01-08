@@ -113,7 +113,7 @@ Cloud Run Jobs are ideal for long-running batch processing that exceeds Cloud Ta
 
 Cloud Run Jobs can run for up to 7 days.
 
-**Tip**: Use seperate queue connections 
+**Tip**: Use seperate queue connections with different targets, for low latency jobs, use HTTP targets, for longer running batch jobs use Cloud Run Jobs.
 
 #### Setup
 
@@ -222,6 +222,8 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SA_EMAIL" \
     --role="roles/run.invoker"
 ```
+
+**Note**: To restrict access to specific Cloud Run instances, use IAM conditions to limit access to specific Cloud Run Jobs / services.
 
 **Service Account Permissions:**
 
