@@ -78,7 +78,7 @@ class CloudRunJobTest extends TestCase
     {
         // Arrange
         Event::fake(JobOutput::class);
-        $payload = $this->createPayload(new SimpleJob);
+        $payload = $this->createPayload(new SimpleJob());
         $this->setEnvVars($payload, 'test-task-name');
 
         // Act
@@ -95,7 +95,7 @@ class CloudRunJobTest extends TestCase
         Event::fake(JobOutput::class);
 
         // Create a job with a specific connection
-        $job = new SimpleJob;
+        $job = new SimpleJob();
         $job->connection = 'my-cloudtasks-connection';
         $payload = $this->createPayload($job);
         $this->setEnvVars($payload, 'test-task-name');
@@ -121,7 +121,7 @@ class CloudRunJobTest extends TestCase
     public function it_fails_without_task_name(): void
     {
         // Arrange
-        $payload = $this->createPayload(new SimpleJob);
+        $payload = $this->createPayload(new SimpleJob());
         putenv('CLOUD_TASKS_PAYLOAD='.$payload);
 
         // Act & Assert
@@ -143,13 +143,13 @@ class CloudRunJobTest extends TestCase
     {
         // Arrange
         Event::fake(JobOutput::class);
-        $payload = $this->createPayload(new FailingJob);
+        $payload = $this->createPayload(new FailingJob());
         $this->setEnvVars($payload, 'test-task-name');
 
-        // Act
-        $this->artisan('cloud-tasks:work-job');
+        // Act & Assert - The command should always return success, just like the HTTP handler.
+        // Retries are managed by Laravel via $job->release(), not by Cloud Run Jobs retry mechanism.
+        $this->artisan('cloud-tasks:work-job')->assertSuccessful();
 
-        // Assert - The job should process but the command may return failure due to exception
         Event::assertDispatched(JobOutput::class);
     }
 
@@ -158,7 +158,7 @@ class CloudRunJobTest extends TestCase
     {
         // Arrange
         Event::fake(JobOutput::class);
-        $payload = $this->createPayload(new EncryptedJob);
+        $payload = $this->createPayload(new EncryptedJob());
         $this->setEnvVars($payload, 'test-task-name');
 
         // Act
@@ -177,7 +177,7 @@ class CloudRunJobTest extends TestCase
             return new WorkerOptions(maxTries: 10);
         });
 
-        $payload = $this->createPayload(new SimpleJob);
+        $payload = $this->createPayload(new SimpleJob());
         $this->setEnvVars($payload, 'test-task-name');
 
         // Act
@@ -201,7 +201,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('cloud_run_job_region', 'europe-west1');
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -221,7 +221,7 @@ class CloudRunJobTest extends TestCase
         // Not setting cloud_run_job_region - should default to location
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -241,7 +241,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('cloud_run_job_name', 'my-worker-job');
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -258,7 +258,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('cloud_run_job_name', 'my-worker-job');
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -278,7 +278,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('cloud_run_job_name', 'my-worker-job');
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -307,7 +307,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('cloud_run_job_name', 'my-worker-job');
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -334,7 +334,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('cloud_run_job_name', 'my-worker-job');
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -354,7 +354,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('dispatch_deadline', 1800);
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -374,7 +374,7 @@ class CloudRunJobTest extends TestCase
             'displayName' => 'SimpleJob',
             'job' => 'Illuminate\\Queue\\CallQueuedHandler@call',
             'data' => [
-                'command' => serialize(new SimpleJob),
+                'command' => serialize(new SimpleJob()),
             ],
             'internal' => [
                 'attempts' => 0,
@@ -392,7 +392,7 @@ class CloudRunJobTest extends TestCase
     public function incoming_task_extracts_connection_from_payload(): void
     {
         // Arrange
-        $job = new SimpleJob;
+        $job = new SimpleJob();
         $job->connection = 'my-cloudtasks-connection';
 
         $payload = json_encode([
@@ -428,7 +428,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('payload_threshold', 100000); // 100KB threshold
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert - should use CLOUD_TASKS_PAYLOAD directly since payload is below threshold
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -458,7 +458,7 @@ class CloudRunJobTest extends TestCase
         $this->setConfigValue('payload_threshold', 1); // 1 byte threshold
 
         // Act
-        $this->dispatch(new SimpleJob);
+        $this->dispatch(new SimpleJob());
 
         // Assert - should use CLOUD_TASKS_PAYLOAD_PATH since payload exceeds threshold
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
@@ -485,7 +485,7 @@ class CloudRunJobTest extends TestCase
         // Arrange
         Event::fake(JobOutput::class);
         Storage::fake('local');
-        $payload = $this->createPayload(new SimpleJob);
+        $payload = $this->createPayload(new SimpleJob());
         $path = 'cloud-tasks-payloads/test-task.json';
 
         // Store payload in fake storage
