@@ -27,12 +27,14 @@ class IncomingTask
     /**
      * @param  JobShape  $task
      */
-    private function __construct(private readonly array $task)
-    {
+    private function __construct(
+        private readonly array $task,
+        private readonly ?string $taskName = null
+    ) {
         //
     }
 
-    public static function fromJson(string $payload): self
+    public static function fromJson(string $payload, ?string $taskName = null): self
     {
         try {
             $decode = json_decode($payload, true);
@@ -42,7 +44,7 @@ class IncomingTask
             }
 
             /** @var JobShape $decode */
-            return new self($decode);
+            return new self($decode, $taskName);
         } catch (JsonException) {
             throw new Exception('Invalid task payload.');
         }
@@ -66,6 +68,12 @@ class IncomingTask
 
     public function shortTaskName(): string
     {
+        // When running via CLI (Cloud Run Job), use the task name passed to constructor
+        if ($this->taskName !== null) {
+            return $this->taskName;
+        }
+
+        // When running via HTTP, extract from headers
         return request()->header('X-CloudTasks-TaskName')
             ?? request()->header('X-AppEngine-TaskName')
             ?? throw new Error('Unable to extract taskname from header');

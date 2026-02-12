@@ -17,7 +17,9 @@ use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Queue\WorkerOptions;
 use Google\Cloud\Tasks\V2\OidcToken;
 use Google\Cloud\Tasks\V2\HttpMethod;
+use Google\Cloud\Tasks\V2\OAuthToken;
 use Google\Cloud\Tasks\V2\HttpRequest;
+use Illuminate\Support\Facades\Storage;
 use Google\Cloud\Tasks\V2\AppEngineRouting;
 use Illuminate\Queue\Queue as LaravelQueue;
 use Google\Cloud\Tasks\V2\AppEngineHttpRequest;
@@ -278,6 +280,45 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
             }
 
             $task->setAppEngineHttpRequest($appEngineRequest);
+        } elseif (! empty($this->config['cloud_run_job'])) {
+            // Cloud Run Job target - call the Cloud Run Jobs execution API
+            $httpRequest = new HttpRequest;
+            $httpRequest->setUrl($this->getCloudRunJobExecutionUrl());
+            $httpRequest->setHttpMethod(HttpMethod::POST);
+            $httpRequest->setHeaders(array_merge($headers, [
+                'Content-Type' => 'application/json',
+            ]));
+
+            // Build the execution request body with container overrides
+            // The job payload is passed as environment variables
+            $taskNameShort = str($task->getName())->afterLast('/')->toString();
+            $encodedPayload = base64_encode(json_encode($payload));
+
+            // Build env vars for the container using fixed env var names
+            // These map to config keys: cloud_run_job_payload, cloud_run_job_task_name, cloud_run_job_payload_path
+            $envVars = $this->getCloudRunJobEnvVars($encodedPayload, $taskNameShort);
+
+            $executionBody = [
+                'overrides' => [
+                    'containerOverrides' => [
+                        [
+                            'env' => $envVars,
+                        ],
+                    ],
+                ],
+            ];
+
+            $httpRequest->setBody(json_encode($executionBody));
+
+            $token = new OAuthToken;
+            $token->setServiceAccountEmail($this->config['service_account_email'] ?? '');
+            $token->setScope('https://www.googleapis.com/auth/cloud-platform');
+            $httpRequest->setOAuthToken($token);
+            $task->setHttpRequest($httpRequest);
+
+            if (! empty($this->config['dispatch_deadline'])) {
+                $task->setDispatchDeadline((new Duration)->setSeconds($this->config['dispatch_deadline']));
+            }
         } else {
             $httpRequest = new HttpRequest;
             $httpRequest->setUrl($this->getHandler($job));
@@ -366,5 +407,64 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         }
 
         return $this->config['queue'];
+    }
+
+    /**
+     * Get the Cloud Run Jobs execution API URL.
+     */
+    private function getCloudRunJobExecutionUrl(): string
+    {
+        $project = $this->config['project'];
+        $region = $this->config['cloud_run_job_region'] ?? $this->config['location'];
+        $jobName = $this->config['cloud_run_job_name'] ?? throw new Exception('cloud_run_job_name is required when using Cloud Run Jobs.');
+
+        return sprintf(
+            'https://run.googleapis.com/v2/projects/%s/locations/%s/jobs/%s:run',
+            $project,
+            $region,
+            $jobName
+        );
+    }
+
+    /**
+     * Get the environment variables for Cloud Run Job dispatch.
+     *
+     * If the payload exceeds the configured threshold, it will be stored
+     * in the configured disk and the path will be returned instead.
+     *
+     * Env vars set map to config keys in the queue connection:
+     * - CLOUD_TASKS_TASK_NAME -> cloud_run_job_task_name
+     * - CLOUD_TASKS_PAYLOAD -> cloud_run_job_payload
+     * - CLOUD_TASKS_PAYLOAD_PATH -> cloud_run_job_payload_path
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    private function getCloudRunJobEnvVars(string $encodedPayload, string $taskName): array
+    {
+        $disk = $this->config['payload_disk'] ?? null;
+        $threshold = $this->config['payload_threshold'] ?? 10240; // 10KB default
+
+        $envVars = [
+            ['name' => 'CLOUD_TASKS_TASK_NAME', 'value' => $taskName],
+        ];
+
+        // If no disk configured or payload is below threshold, pass payload directly
+        if ($disk === null || strlen($encodedPayload) <= $threshold) {
+            $envVars[] = ['name' => 'CLOUD_TASKS_PAYLOAD', 'value' => $encodedPayload];
+
+            return $envVars;
+        }
+
+        // Store payload in configured disk and pass path instead
+        $prefix = $this->config['payload_prefix'] ?? 'cloud-tasks-payloads';
+        $timestamp = now()->format('Y-m-d_H:i:s.v');
+        $path = sprintf('%s/%s_%s.json', $prefix, $timestamp, $taskName);
+
+        Storage::disk($disk)->put($path, $encodedPayload);
+
+        // Set the path env var for large payloads
+        $envVars[] = ['name' => 'CLOUD_TASKS_PAYLOAD_PATH', 'value' => $disk.':'.$path];
+
+        return $envVars;
     }
 }

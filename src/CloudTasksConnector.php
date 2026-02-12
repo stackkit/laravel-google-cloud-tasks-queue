@@ -19,7 +19,13 @@ use Illuminate\Queue\Connectors\ConnectorInterface;
  *     service_account_email?: string,
  *     backoff?: int,
  *     dispatch_deadline?: int,
- *     after_commit?: bool
+ *     after_commit?: bool,
+ *     cloud_run_job?: bool,
+ *     cloud_run_job_name?: string,
+ *     cloud_run_job_region?: string,
+ *     payload_disk?: string,
+ *     payload_prefix?: string,
+ *     payload_threshold?: int
  * }
  */
 class CloudTasksConnector implements ConnectorInterface
