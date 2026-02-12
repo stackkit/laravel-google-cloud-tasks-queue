@@ -6,6 +6,9 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+
+use function Safe\base64_decode;
+
 use Illuminate\Container\Container;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Storage;
@@ -14,8 +17,6 @@ use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\IncomingTask;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksJob;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksQueue;
-
-use function Safe\base64_decode;
 
 /**
  * Artisan command to process Cloud Tasks jobs via Cloud Run Jobs.
@@ -100,7 +101,7 @@ class WorkCloudRunJob extends Command
         $worker = app('cloud-tasks.worker');
 
         // We manually manage retries by releasing jobs (which pushes a new task back to Cloud Tasks),
-        // so we never want to return a failure exit code as that will result in duplicate job attempts 
+        // so we never want to return a failure exit code as that will result in duplicate job attempts
         // if retries are configured on the cloud run job.
         rescue(fn () => $worker->process(
             connectionName: $job->getConnectionName(),
@@ -180,7 +181,7 @@ class WorkCloudRunJob extends Command
      */
     private function getWorkerOptions(array $config): WorkerOptions
     {
-        $options = new WorkerOptions();
+        $options = new WorkerOptions;
 
         if (isset($config['backoff'])) {
             $options->backoff = $config['backoff'];
