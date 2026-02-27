@@ -117,25 +117,29 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
             }
         });
 
-        $events->listen(QueuePaused::class, function (QueuePaused $event) {
-            $queue = Queue::connection($event->connection);
+        if (class_exists('Illuminate\Queue\Events\QueuePaused')) {
+            $events->listen(QueuePaused::class, function (QueuePaused $event) {
+                $queue = Queue::connection($event->connection);
 
-            if (! $queue instanceof CloudTasksQueue) {
-                return;
-            }
+                if (! $queue instanceof CloudTasksQueue) {
+                    return;
+                }
 
-            $queue->pause($event->queue);
-        });
+                $queue->pause($event->queue);
+            });
+        }
 
-        $events->listen(QueueResumed::class, function (QueueResumed $event) {
-            $queue = Queue::connection($event->connection);
+        if (class_exists('Illuminate\Queue\Events\QueueResumed')) {
+            $events->listen(QueueResumed::class, function (QueueResumed $event) {
+                $queue = Queue::connection($event->connection);
 
-            if (! $queue instanceof CloudTasksQueue) {
-                return;
-            }
+                if (! $queue instanceof CloudTasksQueue) {
+                    return;
+                }
 
-            $queue->resume($event->queue);
-        });
+                $queue->resume($event->queue);
+            });
+        }
     }
 
     private function registerCommands(): void
