@@ -222,6 +222,6 @@ class CloudTasksApiTest extends TestCase
             CloudTasksApi::resume($queue);
         }
 
-        $this->assertEquals($desiredState, $this->getQueueState($queue));
+        $this->assertEquals($desiredState, $this->waitForQueueState($queue, $desiredState));
     }
 }
