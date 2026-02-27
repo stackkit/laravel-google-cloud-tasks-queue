@@ -156,7 +156,7 @@ class CloudTasksApiTest extends TestCase
         CloudTasksApi::pause($queueName);
 
         // Assert
-        $this->assertEquals(State::PAUSED, $this->getQueueState($queueName));
+        $this->assertEquals(State::PAUSED, $this->waitForQueueState($queueName, State::PAUSED));
     }
 
     #[Test]
@@ -174,12 +174,36 @@ class CloudTasksApiTest extends TestCase
         CloudTasksApi::resume($queueName);
 
         // Assert
-        $this->assertEquals(State::RUNNING, $this->getQueueState($queueName));
+        $this->assertEquals(State::RUNNING, $this->waitForQueueState($queueName, State::RUNNING));
     }
 
     private function getQueueState(string $queue): int
     {
         return $this->client->getQueue(GetQueueRequest::build($queue))->getState();
+    }
+
+    private function waitForQueueState(string $queue, int $waitForState): ?int
+    {
+        $state = null;
+        $attempts = 0;
+
+        while ($state !== $waitForState) {
+            $state = $this->getQueueState($queue);
+
+            if ($state === $waitForState) {
+                return $state;
+            }
+
+            $attempts++;
+
+            if ($attempts >= 10) {
+                break;
+            }
+
+            sleep(1);
+        }
+
+        return $state;
     }
 
     private function ensureQueueIs(string $queue, int $desiredState): void
