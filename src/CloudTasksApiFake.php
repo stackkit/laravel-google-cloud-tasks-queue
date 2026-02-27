@@ -23,6 +23,11 @@ class CloudTasksApiFake implements CloudTasksApiContract
      */
     public array $deletedTasks = [];
 
+    /**
+     * @var array<string, true>
+     */
+    public array $pausedQueues = [];
+
     public function createTask(string $queueName, Task $task): Task
     {
         $this->createdTasks[] = compact('queueName', 'task');
@@ -49,6 +54,16 @@ class CloudTasksApiFake implements CloudTasksApiContract
         }
 
         return false;
+    }
+
+    public function pause(string $queue): void
+    {
+        $this->pausedQueues[$queue] = true;
+    }
+
+    public function resume(string $queue): void
+    {
+        unset($this->pausedQueues[$queue]);
     }
 
     public function assertTaskDeleted(string $taskName): void
@@ -84,5 +99,15 @@ class CloudTasksApiFake implements CloudTasksApiContract
     public function assertCreatedTaskCount(int $count): void
     {
         Assert::assertCount($count, $this->createdTasks);
+    }
+
+    public function assertQueuePaused(string $queue): void
+    {
+        Assert::assertTrue($this->pausedQueues[$queue] ?? null, 'Expected queue ['.$queue.'] to be paused, but is not');
+    }
+
+    public function assertQueueNotPaused(string $queue): void
+    {
+        Assert::assertNotTrue($this->pausedQueues[$queue] ?? null, 'Expected queue ['.$queue.'] to not be paused, but it is');
     }
 }

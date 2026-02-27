@@ -15,4 +15,8 @@ interface CloudTasksApiContract
     public function getTask(string $taskName): Task;
 
     public function exists(string $taskName): bool;
+
+    public function pause(string $queue): void;
+
+    public function resume(string $queue): void;
 }
