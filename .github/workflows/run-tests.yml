@@ -119,7 +119,7 @@ jobs:
           DB_DRIVER: ${{ matrix.db.driver }}
           DB_HOST: 127.0.0.1
           CI_CLOUD_TASKS_PROJECT_ID: ${{ secrets.CI_CLOUD_TASKS_PROJECT_ID }}
-          CI_CLOUD_TASKS_QUEUE: ${{ secrets.CI_CLOUD_TASKS_QUEUE }}
+          CI_CLOUD_TASKS_QUEUE: ${{ matrix.payload.queue }}
           CI_CLOUD_TASKS_LOCATION: ${{ secrets.CI_CLOUD_TASKS_LOCATION }}
           CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL: ${{ secrets.CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL }}
           CI_SERVICE_ACCOUNT_JSON_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_JSON_KEY }}
