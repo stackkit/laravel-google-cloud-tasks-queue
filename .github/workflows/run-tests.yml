@@ -119,11 +119,11 @@ jobs:
           DB_DRIVER: ${{ matrix.db.driver }}
           DB_HOST: 127.0.0.1
           CI_CLOUD_TASKS_PROJECT_ID: ${{ secrets.CI_CLOUD_TASKS_PROJECT_ID }}
-          CI_CLOUD_TASKS_QUEUE: ${{ matrix.payload.queue }}
+          CI_CLOUD_TASKS_QUEUE: ${{ matrix.payload.queue }}-${{ matrix.db.driver }}
           CI_CLOUD_TASKS_LOCATION: ${{ secrets.CI_CLOUD_TASKS_LOCATION }}
           CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL: ${{ secrets.CI_CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL }}
           CI_SERVICE_ACCOUNT_JSON_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_JSON_KEY }}
-          CI_CLOUD_TASKS_CUSTOM_QUEUE: ${{ matrix.payload.queue }}
+          CI_CLOUD_TASKS_CUSTOM_QUEUE: ${{ matrix.payload.queue }}-${{ matrix.db.driver }}
         run: |
           echo $CI_SERVICE_ACCOUNT_JSON_KEY > tests/Support/gcloud-key-valid.json
           touch .env
