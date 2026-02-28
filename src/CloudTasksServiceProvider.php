@@ -7,8 +7,11 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Illuminate\Routing\Router;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Queue\QueueManager;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Foundation\Application;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\QueuePaused;
+use Illuminate\Queue\Events\QueueResumed;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
@@ -113,6 +116,30 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 return;
             }
         });
+
+        if (class_exists('Illuminate\Queue\Events\QueuePaused')) {
+            $events->listen(QueuePaused::class, function (QueuePaused $event) { // @phpstan-ignore-line
+                $queue = Queue::connection($event->connection); // @phpstan-ignore-line
+
+                if (! $queue instanceof CloudTasksQueue) {
+                    return;
+                }
+
+                $queue->pause($event->queue); // @phpstan-ignore-line
+            });
+        }
+
+        if (class_exists('Illuminate\Queue\Events\QueueResumed')) {
+            $events->listen(QueueResumed::class, function (QueueResumed $event) { // @phpstan-ignore-line
+                $queue = Queue::connection($event->connection); // @phpstan-ignore-line
+
+                if (! $queue instanceof CloudTasksQueue) {
+                    return;
+                }
+
+                $queue->resume($event->queue); // @phpstan-ignore-line
+            });
+        }
     }
 
     private function registerCommands(): void
