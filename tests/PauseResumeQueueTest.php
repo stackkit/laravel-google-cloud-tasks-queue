@@ -20,7 +20,6 @@ class PauseResumeQueueTest extends TestCase
 
         CloudTasksApi::fake();
 
-        // $this->artisan('queue:pause cloudtasks:barbequeue');
         Artisan::call('queue:pause my-cloudtasks-connection:barbequeue');
 
         // Assert
