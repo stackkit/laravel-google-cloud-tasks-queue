@@ -7,3 +7,5 @@ parameters:
     level: 9
     ignoreErrors:
         - "/dispatchAfterCommit with no type specified/"
+        - message: "#Illuminate\\\\Queue\\\\Events\\\\Queue(Paused|Resumed)#"
+          identifier: class.notFound

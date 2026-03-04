@@ -103,11 +103,11 @@ class CloudTasksApiFake implements CloudTasksApiContract
 
     public function assertQueuePaused(string $queue): void
     {
-        Assert::assertTrue($this->pausedQueues[$queue] ?? null, 'Expected queue ['.$queue.'] to be paused, but is not');
+        Assert::assertArrayHasKey($queue, $this->pausedQueues, 'Expected queue ['.$queue.'] to be paused, but it is not.');
     }
 
     public function assertQueueNotPaused(string $queue): void
     {
-        Assert::assertNotTrue($this->pausedQueues[$queue] ?? null, 'Expected queue ['.$queue.'] to not be paused, but it is');
+        Assert::assertArrayNotHasKey($queue, $this->pausedQueues, 'Expected queue ['.$queue.'] to not be paused, but it is.');
     }
 }
