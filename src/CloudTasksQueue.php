@@ -472,13 +472,13 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
     {
         $queueName = CloudTasksClient::queueName($this->config['project'], $this->config['location'], $queue);
 
-        CloudTasksApi::pause($queue);
+        CloudTasksApi::pause($queueName);
     }
 
     public function resume(string $queue): void
     {
         $queueName = CloudTasksClient::queueName($this->config['project'], $this->config['location'], $queue);
 
-        CloudTasksApi::resume($queue);
+        CloudTasksApi::resume($queueName);
     }
 }
