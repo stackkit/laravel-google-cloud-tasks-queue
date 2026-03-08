@@ -9,6 +9,8 @@ use Google\ApiCore\ApiException;
 use Google\Cloud\Tasks\V2\GetTaskRequest;
 use Google\Cloud\Tasks\V2\CreateTaskRequest;
 use Google\Cloud\Tasks\V2\DeleteTaskRequest;
+use Google\Cloud\Tasks\V2\PauseQueueRequest;
+use Google\Cloud\Tasks\V2\ResumeQueueRequest;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 
 class CloudTasksApiConcrete implements CloudTasksApiContract
@@ -64,5 +66,15 @@ class CloudTasksApiConcrete implements CloudTasksApiContract
         }
 
         return false;
+    }
+
+    public function pause(string $queue): void
+    {
+        $this->client->pauseQueue(PauseQueueRequest::build($queue));
+    }
+
+    public function resume(string $queue): void
+    {
+        $this->client->resumeQueue(ResumeQueueRequest::build($queue));
     }
 }
