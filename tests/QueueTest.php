@@ -649,4 +649,27 @@ class QueueTest extends TestCase
             return $task->getScheduleTime() === null;
         });
     }
+
+    #[Test]
+    public function it_resets_attempts_when_retrying_a_failed_job(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        $payload = json_encode([
+            'uuid' => (string) Str::uuid(),
+            'displayName' => SimpleJob::class,
+            'internal' => ['attempts' => 3],
+        ]);
+
+        // Act - simulate queue:retry by calling pushRaw without a 'job' option
+        Queue::connection('my-cloudtasks-connection')->pushRaw($payload, 'barbequeue');
+
+        // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
+            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
+
+            return $decoded['internal']['attempts'] === 0;
+        });
+    }
 }

@@ -159,6 +159,14 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         $delay = ! empty($options['delay']) ? $options['delay'] : 0;
         $job = $options['job'] ?? null;
 
+        // When no job object is present, this was called by queue:retry.
+        // Reset the attempt counter so the job doesn't immediately exceed max attempts.
+        if ($job === null) {
+            $decoded = (array) json_decode($payload, true);
+            $decoded['internal']['attempts'] = 0;
+            $payload = json_encode($decoded);
+        }
+
         return $this->pushToCloudTasks($queue, $payload, $delay, $job);
     }
 
