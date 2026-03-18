@@ -89,6 +89,8 @@ class CloudTasksServiceProvider extends LaravelServiceProvider
                 return;
             }
 
+            $event->job->setAttempts(0);
+
             app('queue.failer')->log(
                 $event->job->getConnectionName(),
                 $event->job->getQueue(),

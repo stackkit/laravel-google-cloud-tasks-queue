@@ -24,6 +24,7 @@ use Illuminate\Queue\CallQueuedClosure;
 use Tests\Support\SimpleJobWithTimeout;
 use Tests\Support\JobThatWillBeReleased;
 use Illuminate\Queue\Events\JobProcessed;
+use Tests\Support\FailingJobWithMaxTries;
 use Illuminate\Queue\Events\JobProcessing;
 use Tests\Support\SimpleJobWithDelayProperty;
 use Tests\Support\FailingJobWithExponentialBackoff;
@@ -656,20 +657,17 @@ class QueueTest extends TestCase
         // Arrange
         CloudTasksApi::fake();
 
-        $payload = json_encode([
-            'uuid' => (string) Str::uuid(),
-            'displayName' => SimpleJob::class,
-            'internal' => ['attempts' => 3],
-        ]);
-
-        // Act - simulate queue:retry by calling pushRaw without a 'job' option
-        Queue::connection('my-cloudtasks-connection')->pushRaw($payload, 'barbequeue');
+        // Act
+        $this
+            ->dispatch(new FailingJobWithMaxTries)
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob();
 
         // Assert
-        CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            $decoded = json_decode($task->getHttpRequest()->getBody(), true);
-
-            return $decoded['internal']['attempts'] === 0;
-        });
+        $this->assertDatabaseCount('failed_jobs', 1);
+        $row = DB::table('failed_jobs')->latest('id')->first();
+        $payload = json_decode($row->payload, true);
+        $this->assertSame(0, $payload['internal']['attempts']);
     }
 }
