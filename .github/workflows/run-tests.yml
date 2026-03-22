@@ -57,25 +57,30 @@ jobs:
               throw "Action was not authorized. Exiting now."
             }
 
-  php-tests:
+  load-matrix:
     runs-on: ubuntu-latest
     needs: access_check
+    outputs:
+      db: ${{ steps.load.outputs.db }}
+      payload: ${{ steps.load.outputs.payload }}
+    steps:
+      - name: Checkout PR code to read matrix.json
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Load matrix
+        id: load
+        run: |
+          echo "db=$(jq -c '.db' matrix.json)" >> $GITHUB_OUTPUT
+          echo "payload=$(jq -c '.payload' matrix.json)" >> $GITHUB_OUTPUT
+
+  php-tests:
+    runs-on: ubuntu-latest
+    needs: load-matrix
     strategy:
       matrix:
-        db:
-          - { driver: 'mysql', version: '8.0' }
-          - { driver: 'mysql', version: '8.4' }
-          - { driver: 'pgsql', version: '14' }
-          - { driver: 'pgsql', version: '15' }
-          - { driver: 'pgsql', version: '16' }
-          - { driver: 'pgsql', version: '17' }
-        payload:
-          - { queue: 'github-actions-laravel11-php82', laravel: '11.*', php: '8.2', 'testbench': '9.*' }
-          - { queue: 'github-actions-laravel11-php83', laravel: '11.*', php: '8.3', 'testbench': '9.*' }
-          - { queue: 'github-actions-laravel11-php84', laravel: '11.*', php: '8.4', 'testbench': '9.*' }
-          - { queue: 'github-actions-laravel12-php82', laravel: '12.*', php: '8.2', 'testbench': '10.*' }
-          - { queue: 'github-actions-laravel12-php83', laravel: '12.*', php: '8.3', 'testbench': '10.*' }
-          - { queue: 'github-actions-laravel12-php84', laravel: '12.*', php: '8.4', 'testbench': '10.*' }
+        db: ${{ fromJson(needs.load-matrix.outputs.db) }}
+        payload: ${{ fromJson(needs.load-matrix.outputs.payload) }}
 
     name: PHP ${{ matrix.payload.php }} - Laravel ${{ matrix.payload.laravel }} - DB ${{ matrix.db.driver }} ${{ matrix.db.version }}
 
@@ -102,6 +107,7 @@ jobs:
           elif [ "${{ matrix.db.driver }}" = "pgsql" ]; then
             POSTGRES_PORT=5432 PGSQL_VERSION=${{ matrix.db.version }} docker compose up ${{ matrix.db.driver }} -d
           fi
+
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.payload.laravel }}" "orchestra/testbench:${{ matrix.payload.testbench }}" --no-interaction --no-update
@@ -114,6 +120,7 @@ jobs:
           else
             echo "Not waiting for MySQL."
           fi
+
       - name: Execute tests
         env:
           DB_DRIVER: ${{ matrix.db.driver }}

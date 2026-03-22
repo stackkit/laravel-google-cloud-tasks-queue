@@ -1,0 +1,18 @@
+{
+  "db": [
+    { "driver": "mysql", "version": "8.0" },
+    { "driver": "mysql", "version": "8.4" },
+    { "driver": "pgsql", "version": "14" },
+    { "driver": "pgsql", "version": "15" },
+    { "driver": "pgsql", "version": "16" },
+    { "driver": "pgsql", "version": "17" }
+  ],
+  "payload": [
+    { "queue": "github-actions-laravel11-php82", "laravel": "11.*", "php": "8.2", "testbench": "9.*" },
+    { "queue": "github-actions-laravel11-php83", "laravel": "11.*", "php": "8.3", "testbench": "9.*" },
+    { "queue": "github-actions-laravel11-php84", "laravel": "11.*", "php": "8.4", "testbench": "9.*" },
+    { "queue": "github-actions-laravel12-php82", "laravel": "12.*", "php": "8.2", "testbench": "10.*" },
+    { "queue": "github-actions-laravel12-php83", "laravel": "12.*", "php": "8.3", "testbench": "10.*" },
+    { "queue": "github-actions-laravel12-php84", "laravel": "12.*", "php": "8.4", "testbench": "10.*" }
+  ]
+}
