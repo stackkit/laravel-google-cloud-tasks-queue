@@ -14,7 +14,7 @@ This package allows you to use Google Cloud Tasks as the queue driver in your La
 
 ### Requirements
 
-This package requires Laravel 11 or 12.
+This package requires Laravel 12 or 13.
 
 ### Installation
 
