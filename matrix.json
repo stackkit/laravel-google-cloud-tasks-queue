@@ -8,11 +8,12 @@
     { "driver": "pgsql", "version": "17" }
   ],
   "payload": [
-    { "queue": "github-actions-laravel11-php82", "laravel": "11.*", "php": "8.2", "testbench": "9.*" },
-    { "queue": "github-actions-laravel11-php83", "laravel": "11.*", "php": "8.3", "testbench": "9.*" },
-    { "queue": "github-actions-laravel11-php84", "laravel": "11.*", "php": "8.4", "testbench": "9.*" },
     { "queue": "github-actions-laravel12-php82", "laravel": "12.*", "php": "8.2", "testbench": "10.*" },
     { "queue": "github-actions-laravel12-php83", "laravel": "12.*", "php": "8.3", "testbench": "10.*" },
-    { "queue": "github-actions-laravel12-php84", "laravel": "12.*", "php": "8.4", "testbench": "10.*" }
+    { "queue": "github-actions-laravel12-php84", "laravel": "12.*", "php": "8.4", "testbench": "10.*" },
+    { "queue": "github-actions-laravel12-php85", "laravel": "12.*", "php": "8.5", "testbench": "10.*" },
+    { "queue": "github-actions-laravel13-php83", "laravel": "13.*", "php": "8.3", "testbench": "11.*" },
+    { "queue": "github-actions-laravel13-php84", "laravel": "13.*", "php": "8.4", "testbench": "11.*" },
+    { "queue": "github-actions-laravel13-php85", "laravel": "13.*", "php": "8.5", "testbench": "11.*" }
   ]
 }
