@@ -515,7 +515,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
         return 0;
     }
 
-        /**
+    /**
      * Get the creation timestamp of the oldest pending job, excluding delayed jobs.
      *
      * @param  string|null  $queue
