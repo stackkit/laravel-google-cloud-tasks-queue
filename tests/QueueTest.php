@@ -24,6 +24,7 @@ use Illuminate\Queue\CallQueuedClosure;
 use Tests\Support\SimpleJobWithTimeout;
 use Tests\Support\JobThatWillBeReleased;
 use Illuminate\Queue\Events\JobProcessed;
+use Tests\Support\FailingJobWithMaxTries;
 use Illuminate\Queue\Events\JobProcessing;
 use Tests\Support\SimpleJobWithDelayProperty;
 use Tests\Support\FailingJobWithExponentialBackoff;
@@ -648,5 +649,25 @@ class QueueTest extends TestCase
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
             return $task->getScheduleTime() === null;
         });
+    }
+
+    #[Test]
+    public function it_resets_attempts_when_retrying_a_failed_job(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        $this
+            ->dispatch(new FailingJobWithMaxTries)
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob()
+            ->runAndGetReleasedJob();
+
+        // Assert
+        $this->assertDatabaseCount('failed_jobs', 1);
+        $row = DB::table('failed_jobs')->latest('id')->first();
+        $payload = json_decode($row->payload, true);
+        $this->assertSame(0, $payload['internal']['attempts']);
     }
 }
