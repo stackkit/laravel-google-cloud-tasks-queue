@@ -7,6 +7,8 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 use Closure;
 use PHPUnit\Framework\Assert;
 use Google\Cloud\Tasks\V2\Task;
+use Google\Cloud\Tasks\V2\Queue;
+use Google\Cloud\Tasks\V2\Queue\State;
 
 class CloudTasksApiFake implements CloudTasksApiContract
 {
@@ -56,14 +58,18 @@ class CloudTasksApiFake implements CloudTasksApiContract
         return false;
     }
 
-    public function pause(string $queue): void
+    public function pause(string $queue): Queue
     {
         $this->pausedQueues[$queue] = true;
+
+        return (new Queue)->setName($queue)->setState(State::PAUSED);
     }
 
-    public function resume(string $queue): void
+    public function resume(string $queue): Queue
     {
         unset($this->pausedQueues[$queue]);
+
+        return (new Queue)->setName($queue)->setState(State::RUNNING);
     }
 
     public function assertTaskDeleted(string $taskName): void
