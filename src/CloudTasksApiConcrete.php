@@ -6,6 +6,7 @@ namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\Task;
 use Google\ApiCore\ApiException;
+use Google\Cloud\Tasks\V2\Queue;
 use Google\Cloud\Tasks\V2\GetTaskRequest;
 use Google\Cloud\Tasks\V2\CreateTaskRequest;
 use Google\Cloud\Tasks\V2\DeleteTaskRequest;
@@ -68,13 +69,13 @@ class CloudTasksApiConcrete implements CloudTasksApiContract
         return false;
     }
 
-    public function pause(string $queue): void
+    public function pause(string $queue): Queue
     {
-        $this->client->pauseQueue(PauseQueueRequest::build($queue));
+        return $this->client->pauseQueue(PauseQueueRequest::build($queue));
     }
 
-    public function resume(string $queue): void
+    public function resume(string $queue): Queue
     {
-        $this->client->resumeQueue(ResumeQueueRequest::build($queue));
+        return $this->client->resumeQueue(ResumeQueueRequest::build($queue));
     }
 }

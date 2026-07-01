@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\Task;
+use Google\Cloud\Tasks\V2\Queue;
 
 interface CloudTasksApiContract
 {
@@ -16,7 +17,7 @@ interface CloudTasksApiContract
 
     public function exists(string $taskName): bool;
 
-    public function pause(string $queue): void;
+    public function pause(string $queue): Queue;
 
-    public function resume(string $queue): void;
+    public function resume(string $queue): Queue;
 }

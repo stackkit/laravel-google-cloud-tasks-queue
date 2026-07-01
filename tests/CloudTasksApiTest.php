@@ -11,7 +11,6 @@ use Google\Cloud\Tasks\V2\HttpMethod;
 use Google\Cloud\Tasks\V2\HttpRequest;
 use Google\Cloud\Tasks\V2\Queue\State;
 use PHPUnit\Framework\Attributes\Test;
-use Google\Cloud\Tasks\V2\GetQueueRequest;
 use Google\Cloud\Tasks\V2\Client\CloudTasksClient;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
 
@@ -150,13 +149,11 @@ class CloudTasksApiTest extends TestCase
             env('CI_CLOUD_TASKS_QUEUE').'-pause'
         );
 
-        $this->ensureQueueIs($queueName, State::RUNNING);
-
         // Act
-        CloudTasksApi::pause($queueName);
+        $queue = CloudTasksApi::pause($queueName);
 
         // Assert
-        $this->assertEquals(State::PAUSED, $this->waitForQueueState($queueName, State::PAUSED));
+        $this->assertEquals(State::PAUSED, $queue->getState());
     }
 
     #[Test]
@@ -168,54 +165,10 @@ class CloudTasksApiTest extends TestCase
             env('CI_CLOUD_TASKS_QUEUE').'-pause'
         );
 
-        $this->ensureQueueIs($queueName, State::PAUSED);
-
         // Act
-        CloudTasksApi::resume($queueName);
+        $queue = CloudTasksApi::resume($queueName);
 
         // Assert
-        $this->assertEquals(State::RUNNING, $this->waitForQueueState($queueName, State::RUNNING));
-    }
-
-    private function getQueueState(string $queue): int
-    {
-        return $this->client->getQueue(GetQueueRequest::build($queue))->getState();
-    }
-
-    private function waitForQueueState(string $queue, int $waitForState): ?int
-    {
-        $state = null;
-        $backoff = [1, 5, 10, 30, 60];
-
-        foreach ($backoff as $delay) {
-            $state = $this->getQueueState($queue);
-
-            if ($state === $waitForState) {
-                return $state;
-            }
-
-            sleep($delay);
-        }
-
-        return $this->getQueueState($queue);
-    }
-
-    private function ensureQueueIs(string $queue, int $desiredState): void
-    {
-        $currentState = $this->getQueueState($queue);
-
-        if ($currentState === $desiredState) {
-            return;
-        }
-
-        if ($currentState === State::RUNNING && $desiredState === State::PAUSED) {
-            CloudTasksApi::pause($queue);
-        }
-
-        if ($currentState === State::PAUSED && $desiredState === State::RUNNING) {
-            CloudTasksApi::resume($queue);
-        }
-
-        $this->assertEquals($desiredState, $this->waitForQueueState($queue, $desiredState));
+        $this->assertEquals(State::RUNNING, $queue->getState());
     }
 }

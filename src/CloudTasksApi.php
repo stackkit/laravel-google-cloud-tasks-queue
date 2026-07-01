@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Stackkit\LaravelGoogleCloudTasksQueue;
 
 use Google\Cloud\Tasks\V2\Task;
+use Google\Cloud\Tasks\V2\Queue;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -12,8 +13,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static void deleteTask(string $taskName)
  * @method static Task getTask(string $taskName)
  * @method static bool exists(string $taskName)
- * @method static void pause(string $queue)
- * @method static void resume(string $queue)
+ * @method static Queue pause(string $queue)
+ * @method static Queue resume(string $queue)
  */
 class CloudTasksApi extends Facade
 {
