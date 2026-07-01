@@ -5,5 +5,11 @@ parameters:
     paths:
         - src
     level: 9
+    # QueuePaused/QueueResumed only exist in newer Laravel versions; the code
+    # guards them with class_exists(), so the ignore is unmatched on versions
+    # where they do exist. Don't fail when that happens.
+    reportUnmatchedIgnoredErrors: false
     ignoreErrors:
         - "/dispatchAfterCommit with no type specified/"
+        - message: "#Illuminate\\\\Queue\\\\Events\\\\Queue(Paused|Resumed)#"
+          identifier: class.notFound
