@@ -39,6 +39,8 @@ use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
  */
 class CloudTasksQueue extends LaravelQueue implements QueueContract
 {
+    private const TASK_NAME_PREFIX_LENGTH = 32;
+
     protected static ?Closure $handlerUrlCallback = null;
 
     protected static ?Closure $taskHeadersCallback = null;
@@ -234,7 +236,7 @@ class CloudTasksQueue extends LaravelQueue implements QueueContract
                 ->afterLast('\\')
                 ->replaceMatches('![^-\pL\pN\s]+!u', '-')
                 ->replaceMatches('![-\s]+!u', '-')
-                ->prepend((string) Str::ulid(), '-')
+                ->prepend(Str::random(self::TASK_NAME_PREFIX_LENGTH), '-')
                 ->toString(),
         );
     }

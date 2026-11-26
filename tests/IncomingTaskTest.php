@@ -34,14 +34,15 @@ class IncomingTaskTest extends TestCase
     {
         // Arrange
         $this->withTaskType($taskType);
-        Str::createUlidsUsingSequence(['01HSR4V9QE2F4T0K8RBAYQ88KE']);
+        $randomPrefix = fake()->regexify('[A-Za-z0-9]{32}');
+        Str::createRandomStringsUsingSequence([$randomPrefix]);
 
         // Act
         $this->dispatch(new $job)->run();
 
         // Assert
-        Event::assertDispatched(function (TaskIncoming $event) use ($job) {
-            return $event->task->fullyQualifiedTaskName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/01HSR4V9QE2F4T0K8RBAYQ88KE-'.class_basename($job)
+        Event::assertDispatched(function (TaskIncoming $event) use ($job, $randomPrefix) {
+            return $event->task->fullyQualifiedTaskName() === "projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/$randomPrefix-".class_basename($job)
                 && $event->task->connection() === 'my-cloudtasks-connection'
                 && $event->task->queue() === 'barbequeue';
         });
