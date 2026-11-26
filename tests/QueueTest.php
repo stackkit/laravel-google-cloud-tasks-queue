@@ -474,14 +474,30 @@ class QueueTest extends TestCase
     {
         // Arrange
         CloudTasksApi::fake();
-        Str::createUlidsUsingSequence(['01HSR4V9QE2F4T0K8RBAYQ88KE']);
+        $randomPrefix = fake()->regexify('[A-Za-z0-9]{32}');
+        Str::createRandomStringsUsingSequence([$randomPrefix]);
 
         // Act
         $this->dispatch((new SimpleJob));
 
         // Assert
+        CloudTasksApi::assertTaskCreated(function (Task $task) use ($randomPrefix): bool {
+            return $task->getName() === "projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/$randomPrefix-SimpleJob";
+        });
+    }
+
+    #[Test]
+    public function it_prefixes_the_task_name_with_32_alphanumeric_characters(): void
+    {
+        // Arrange
+        CloudTasksApi::fake();
+
+        // Act
+        $this->dispatch(new SimpleJob);
+
+        // Assert
         CloudTasksApi::assertTaskCreated(function (Task $task): bool {
-            return $task->getName() === 'projects/my-test-project/locations/europe-west6/queues/barbequeue/tasks/01HSR4V9QE2F4T0K8RBAYQ88KE-SimpleJob';
+            return str($task->getName())->test('/\/tasks\/[A-Za-z0-9]{32}-SimpleJob$/');
         });
     }
 
